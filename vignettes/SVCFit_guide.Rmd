@@ -33,7 +33,8 @@ Many tumors evolve through a process of cellular mutation and selection, during 
 The input of this package should be in Variant Call Format (VCF). Each row describes a structural variants and each column are the attributes for this structural variants. In this example below, we have a sample VCF from Manta (VCF from other tools need to be modified to fit this format):
 
 ```{r,echo = FALSE}
-example_vcf <- read.table("../inst/extdata/c50p70.0s32.bed.vcf", quote="\"")
+file_path <- system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
+example_vcf <- read.table(file_path, quote="\"")
 colnames(example_vcf)=c("CHROM",  "POS",     "ID",      "REF",     "ALT",     "QUAL",    "FILTER",  "INFO",    "FORMAT", "tumor")
 #system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
 str(example_vcf)
@@ -88,12 +89,12 @@ Finally, all of the above functionality is wrapped within a function SVCF()
 # Examples
 
 ```{r, echo = FALSE, message=FALSE, fig.width=6, fig.height=3}
-single = SVCF("../inst/extdata/c40p50.0s22.bed.vcf",
-                tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
+s_path <- system.file("extdata", "c40p50.0s22.bed.vcf", package = "SVCFit")
+m_path <- system.file("extdata", "c50p50.0s18.bed.vcf", package = "SVCFit")
+single = SVCF(s_path,tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
   filter(svcf<1.1)
 
-multiple = SVCF("../inst/extdata/c50p50.0s18.bed.vcf",
-                tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
+multiple = SVCF(m_path,tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
   filter(svcf<1.1)
 
 ps=single %>%
