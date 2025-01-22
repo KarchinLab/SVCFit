@@ -18,8 +18,17 @@ You can install the development version of SVCFit from
 [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("pak")
-pak::pak("KarchinLab/SVCFit")
+#set config
+usethis::use_git_config(user.name = "YourName", user.email = "your@mail.com")
+
+#Command below will generate link to github page to generate token 
+usethis::create_github_token() 
+
+#paste your PAT into pop-up that follows...
+credentials::set_github_pat()
+
+#now remotes::install_github() will work
+remotes::install_github("KarchinLab/SVCFit")
 ```
 
 ## Key data structure
@@ -48,10 +57,15 @@ This step assigns column names and extracts key information for
 downstream calculation and filtering. Key information includes reads,
 structural variant length, and structural variant coordinates.
 
-This function has three inputs: 1. vcf_path: Character variable of path
-to vcf files 2. tumor_only: Boolean variable of whether the VCF is
-created without matched normal sample 3. length_filter: Numeric variable
-of structural variant length filter threshold.
+This function has three inputs:
+
+1.  vcf_path: Character variable of path to vcf files
+
+2.  tumor_only: Boolean variable of whether the VCF is created without
+    matched normal sample
+
+3.  length_filter: Numeric variable of structural variant length filter
+    threshold.
 
 ``` r
 vcf=extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_filter=0)
@@ -64,12 +78,17 @@ The output from *extract_info()* will be in annotated VCF format.
 This step checks if the genomic coordinates of two structural variants
 are close enough to be considered as one event.
 
-This function has 4 inputs: 1. dat: a dataframe to be compared 2.
-compare: a dataframe used as baseline for comparison 3. tolerance: an
-integer variable setting the threshold for genomic coordinates
-difference to be considered as the same event 4. window: an integer
-variable setting threshold for how many svructural variant to be
-compared at once
+This function has 4 inputs:
+
+1.  dat: a dataframe to be compared
+
+2.  compare: a dataframe used as reference for comparison
+
+3.  tolerance: an integer variable setting the threshold for genomic
+    coordinates difference to be considered as the same event
+
+4.  window: an integer variable setting threshold for how many
+    svructural variant to be compared at once
 
 Note: When *dat* and *compare* are the same dataframe, this function
 will remove overlapping structural variant and use averaged reads to
