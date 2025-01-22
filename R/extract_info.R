@@ -7,6 +7,9 @@
 #' @return a dataframe with read information for each structural variant
 #' @export
 #' @import tidyverse
+#' @import magrittr
+#' @import dplyr
+#' @importFrom utils read.table
 #' @examples example
 extract_info <- function(path, tumor_only=FALSE, length_filter=0){
   svt <- read.table(path, quote="\"")
@@ -29,60 +32,60 @@ extract_info <- function(path, tumor_only=FALSE, length_filter=0){
 
   if(tumor_only){
     out <- svt %>%
-      dplyr::mutate(chr2 = gsub(".*(chr.).*","\\1", ALT),
-             chr2 = ifelse(grepl("chr", chr2), chr2, CHROM),
-             pos2 = gsub(".*:(\\d+).*","\\1", ALT),
-             pos2 = ifelse(grepl("\\d+", pos2), pos2, gsub("END=(\\d+).*","\\1",INFO)),
-             pos2 = as.integer(pos2),
-             classification = gsub(".*SVTYPE=(\\w+).*","\\1", INFO),
-             length = abs(POS-pos2),
-             ID = gsub(":\\d$","",ID),
+      dplyr::mutate(chr2 = gsub(".*(chr.).*","\\1", .data$ALT),
+             chr2 = ifelse(grepl("chr", .data$chr2), .data$chr2, .data$CHROM),
+             pos2 = gsub(".*:(\\d+).*","\\1", .data$ALT),
+             pos2 = ifelse(grepl("\\d+", .data$pos2), .data$pos2, gsub("END=(\\d+).*","\\1",.data$INFO)),
+             pos2 = as.integer(.data$pos2),
+             classification = gsub(".*SVTYPE=(\\w+).*","\\1", .data$INFO),
+             length = abs(.data$POS-.data$pos2),
+             ID = gsub(":\\d$","",.data$ID),
              ## here, sum the spanning and split read
-             PR = gsub(":.*$", "", tumor),
-             SR = ifelse(FORMAT == "PR", "0,0", gsub("^.*:", "", tumor)),
-             rpr = gsub(",\\d+","", PR),
-             apr = gsub("\\d+,","", PR),
-             rsr = gsub(",\\d+","", SR),
-             asr = gsub("\\d+,","", SR),
-             ref = as.numeric(rpr)+as.numeric(rsr),
-             alt = as.numeric(apr)+as.numeric(asr),
+             PR = gsub(":.*$", "", .data$tumor),
+             SR = ifelse(.data$FORMAT == "PR", "0,0", gsub("^.*:", "", .data$tumor)),
+             rpr = gsub(",\\d+","", .data$PR),
+             apr = gsub("\\d+,","", .data$PR),
+             rsr = gsub(",\\d+","", .data$SR),
+             asr = gsub("\\d+,","", .data$SR),
+             ref = as.numeric(.data$rpr)+as.numeric(.data$rsr),
+             alt = as.numeric(.data$apr)+as.numeric(.data$asr),
              sample = sample_id,
              row = as.integer(row_number()),
-             iid=paste0(CHROM,"_",POS))%>%
-      dplyr::filter(FILTER == "PASS",
-             alt > 2,
-             length>length_filter)
+             iid=paste0(.data$CHROM,"_",.data$POS))%>%
+      dplyr::filter(.data$FILTER == "PASS",
+                    .data$alt > 2,
+                    .data$length>length_filter)
   }else{
   out <- svt %>%
-    dplyr::mutate(chr2 = gsub(".*(chr.).*","\\1", ALT),
-           chr2 = ifelse(grepl("chr", chr2), chr2, CHROM),
-           pos2 = gsub(".*:(\\d+).*","\\1", ALT),
-           pos2 = ifelse(grepl("\\d+", pos2), pos2, gsub("END=(\\d+).*","\\1",INFO)),
-           pos2 = as.integer(pos2),
-           length = abs(POS-pos2),
-           classification = gsub(".*SVTYPE=(\\w+).*","\\1", INFO),
-           ID = gsub(":\\d$","",ID),
+    dplyr::mutate(chr2 = gsub(".*(chr.).*","\\1", .data$ALT),
+           chr2 = ifelse(grepl("chr", .data$chr2), .data$chr2, .data$CHROM),
+           pos2 = gsub(".*:(\\d+).*","\\1", .data$ALT),
+           pos2 = ifelse(grepl("\\d+", .data$pos2), .data$pos2, gsub("END=(\\d+).*","\\1",.data$INFO)),
+           pos2 = as.integer(.data$pos2),
+           length = abs(.data$POS-.data$pos2),
+           classification = gsub(".*SVTYPE=(\\w+).*","\\1", .data$INFO),
+           ID = gsub(":\\d$","",.data$ID),
            ## here, sum the spanning and split read
-           PR = gsub(":.*$", "", tumor),
-           SR = ifelse(FORMAT == "PR", "0,0", gsub("^.*:", "", tumor)),
-           NPR = gsub(":.*$", "", normal),
-           NSR = ifelse(FORMAT == "PR", "0,0", gsub("^.*:", "", normal)),
-           anpr = gsub("\\d+,","", NPR),
-           ansr = gsub("\\d+,","", NSR),
-           rpr = gsub(",\\d+","", PR),
-           apr = gsub("\\d+,","", PR),
-           rsr = gsub(",\\d+","", SR),
-           asr = gsub("\\d+,","", SR),
-           ref = as.numeric(rpr)+as.numeric(rsr),
-           alt = as.numeric(apr)+as.numeric(asr),
+           PR = gsub(":.*$", "", .data$tumor),
+           SR = ifelse(.data$FORMAT == "PR", "0,0", gsub("^.*:", "", .data$tumor)),
+           NPR = gsub(":.*$", "", .data$normal),
+           NSR = ifelse(.data$FORMAT == "PR", "0,0", gsub("^.*:", "", .data$normal)),
+           anpr = gsub("\\d+,","", .data$NPR),
+           ansr = gsub("\\d+,","", .data$NSR),
+           rpr = gsub(",\\d+","", .data$PR),
+           apr = gsub("\\d+,","", .data$PR),
+           rsr = gsub(",\\d+","", .data$SR),
+           asr = gsub("\\d+,","", .data$SR),
+           ref = as.numeric(.data$rpr)+as.numeric(.data$rsr),
+           alt = as.numeric(.data$apr)+as.numeric(.data$asr),
            sample = sample_id,
            row = as.integer(row_number()),
-           iid=paste0(CHROM,"_",POS))%>%
-    dplyr::filter(FILTER == "PASS",
-           alt > 2,
-           ansr == 0,
-           anpr == 0,
-           length>length_filter)
+           iid=paste0(.data$CHROM,"_",.data$POS))%>%
+    dplyr::filter(.data$FILTER == "PASS",
+                  .data$alt > 2,
+                  .data$ansr == 0,
+                  .data$anpr == 0,
+                  .data$length>length_filter)
   }
   return(out)
 }

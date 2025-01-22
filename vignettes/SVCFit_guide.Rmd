@@ -1,9 +1,11 @@
 ---
-title: "SVCFit"
-subtitle: SVCFit...
+title: "SVCFit Guide"
+subtitle: 
 output: rmarkdown::html_vignette
-vignette: "%\\VignetteIndexEntry{SVCFit} %\\VignetteEngine{knitr::rmarkdown}
-  %\\VignetteEncoding{UTF-8}\n"
+vignette: >
+  %\VignetteIndexEntry{SVCFit Guide}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
@@ -31,7 +33,7 @@ Many tumors evolve through a process of cellular mutation and selection, during 
 The input of this package should be in Variant Call Format (VCF). Each row describes a structural variants and each column are the attributes for this structural variants. In this example below, we have a sample VCF from Manta (VCF from other tools need to be modified to fit this format):
 
 ```{r,echo = FALSE}
-example_vcf <- read.table("~/Documents/GitHub/SVCFit/inst/extdata/c50p70.0s32.bed.vcf", quote="\"")
+example_vcf <- read.table("../inst/extdata/c50p70.0s32.bed.vcf", quote="\"")
 colnames(example_vcf)=c("CHROM",  "POS",     "ID",      "REF",     "ALT",     "QUAL",    "FILTER",  "INFO",    "FORMAT", "tumor")
 #system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
 str(example_vcf)
@@ -44,7 +46,7 @@ str(example_vcf)
 
 This step assigns column names and extracts key information for downstream calculation and filtering. Key information includes reads, structural variant length, and structural variant coordinates. This function has three inputs: 1) Character variable of path to vcf files, 2) Boolean variable of whether the VCF is created without matched normal sample, and 3) Numeric variable of structural variant length filter threshold.
 ```{r,echo = FALSE}
-vcf=extract_info("inst/extdata/c50p70.0s32.bed.vcf", tumor_only=TRUE, length_filter=0)
+vcf=extract_info("../inst/extdata/c50p70.0s32.bed.vcf", tumor_only=TRUE, length_filter=0)
 str(vcf)
 ```
 After this step, the vcf now has `r nrow(vcf)` structural variants. Below shows the lost one structural variants because that the FILTER column is not PASS.
@@ -72,25 +74,25 @@ This step calculate structural variant cellular fraction (SVCF)
 
 ```{r, echo = TRUE}
 output <- checked %>%
-      dplyr::filter(!classification%in%c("INS","BND"))%>%
-      dplyr::mutate(vaf = alt/(alt+0.5*ref),
+      filter(!classification%in%c("INS","BND"))%>%
+      mutate(vaf = alt/(alt+0.5*ref),
              tcn= ifelse(classification =="DUP", (4*alt+2*ref)/ref, 2),
              inferred_icn = ifelse(classification=="DUP", round(tcn*vaf+2),2),
              svcf = ifelse(inferred_icn<4, tcn*vaf, tcn*vaf/(inferred_icn-2)))%>%
-      dplyr::select(sample, CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO,FORMAT,tumor,classification,pos2,vaf,tcn,inferred_icn,svcf)
+      select(sample, CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO,FORMAT,tumor,classification,pos2,vaf,tcn,inferred_icn,svcf)
 
 ```
 
-Finally, all of the above functionality is wrapped within a function SVCFit()
+Finally, all of the above functionality is wrapped within a function SVCF()
 
 # Examples
 
 ```{r, echo = FALSE, message=FALSE, fig.width=6, fig.height=3}
-single = SVCFit(vcf_path="inst/extdata/c40p50.0s22.bed.vcf",
+single = SVCF("../inst/extdata/c40p50.0s22.bed.vcf",
                 tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
   filter(svcf<1.1)
 
-multiple = SVCFit("inst/extdata/c50p50.0s18.bed.vcf",
+multiple = SVCF("../inst/extdata/c50p50.0s18.bed.vcf",
                 tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
   filter(svcf<1.1)
 

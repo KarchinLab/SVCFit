@@ -14,8 +14,10 @@
 #' @return an annotated vcf file
 #' @export
 #' @import tidyverse
+#' @import magrittr
+#' @import dplyr
 #' @examples example
-SVCFit <- function(vcf_path, simulation=FALSE, overlap=TRUE, tolerance=6, window=100, multiple=FALSE, tumor_only=FALSE, truth_path=NULL, length_filter=0){
+SVCF <- function(vcf_path, simulation=FALSE, overlap=TRUE, tolerance=6, window=100, multiple=FALSE, tumor_only=FALSE, truth_path=NULL, length_filter=0){
 
   # load vcf files
   vcf=extract_info(vcf_path, tumor_only)
@@ -43,20 +45,20 @@ SVCFit <- function(vcf_path, simulation=FALSE, overlap=TRUE, tolerance=6, window
   #calculate svcf
   if(tumor_only==FALSE){
     output <- checked %>%
-      dplyr::filter(!classification%in%c("INS","BND"))%>%
-      dplyr::mutate(vaf = alt/(alt+0.5*ref),
-             tcn= ifelse(classification =="DUP", (4*alt+2*ref)/ref, 2),
-             inferred_icn = ifelse(classification=="DUP", round(tcn*vaf+2),2),
-             svcf = ifelse(inferred_icn<4, tcn*vaf, tcn*vaf/(inferred_icn-2)))%>%
-      dplyr::select(sample, CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO,FORMAT,normal,tumor,classification,pos2,vaf, tcn, inferred_icn, svcf)
+      dplyr::filter(!.data$classification%in%c("INS","BND"))%>%
+      dplyr::mutate(vaf = .data$alt/(.data$alt+0.5*.data$ref),
+             tcn= ifelse(.data$classification =="DUP", (4*.data$alt+2*.data$ref)/.data$ref, 2),
+             inferred_icn = ifelse(.data$classification=="DUP", round(.data$tcn*.data$vaf+2),2),
+             svcf = ifelse(.data$inferred_icn<4, .data$tcn*.data$vaf, .data$tcn*.data$vaf/(.data$inferred_icn-2)))%>%
+      dplyr::select(.data$sample, .data$CHROM,.data$POS,.data$ID,.data$REF,.data$ALT,.data$QUAL,.data$FILTER,.data$INFO,.data$FORMAT,.data$normal,.data$tumor,.data$classification,.data$pos2,.data$vaf, .data$tcn, .data$inferred_icn, .data$svcf)
   }else{
     output <- checked %>%
-      dplyr::filter(!classification%in%c("INS","BND"))%>%
-      dplyr::mutate(vaf = alt/(alt+0.5*ref),
-             tcn= ifelse(classification =="DUP", (4*alt+2*ref)/ref, 2),
-             inferred_icn = ifelse(classification=="DUP", round(tcn*vaf+2),2),
-             svcf = ifelse(inferred_icn<4, tcn*vaf, tcn*vaf/(inferred_icn-2)))%>%
-      dplyr::select(sample, CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO,FORMAT,tumor,classification,pos2,vaf, tcn, inferred_icn, svcf)
+      dplyr::filter(!.data$classification%in%c("INS","BND"))%>%
+      dplyr::mutate(vaf = .data$alt/(.data$alt+0.5*.data$ref),
+             tcn= ifelse(.data$classification =="DUP", (4*.data$alt+2*.data$ref)/.data$ref, 2),
+             inferred_icn = ifelse(.data$classification=="DUP", round(.data$tcn*.data$vaf+2),2),
+             svcf = ifelse(.data$inferred_icn<4, .data$tcn*.data$vaf, .data$tcn*.data$vaf/(.data$inferred_icn-2)))%>%
+      dplyr::select(.data$sample, .data$CHROM,.data$POS,.data$ID,.data$REF,.data$ALT,.data$QUAL,.data$FILTER,.data$INFO,.data$FORMAT,.data$tumor,.data$classification,.data$pos2,.data$vaf, .data$tcn, .data$inferred_icn, .data$svcf)
   }
 
   if(multiple&simulation&nrow(truth)>0){ # make sure truth is loaded

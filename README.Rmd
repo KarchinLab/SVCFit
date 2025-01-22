@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: end -->
 
-Many tumors evolve through a process of cellular mutation and selection, during which subpopula-tions of cells (subclones) with shared ancestry compete for dominance. Creating tumor phylogeny is a common practice to examine this evolutionary process at a time point. Several metrics have been used to create tumor phylogeny and the accuracy of these metrics greatly affects the quality of the phylogeny. Tumor phylogeny have been largely explored using small somatic mutations, however, there are several advantages to marking subclones with structural variants: they are more likely to have significant impact on genome function; they are particularly critical to late-stage tumor development; and they provide a more complete picture of the genomic instability driving tumor evolution. In this package, we introduce SVCFit to calcualte a new metric structural variant cellular fraction (SVCF) for inversion, tandem duplication, and deletion that can be used for tumor phylogeny reconstruction. Below, we explain the detailed usage of this package.
+SVCFit is a super fast computational tool developed to calculate structural variant cellular fraction (SVCF) to aid the construction of tumor phylogeny. It takes unique characteristic of structural variants when computing SVCF to achieve more accurate result. Currently, our package work with Inversion, Deletion, and Tandem duplication. 
 
 ## Installation
 
@@ -46,7 +46,7 @@ chr2    5000    MantaDEL:7:0:1:0:0:0    G   <DEL>   .   PASS    END=5300;SVTYPE=
 
 ## General workflow
 
-*SVCFit()* is the main function in this package that wraps all usage described below. All functions can be ran separately.
+*SVCF()* is the main function in this package that wraps all usage described below. All functions can be ran separately.
 
 ### 1. Extract information from original VCF (extract_info)
 
@@ -60,7 +60,7 @@ vcf=extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_filter=0)
 
 The output from *extract_info()* will be in annotated VCF format.
 
-## 2. Check overlapping structural variants
+### 2. Check overlapping structural variants
 
 This step checks if the genomic coordinates of two structural variants are close enough to be considered as one event.
 
@@ -72,7 +72,7 @@ Note: When *dat* and *compare* are the same dataframe, this function will remove
 checked=check_overlap(vcf, vcf)
 ```
 
-## 3. Calculate SVCF for structural variants
+### 3. Calculate SVCF for structural variants
 
 This step calculate structural variant cellular fraction (SVCF). The *inferred_icn* is not an accurate estimation for integer copy number.
 
@@ -89,6 +89,13 @@ output <- checked %>%
 
 The output is an annotated VCF with additional information supporting the calculation of SVCF.
 
-## 4. Additional functions
+### 4. Additional functions
 
 *attach_clone* and *read_clone* are functions to assign SV to clones when ground truth from simulations is known.
+
+
+## Tutorial
+```r
+library(SVCFit)
+vignette("SVCFit_guide", package = "SVCFit")
+```

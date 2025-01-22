@@ -1,18 +1,23 @@
 Package: SVCFit
-Title: This tool is designed to calculate Structural Variant Cellular Fraction (SVCF)
+Title: SVCFit: calculate structural variant cellular fraction 
 Version: 0.0.1
 Authors@R: 
     person("Yunzhou", "Liu", , "yliu498@jh.edu", role = c("aut", "cre"))
 Maintainer: Yunzhou Liu <yliu498@jh.edu>
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: This tool is designed to calculate Structural Variant Cellular Fraction (SVCF).
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+VignetteBuilder: knitr
+Imports:
+    tidyverse,
+    dplyr,
+    magrittr
 Suggests: 
     knitr,
     rmarkdown,
+    ggplot2,
+    gridExtra,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-VignetteBuilder: knitr

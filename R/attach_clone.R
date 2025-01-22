@@ -7,15 +7,17 @@
 #' @return add one more column "clone_num" to the dat
 #' @export
 #' @import tidyverse
+#' @import magrittr
+#' @import dplyr
 #' @examples example
 attach_clone <- function(dat, truth, tolerance=6){
   out <- dat %>%
     dplyr::rowwise()%>%
-    dplyr::mutate(type = any(abs(POS-truth$pos1)<=tolerance))%>%
-    dplyr::filter(type == TRUE)%>%
-    dplyr::mutate(clone_id = as.integer(which(abs(POS-truth$pos1)<=tolerance)),
-           clone_num = truth$id[which(abs(POS-truth$pos1)<=tolerance)])%>%
+    dplyr::mutate(type = any(abs(.data$POS-truth$pos1)<=tolerance))%>%
+    dplyr::filter(.data$type == TRUE)%>%
+    dplyr::mutate(clone_id = as.integer(which(abs(.data$POS-truth$pos1)<=tolerance)),
+           clone_num = truth$id[which(abs(.data$POS-truth$pos1)<=tolerance)])%>%
     dplyr::ungroup()%>%
-    dplyr::select(-type, -clone_id)
+    dplyr::select(-.data$type, -.data$clone_id)
   return(out)
 }

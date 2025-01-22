@@ -8,6 +8,8 @@
 #' @return an filtered annotated vcf file
 #' @export
 #' @import tidyverse
+#' @import magrittr
+#' @import dplyr
 #' @examples example
 check_overlap <- function(dat, compare, tolerance=6, window=1000){
 
@@ -39,14 +41,14 @@ check_overlap <- function(dat, compare, tolerance=6, window=1000){
   rr = as.data.frame(do.call(rbind,result))
   out <- dat %>%
     dplyr::mutate(row=as.integer(row_number()))%>%
-    dplyr::filter(row %in% rr$row)%>% # only kept ones that overlaps: self-compare will retain everything, truth-compare will keep overlap
+    dplyr::filter(.data$row %in% rr$row)%>% # only kept ones that overlaps: self-compare will retain everything, truth-compare will keep overlap
     dplyr::left_join(rr)%>%
     dplyr::group_by(col)%>%
     ## use mean for alt and ref
-    dplyr::mutate(alt=round(mean(alt)),
-           ref=round(mean(ref)))%>%
+    dplyr::mutate(alt=round(mean(.data$alt)),
+           ref=round(mean(.data$ref)))%>%
     dplyr::ungroup()%>%
-    dplyr::distinct(iid, .keep_all = T)%>%
+    dplyr::distinct(.data$iid, .keep_all = T)%>%
     dplyr::select(-c("col", "row"))
 
   return(out)
