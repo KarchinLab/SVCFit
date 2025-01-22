@@ -1,0 +1,114 @@
+---
+title: "SVCFit"
+subtitle: SVCFit...
+output: rmarkdown::html_vignette
+vignette: "%\\VignetteIndexEntry{SVCFit} %\\VignetteEngine{knitr::rmarkdown}
+  %\\VignetteEncoding{UTF-8}\n"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=TRUE, message=FALSE}
+library(SVCFit)
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+```
+
+# Introductin to SVCFit
+
+Many tumors evolve through a process of cellular mutation and selection, during which subpopula-tions of cells (subclones) with shared ancestry compete for dominance. Creating tumor phylogeny is a common practice to examine this evolutionary process at a time point. Several metrics have been used to create tumor phylogeny and the accuracy of these metrics greatly affects the quality of the phylogeny. Tumor phylogeny have been largely explored using small somatic mutations, however, there are several advantages to marking subclones with structural variants: they are more likely to have significant impact on genome function; they are particularly critical to late-stage tumor development; and they provide a more complete picture of the genomic instability driving tumor evolution. In this package, we introduce SVCFit to calcualte a new metric structural variant cellular fraction (SVCF) for inversion, tandem duplication, and deletion that can be used for tumor phylogeny reconstruction. Below, we explain the detailed usage of this package.
+
+
+
+# Key data structure
+
+The input of this package should be in Variant Call Format (VCF). Each row describes a structural variants and each column are the attributes for this structural variants. In this example below, we have a sample VCF from Manta (VCF from other tools need to be modified to fit this format):
+
+```{r,echo = FALSE}
+example_vcf <- read.table("~/Documents/GitHub/SVCFit/inst/extdata/c50p70.0s32.bed.vcf", quote="\"")
+colnames(example_vcf)=c("CHROM",  "POS",     "ID",      "REF",     "ALT",     "QUAL",    "FILTER",  "INFO",    "FORMAT", "tumor")
+#system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
+str(example_vcf)
+```
+
+
+
+# General workflow
+## 1. Extract information from original VCF (extract_info)
+
+This step assigns column names and extracts key information for downstream calculation and filtering. Key information includes reads, structural variant length, and structural variant coordinates. This function has three inputs: 1) Character variable of path to vcf files, 2) Boolean variable of whether the VCF is created without matched normal sample, and 3) Numeric variable of structural variant length filter threshold.
+```{r,echo = FALSE}
+vcf=extract_info("inst/extdata/c50p70.0s32.bed.vcf", tumor_only=TRUE, length_filter=0)
+str(vcf)
+```
+After this step, the vcf now has `r nrow(vcf)` structural variants. Below shows the lost one structural variants because that the FILTER column is not PASS.
+
+```{r, echo = FALSE}
+print(example_vcf[35,1:7])
+```
+
+
+## 2. Check overlapping structural variants
+
+This step checks if the genomic coordinates of two structural variants are close enough to be considered as one event. This function can be used for two purposes: 1) if a structural variant detected exists in simulation input, and 2) if a tool outputs the same structural variant twice. This function has 4 inputs: 1) a dataframe to be compared, 2) a dataframe used as baseline for comparison, 3) set threshold for genomic coordinates difference to be considered as the same event, and 4) set threshold for how many svructural variant to be compared at once.
+
+```{r, echo = FALSE}
+checked=check_overlap(vcf, vcf)
+str(checked)
+```
+
+After checking overlaps, the vcf now has `r nrow(checked)` structural variants.
+
+
+## 3. Calculate SVCF for structural variants
+
+This step calculate structural variant cellular fraction (SVCF)
+
+```{r, echo = TRUE}
+output <- checked %>%
+      dplyr::filter(!classification%in%c("INS","BND"))%>%
+      dplyr::mutate(vaf = alt/(alt+0.5*ref),
+             tcn= ifelse(classification =="DUP", (4*alt+2*ref)/ref, 2),
+             inferred_icn = ifelse(classification=="DUP", round(tcn*vaf+2),2),
+             svcf = ifelse(inferred_icn<4, tcn*vaf, tcn*vaf/(inferred_icn-2)))%>%
+      dplyr::select(sample, CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO,FORMAT,tumor,classification,pos2,vaf,tcn,inferred_icn,svcf)
+
+```
+
+Finally, all of the above functionality is wrapped within a function SVCFit()
+
+# Examples
+
+```{r, echo = FALSE, message=FALSE, fig.width=6, fig.height=3}
+single = SVCFit(vcf_path="inst/extdata/c40p50.0s22.bed.vcf",
+                tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
+  filter(svcf<1.1)
+
+multiple = SVCFit("inst/extdata/c50p50.0s18.bed.vcf",
+                tumor_only = TRUE, overlap = TRUE, simulation=FALSE)%>%
+  filter(svcf<1.1)
+
+ps=single %>%
+  ggplot()+
+  geom_density(aes(x=svcf))+
+  xlim(0,1.2)+
+  geom_vline(aes(xintercept=0.5))+
+  ggtitle("single-clone tumor sample")+ 
+  theme(plot.title = element_text(size = 11))
+
+pm=multiple %>%
+  ggplot()+
+  geom_density(aes(x=svcf))+
+  xlim(0,1.2)+
+  geom_vline(aes(xintercept=0.5))+
+  ggtitle("multiple-clone tumor sample")+ 
+  theme(plot.title = element_text(size = 11))
+
+grid.arrange(ps, pm, nrow = 1, ncol = 2)
+```
