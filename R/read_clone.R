@@ -15,17 +15,17 @@ read_clone <- function(fp){
   read <- function(path){
     clone <- paste0("clone",gsub(".*/\\w(\\d+).bed","\\1",path))
     tmp <- read.delim(path, header=FALSE)%>%
-      dplyr::mutate(id=.data$clone)
+      dplyr::mutate(id=clone)
     colnames(tmp) <- c("chr","pos1","pos2","sv","info","flank","id")
     return(tmp)
   }
 
   # process clone
-clone <- lapply(fp,function(x) read(x))%>%
-  do.call(rbind,.data)%>%
+clone <- lapply(fp,function(x) read(x))
+out = do.call(rbind, clone)%>%
   dplyr::group_by(.data$pos1) %>%
-  dplyr::mutate(n = n(),
-         id = ifelse(.data$n == 3, "clone3", .data$id))%>%
+  dplyr::mutate(num = n(),
+         id = ifelse(.data$num == 3, "clone3", .data$id))%>%
   dplyr::ungroup()%>%
   dplyr::group_by(.data$id, .data$pos1)%>%
   dplyr::distinct(.data$pos1,.keep_all = T)%>%
@@ -34,5 +34,5 @@ clone <- lapply(fp,function(x) read(x))%>%
   as.data.frame() %>%
   dplyr::mutate(iid = paste0(.data$chr,"_",.data$pos1))
 
-return(clone)
+return(out)
 }
