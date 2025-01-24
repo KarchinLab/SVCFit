@@ -8,8 +8,8 @@
 
 SVCFit is a fast computational tool developed to estimate the 
 structural variant cellular fraction (SVCF) of inversions, deletions and
-tandem duplications. The SVCF can be used to incorporate these structural 
-variants into a tumor evolutionary tree. 
+tandem duplications. The SVCF can be used to assign these structural variants
+to tumor clones and/or place them on a tumor evolutionary tree. 
 
 ## Installation
 
