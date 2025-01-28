@@ -4,14 +4,14 @@
 \alias{extract_info}
 \title{extract_info is used to get the information from vcf files to calculate structural variant cellular fraction}
 \usage{
-extract_info(path, tumor_only = FALSE, length_filter = 0)
+extract_info(path, tumor_only = FALSE, length_threshold = 0)
 }
 \arguments{
 \item{path}{an object of class "Character". This variable is the path to vcf files}
 
 \item{tumor_only}{an object of class "Boolean". This variable indicates whether the vcf files were created under tumor-only mode}
 
-\item{length_filter}{an object of class "integer". This variable set lowest threshold on the size of a structural variants}
+\item{length_threshold}{an object of class "integer". This variable set lowest threshold on the size of a structural variants}
 }
 \value{
 a dataframe with read information for each structural variant

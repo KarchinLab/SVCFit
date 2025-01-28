@@ -18,6 +18,6 @@ attach_clone <- function(dat, truth, tolerance=6){
     dplyr::mutate(clone_id = as.integer(which(abs(.data$POS-truth$pos1)<=tolerance)),
            clone_num = truth$id[which(abs(.data$POS-truth$pos1)<=tolerance)])%>%
     dplyr::ungroup()%>%
-    dplyr::select(-.data$type, -.data$clone_id)
+    dplyr::select(-type, -clone_id)
   return(out)
 }

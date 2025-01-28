@@ -2,7 +2,7 @@
 #'
 #' @param path an object of class "Character". This variable is the path to vcf files
 #' @param tumor_only an object of class "Boolean". This variable indicates whether the vcf files were created under tumor-only mode
-#' @param length_filter an object of class "integer". This variable set lowest threshold on the size of a structural variants
+#' @param length_threshold an object of class "integer". This variable set lowest threshold on the size of a structural variants
 #'
 #' @return a dataframe with read information for each structural variant
 #' @export
@@ -11,7 +11,7 @@
 #' @import dplyr
 #' @importFrom utils read.table
 #' @examples example
-extract_info <- function(path, tumor_only=FALSE, length_filter=0){
+extract_info <- function(path, tumor_only=FALSE, length_threshold=0){
   svt <- read.table(path, quote="\"")
   sample_id <- gsub(".*(c.*).vcf","\\1",path)
 
@@ -54,7 +54,7 @@ extract_info <- function(path, tumor_only=FALSE, length_filter=0){
              iid=paste0(.data$CHROM,"_",.data$POS))%>%
       dplyr::filter(.data$FILTER == "PASS",
                     .data$alt > 2,
-                    .data$length>length_filter)
+                    .data$length>length_threshold)
   }else{
   out <- svt %>%
     dplyr::mutate(chr2 = gsub(".*(chr.).*","\\1", .data$ALT),
@@ -85,7 +85,7 @@ extract_info <- function(path, tumor_only=FALSE, length_filter=0){
                   .data$alt > 2,
                   .data$ansr == 0,
                   .data$anpr == 0,
-                  .data$length>length_filter)
+                  .data$length>length_threshold)
   }
   return(out)
 }

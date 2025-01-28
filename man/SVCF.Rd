@@ -6,20 +6,18 @@
 \usage{
 SVCF(
   vcf_path,
-  simulation = FALSE,
   overlap = TRUE,
   tolerance = 6,
   window = 100,
   multiple = FALSE,
   tumor_only = FALSE,
   truth_path = NULL,
-  length_filter = 0
+  mode = "heritage",
+  length_threshold = 0
 )
 }
 \arguments{
 \item{vcf_path}{an object of class "Character". This variable is the path to vcf files}
-
-\item{simulation}{an object of class "Boolean". This variable indicates if the vcf files are from a simulation}
 
 \item{overlap}{an object of class "Boolean". This variable indicates if a structural variants should be filtered based on coordinates overlap}
 
@@ -31,9 +29,11 @@ SVCF(
 
 \item{tumor_only}{an object of class "Boolean". This variable indicates whether the vcf files were created under tumor-only mode}
 
-\item{truth_path}{an object of class "Character". This variable is the path to the ground truth designed for simulation}
+\item{truth_path}{an onject of class "Character". This variable is a path to bed files storing true structural variants information with clonal assignment. Each bed file should be named like "c1.bed, c2.bed" etc. Structural variants should be saved in a seperate bed file if they belong to different (sub)clone.}
 
-\item{length_filter}{an object of class "integer". This variable set lowest threshold on the size of a structural variants}
+\item{mode}{an onject of class "Character". This variable describe how true clonal information is saved. In "heritage" mode, bed files for all children clone contains all ancestral structural variants of their parents. In "separate" mode, children clones don't contain any ancestral structural variants.}
+
+\item{length_threshold}{an object of class "integer". This variable set lowest threshold on the size of a structural variants}
 }
 \value{
 an annotated vcf file

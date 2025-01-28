@@ -2,6 +2,7 @@
 
 export(SVCF)
 export(attach_clone)
+export(calculate_svcf)
 export(check_overlap)
 export(extract_info)
 export(read_clone)
