@@ -190,8 +190,7 @@ root/
 Following the tree on the left, the files under two modes should look
 like:
 
-<img src="images/Screenshot%202025-01-28%20at%2014.58.04.png"
-width="487" />
+<img src="inst/extdata/tree.png" width="487" />
 
 4.2 attach clonal assignment to structural variants
 
