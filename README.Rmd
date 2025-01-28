@@ -89,7 +89,7 @@ This function has three inputs:
 For example, the following command will generate an annotated VCF file with all structural variants with length\>0
 
 ``` r
-vcf=extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=0)
+vcf <- extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=0)
 ```
 
 The output from *extract_info()* will be in annotated VCF format.
@@ -111,7 +111,7 @@ This function has 4 inputs:
 Note: When *dat* and *compare* are the same dataframe, this function will merge overlapping structural variants and recompute the reads supporting the new structural variant by taking the average of the overlapping structural variants. When *compare* is the ground truth from a simulation, this function will also remove false positive structural variants that were not included in the simulation.
 
 ``` r
-checked=check_overlap(vcf, vcf)
+checked <- check_overlap(vcf, vcf)
 ```
 
 ### 3. Calculate SVCF for structural variants
@@ -131,7 +131,7 @@ The output is an annotated VCF with additional fields for VAF, Rbar, inferred IC
 4.1 read clonal assignment
 
 ``` r
-truth = read_clone(truth_path, mode="heritage")
+truth <- read_clone(truth_path, mode="heritage")
 ```
 
 This function has 2 inputs:
@@ -153,7 +153,7 @@ root/
 
 Following the tree on the left, the files under two modes should look like:
 
-![](images/Screenshot 2025-01-28 at 14.58.04.png){width="487"}
+![](images/Screenshot%202025-01-28%20at%2014.58.04.png){width="487"}
 
 4.2 attach clonal assignment to structural variants
 

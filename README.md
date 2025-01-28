@@ -102,7 +102,7 @@ For example, the following command will generate an annotated VCF file
 with all structural variants with length\>0
 
 ``` r
-vcf=extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=0)
+vcf <- extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=0)
 ```
 
 The output from *extract_info()* will be in annotated VCF format.
@@ -134,7 +134,7 @@ a simulation, this function will also remove false positive structural
 variants that were not included in the simulation.
 
 ``` r
-checked=check_overlap(vcf, vcf)
+checked <- check_overlap(vcf, vcf)
 ```
 
 ### 3. Calculate SVCF for structural variants
@@ -159,7 +159,7 @@ variants to tumor clones, when the assignment is known.
 4.1 read clonal assignment
 
 ``` r
-truth = read_clone(truth_path, mode="heritage")
+truth <- read_clone(truth_path, mode="heritage")
 ```
 
 This function has 2 inputs:
