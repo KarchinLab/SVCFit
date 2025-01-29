@@ -7,20 +7,21 @@
 check_overlap(dat, compare, tolerance = 6, window = 1000)
 }
 \arguments{
-\item{dat}{an object of class "dataframe". This object stores the first set of structural variants to be compared}
+\item{dat}{an object of class "dataframe". This object stores the first set of
+structural variants to be compared}
 
-\item{compare}{an object of class "dataframe". This object stores the second set of structural variants for comparison}
+\item{compare}{an object of class "dataframe". This object stores the second
+set of structural variants for comparison}
 
-\item{tolerance}{an object of class "integer". This variable sets the threshold coordinates overlaps for two SVs}
+\item{tolerance}{an object of class "integer". This variable sets the threshold
+coordinates overlaps for two SVs}
 
-\item{window}{an object of class "Integer". This variable sets how many SVs should be compared at the same time}
+\item{window}{an object of class "Integer". This variable sets how many SVs
+should be compared at the same time}
 }
 \value{
 an filtered annotated vcf file
 }
 \description{
 check_overlap compare two sets of coordinates of structural variants and merge the structural variants with coordinates within tolerance.
-}
-\examples{
-example
 }

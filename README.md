@@ -6,33 +6,38 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-SVCFit is a fast computational tool developed to estimate the structural
-variant cellular fraction (SVCF) of inversions, deletions and tandem
-duplications. The SVCF can be used to assign these structural variants
-to tumor clones and/or place them on a tumor evolutionary tree.
+SVCFit is a fast and scalable computational tool developed to estimate
+the structural variant cellular fraction (SVCF) of inversions, deletions
+and tandem duplications without using tumor sample purity. The SVCF can
+be used to assign these structural variants to tumor clones and/or place
+them on a tumor evolutionary tree.
 
 ## Installation
 
-You can install the development version of SVCFit from
-[GitHub](https://github.com/) with:
+You can install SVCFit from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("pak")
 pak::pak("KarchinLab/SVCFit")
 ```
 
+## Dependency
+
+``` r
+# install.packages("tidyverse")
+library(tidyverse)
+```
+
 ## Input your structural variants into SVCFit
 
-The input should be in Variant Call Format (VCF) as output by the Manta
-package (cite). If you have a VCF output from a structural variant
+The input should be in Variant Call Format (VCF) as outputed by the
+Manta package \[1\]. If you have a VCF output from a structural variant
 caller other than Manta, you can modify it to match Manta format.
 
-<!-- ```{r,echo = FALSE}  example_vcf=data.frame(CHROM=c("chr1","chr2"), POS=c(1000, 5000), ID=c("MantaINV:6:0:1:0:0:0","MantaDEL:7:0:1:0:0:0"), REF=c("T","G"), ALT=c("<INV>","<DEL>"), QUAL=c(".","."), FILTER=c("PASS","PASS"),INFO=c("END=1500;SVTYPE=INV;SVLEN=500","END=5300;SVTYPE=DEL;SVLEN=300"), FORMAT=c("PR:SR","PR"),tumor=c("20,30:19,27", "15,30")) # example_vcf #` -->
-<!-- ``` -->
-
-    CHROM   POS   ID    REF   ALT   QUAL    FILTER    INFO    FORMAT    tumor
-    chr1    1000    MantaINV:6:0:1:0:0:0    T   <INV>   .   PASS    END=1500;SVTYPE=INV;SVLEN=500   PR:SR   20,30:19,27
-    chr2    5000    MantaDEL:7:0:1:0:0:0    G   <DEL>   .   PASS    END=5300;SVTYPE=DEL;SVLEN=300   PR   15,30
+| CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
+|----|----|----|----|----|----|----|----|----|----|
+| chr1 | 1000 | MantaINV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 |
+| chr2 | 5000 | MantaDEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 |
 
 ## General workflow
 
@@ -43,88 +48,66 @@ functionality described below. All functions can also be run separately.
 SVCF(vcf_path="~/path/to/file.vcf", tumor_only=FALSE, length_threshold=0, overlap=TRUE, tolerance=6, window=100, multiple=FALSE, truth_path=NULL, mode="heritage")
 ```
 
-*SVCF()* has 9 inputs:
+*SVCF()* requires two arguments and includes several optional
+parameters:
 
-1.  vcf_path: Character variable of path to vcf files.
+### Required Arguments
 
-2.  tumor_only: Boolean variable of whether the VCF is created without
-    matched normal sample.
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `vcf_path` | Character | `NULL` | Path to VCF files. |
+| `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
 
-3.  length_threshold: Numeric variable of the structural variant length
-    filter threshold.
+### Optional Arguments
 
-4.  overlap: Boolean variable of whether a structural variants should be
-    filtered based on coordinates overlap.
-
-5.  tolerance: Integer variable setting the threshold for the maximum
-    distance between structural variants to be considered as a single
-    structural variant.
-
-6.  window: Integer variable setting the threshold for how many
-    structural variants should be checked for whether they overlap to
-    form a single structural variant.
-
-7.  multiple: Boolean variable of whether the sample has multiple clone
-    (only used for simulated data when giving clone assignment to
-    structural variants).
-
-8.  truth_path: Character variable of a path to bed files storing true
-    structural variants information with clonal assignment. Each bed
-    file should be named like “c1.bed, c2.bed” etc. Structural variants
-    should be saved in a seperate bed file if they belong to different
-    (sub)clone.
-
-9.  mode: Character variable describing how true clonal information is
-    saved. In “heritage” mode, bed files for all children clone contains
-    all ancestral structural variants of their parents. In “separate”
-    mode, children clones don’t contain any ancestral structural
-    variants.
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `length_threshold` | Integer | `0` | Structural variant length filter threshold. |
+| `overlap` | Boolean | `FALSE` | Whether structural variants should be filtered based on coordinate overlap. |
+| `tolerance` | Integer | `6` | Maximum distance between structural variants to be considered as a single variant. |
+| `window` | Integer | `1000` | Number of structural variants checked for overlap to form a single variant. |
+| `multiple` | Boolean | `FALSE` | Whether the sample has multiple clones (used in simulated data for assigning clones). |
+| `truth_path` | Character | `NULL` | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
+| `mode` | Character | `"heritage"` | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
 
 The steps executed by *SVCF()* are:
 
-### 1. Extract information from input VCF (extract_info)
+### 1. Extract information from input VCF (*extract_info()*)
 
 This step assigns column names and extracts key information for
 downstream calculation and filtering. Key information includes reads,
 structural variant length, and structural variant coordinates.
 
-This function has three inputs:
+This function has 3 arguments:
 
-1.  vcf_path: Character variable of path to vcf files.
-
-2.  tumor_only: Boolean variable of whether the VCF is created without
-    matched normal sample.
-
-3.  length_threshold: Numeric variable of the structural variant length
-    filter threshold.
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `vcf_path` | Character | `NULL` | Path to VCF files. |
+| `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
+| `length_threshold` | Numeric | `0` | Structural variant length filter threshold. |
 
 For example, the following command will generate an annotated VCF file
-with all structural variants with length\>0
+with all structural variants with length\>50
 
 ``` r
-vcf <- extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=0)
+vcf <- extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=50)
 ```
 
 The output from *extract_info()* will be in annotated VCF format.
 
-### 2. Check overlapping structural variants
+### 2. Check overlapping structural variants (*check_overlap()*)
 
 This step checks if structural variants are close enough to be
 considered as a single structural variant.
 
-This function has 4 inputs:
+This function has 4 arguments:
 
-1.  dat: a dataframe to be compared.
-
-2.  compare: a dataframe used as reference for comparison.
-
-3.  tolerance: Integer variable setting the threshold for the maximum
-    distance between structural variants to be considered as a single
-    structural variant.
-
-4.  window: Integer variable setting the threshold for how many
-    structural variants should be checked for whether they overlap to
-    form a single structural variant.
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `dat` | DataFrame | N/A | A dataframe to be compared. |
+| `compare` | DataFrame | N/A | A dataframe used as a reference for comparison. |
+| `tolerance` | Integer | `6` | Threshold for the maximum distance between structural variants to be considered as a single variant. |
+| `window` | Integer | `1000` | Number of structural variants checked for overlap to form a single variant. |
 
 Note: When *dat* and *compare* are the same dataframe, this function
 will merge overlapping structural variants and recompute the reads
@@ -134,10 +117,10 @@ a simulation, this function will also remove false positive structural
 variants that were not included in the simulation.
 
 ``` r
-checked <- check_overlap(vcf, vcf)
+checked <- check_overlap(dat, compare)
 ```
 
-### 3. Calculate SVCF for structural variants
+### 3. Calculate SVCF for structural variants (*calculate_svcf()*)
 
 This step calculates the structural variant cellular fraction (SVCF) for
 all structural variants in the input VCF file.
@@ -146,9 +129,9 @@ all structural variants in the input VCF file.
 output <- calculate_svcf(checked, tumor_only=FALSE)
 ```
 
-The output is an annotated VCF with additional fields for VAF, Rbar,
-inferred ICN and SVCF. VAF=variant allele frequency; Rbar=average break
-interval count in a sample; inferred ICN = inferred integer copy number;
+The output is an annotated VCF with additional fields for VAF, Rbar, r
+and SVCF. VAF=variant allele frequency; Rbar=average break interval
+count in a sample; r = inferred integer copy number of break intervals;
 SVCF=structural variant cellular fraction.
 
 ### 4. Additional functions
@@ -162,19 +145,12 @@ variants to tumor clones, when the assignment is known.
 truth <- read_clone(truth_path, mode="heritage")
 ```
 
-This function has 2 inputs:
+This function has 2 arguments:
 
-1.  truth_path: Character variable of a path to bed files storing true
-    structural variants information with clonal assignment. Each bed
-    file should be named like “c1.bed, c2.bed” etc. Structural variants
-    should be saved in a seperate bed file if they belong to different
-    (sub)clone.
-
-2.  mode: Character variable describing how true clonal information is
-    saved. In “heritage” mode, bed files for all children clone contains
-    all ancestral structural variants of their parents. In “separate”
-    mode, children clones don’t contain any ancestral structural
-    variants.
+| Argument | Type | Description |
+|----|----|----|
+| `truth_path` | Character | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
+| `mode` | Character | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
 
 The file path should follow this structure:
 
@@ -198,7 +174,7 @@ like:
 attched <- attach_clone(dat, truth, tolerance = 6)
 ```
 
-This function has 2 inputs:
+This function has 2 arguments:
 
 1.  dat: a dataframe storing structural variants for clone assignment.
 
@@ -215,3 +191,16 @@ This function has 2 inputs:
 library(SVCFit)
 vignette("SVCFit_guide", package = "SVCFit")
 ```
+
+## Data availability
+
+This repository contains source code used to produce figures for SVCFit
+publication under Paper folder. All data can be downloaded from
+[Mendeley](https://data.mendeley.com) to reproduce figures by searching
+“SVCFit benchmark dataset”.
+
+## Reference
+
+1.  Chen, X. et al. (2016) Manta: rapid detection of structural variants
+    and indels for germline and cancer sequencing applications.
+    Bioinformatics, 32, 1220-1222. <doi:10.1093/bioinformatics/btv710>

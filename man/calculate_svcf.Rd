@@ -7,9 +7,11 @@
 calculate_svcf(input, tumor_only = FALSE)
 }
 \arguments{
-\item{input}{an object of class "dataframe". This object stores the set of information for structural variants used to calculate SVCF}
+\item{input}{an object of class "dataframe". This object stores the set of
+information for structural variants used to calculate SVCF}
 
-\item{tumor_only}{an object of class "Boolean". This variable indicates whether the vcf files were created under tumor-only mode}
+\item{tumor_only}{an object of class "Boolean". This variable indicates whether
+the vcf files were created under tumor-only mode}
 }
 \value{
 an annotated vcf file

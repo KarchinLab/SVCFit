@@ -22,12 +22,6 @@ library(ggplot2)
 library(gridExtra)
 ```
 
-# Introductin to SVCFit
-
-SVCFit is a fast computational tool developed to estimate the structural variant cellular fraction (SVCF) of inversions, deletions and tandem duplications. The SVCF can be used to assign these structural variants to tumor clones and/or place them on a tumor evolutionary tree. Below describes how to use SVCFit with simulated data. 
-
-
-
 # Input to SVCFit
 
 The input should be in Variant Call Format (VCF) as output by the Manta package (cite). If you have a VCF output from a structural variant caller other than Manta, you can modify it to match Manta format.
@@ -37,38 +31,37 @@ file_path <- system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
 example_vcf <- read.table(file_path, quote="\"")
 colnames(example_vcf)=c("CHROM",  "POS",     "ID",      "REF",     "ALT",     "QUAL",    "FILTER",  "INFO",    "FORMAT", "tumor")
 #system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
-str(example_vcf)
 ```
-
+```{r, echo=TRUE}
+head(as_tibble(example_vcf))
+```
 
 # General workflow
+
 ## 1. Extract information from original VCF (extract_info)
 
-This step assigns column names and extracts key information for downstream calculation and filtering. Key information includes reads, structural variant length, and structural variant coordinates.
+This step assigns column names and extracts key information for downstream calculation and filtering. Key information includes reads, structural variant length, and structural variant coordinates. And the input looks like:
 
-```{r,echo = FALSE}
+```{r, echo=TRUE}
 vcf=extract_info(file_path, tumor_only=TRUE, length_threshold=0)
-str(vcf)
+head(as_tibble(vcf))
 ```
 
-After this step, the vcf now has `r nrow(vcf)` structural variants. Below shows the lost one structural variants because that the FILTER column is not PASS.
+During this step, Extract_info would also filter out structural variants that didn't pass the filter criteria specified by structural variant caller. Below is an example where the FILTER column is not "PASS". 
 
 ```{r, echo = FALSE}
 print(example_vcf[35,1:7])
 ```
 
-
 ## 2. Check overlapping structural variants
 
 This step checks if structural variants are close enough to be considered as a single structural variant.
 
-```{r, echo = FALSE}
+```{r, echo=TRUE}
 checked=check_overlap(vcf, vcf)
-str(checked)
 ```
 
-After checking overlaps, the vcf now has `r nrow(checked)` structural variants.
-
+During this setp, the number of structural variants went from `r nrow(vcf)` to `r nrow(checked)`.
 
 ## 3. Calculate SVCF for structural variants
 
@@ -78,20 +71,19 @@ This step calculates the structural variant cellular fraction (SVCF) for all str
 output <- calculate_svcf(checked, tumor_only=TRUE)
 ```
 
-Finally, all of the above functionality is wrapped within a function SVCF()
+Finally, all of the above functionality is wrapped within a function SVCF(). Please refer to [our Github page](https://github.com/KarchinLab/SVCFit) for argument details. 
 
-```{r}
+```{r, echo=TRUE}
 output = SVCF(file_path, overlap = TRUE, tumor_only = TRUE, length_threshold=0)
 ```
 
 # Examples
-
-```{r, echo = FALSE, message=FALSE, fig.width=6, fig.height=3}
+Here, we show an example of SVCFit processing simulated single-clone and multiple_clone samples.
+```{r, echo = TRUE, message=FALSE, fig.width=6, fig.height=3}
 s_path <- system.file("extdata", "c40p50.0s22.bed.vcf", package = "SVCFit")
 m_path <- system.file("extdata", "c50p50.0s18.bed.vcf", package = "SVCFit")
 single = SVCF(s_path,tumor_only = TRUE, overlap = TRUE)%>%
   filter(svcf<1.1)
-
 multiple = SVCF(m_path,tumor_only = TRUE, overlap = TRUE)%>%
   filter(svcf<1.1)
 

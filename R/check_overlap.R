@@ -1,16 +1,18 @@
 #' check_overlap compare two sets of coordinates of structural variants and merge the structural variants with coordinates within tolerance.
 #'
-#' @param dat an object of class "dataframe". This object stores the first set of structural variants to be compared
-#' @param compare an object of class "dataframe". This object stores the second set of structural variants for comparison
-#' @param tolerance an object of class "integer". This variable sets the threshold coordinates overlaps for two SVs
-#' @param window an object of class "Integer". This variable sets how many SVs should be compared at the same time
+#' @param dat an object of class "dataframe". This object stores the first set of
+#' structural variants to be compared
+#' @param compare an object of class "dataframe". This object stores the second
+#' set of structural variants for comparison
+#' @param tolerance an object of class "integer". This variable sets the threshold
+#' coordinates overlaps for two SVs
+#' @param window an object of class "Integer". This variable sets how many SVs
+#' should be compared at the same time
 #'
 #' @return an filtered annotated vcf file
 #' @export
 #' @import tidyverse
-#' @import magrittr
-#' @import dplyr
-#' @examples example
+
 check_overlap <- function(dat, compare, tolerance=6, window=1000){
 
   result = list()
@@ -40,16 +42,17 @@ check_overlap <- function(dat, compare, tolerance=6, window=1000){
   }
   rr = as.data.frame(do.call(rbind,result))
   out <- dat %>%
-    dplyr::mutate(row=as.integer(row_number()))%>%
-    dplyr::filter(.data$row %in% rr$row)%>% # only kept ones that overlaps: self-compare will retain everything, truth-compare will keep overlap
-    dplyr::left_join(rr)%>%
-    dplyr::group_by(col)%>%
+    mutate(row=as.integer(row_number()))%>%
+    # only kept ones that overlaps: self-compare will retain everything, truth-compare will keep overlap
+    filter(row %in% rr$row)%>%
+    left_join(rr)%>%
+    group_by(col)%>%
     ## use mean for alt and ref
-    dplyr::mutate(alt=round(mean(.data$alt)),
-           ref=round(mean(.data$ref)))%>%
-    dplyr::ungroup()%>%
-    dplyr::distinct(.data$iid, .keep_all = T)%>%
-    dplyr::select(-c("col", "row"))
+    mutate(alt=round(mean(alt)),
+           ref=round(mean(ref)))%>%
+    ungroup()%>%
+    distinct(iid, .keep_all = T)%>%
+    select(-c("col", "row"))
 
   return(out)
 }
