@@ -1,0 +1,311 @@
+---
+title: "Figure_1"
+author: "Yunzhou Liu"
+date: "2024-12-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(SVCFit)
+library(tidyverse)
+library(ggpubr) #for stat
+library(rstatix) #for stat
+library(ggsignif) #for plot significance
+```
+
+## load data for F1AB
+```{r}
+## all data can be found from mendeley.com, following the instructions from Github
+## all data path used here should be in your/pathway/Figure_1/...
+
+ground_truth="~/Downloads/Figure_1/input/"
+p <- list.files(ground_truth, pattern = "^c.*.bed", full.names = T)
+truth = read_clone(p, mode="heritage")
+
+## get SVCFit data
+svmp <- list.files("~/Downloads/Figure_1/multiple_vcfs",pattern = ".*.vcf", full.names = T)
+svsp <- list.files("~/Downloads/Figure_1/single_vcfs",pattern = ".*.vcf", full.names = T)
+
+svs=lapply(svsp, function(x) SVCF(x, overlap=TRUE, truth_path = p))%>%
+  do.call(rbind,.)%>%
+  mutate(method="SVCFit")
+
+svm=lapply(svmp, function(x) SVCF(x, overlap=TRUE, multiple=TRUE, truth_path = p))%>%
+  do.call(rbind,.)%>%
+  mutate(method="SVCFit")
+
+## get SVclone data
+### create function to gather SVclone output
+get_svclone <- function(rdata_path, sv_dat, tolerance=6){
+  load(rdata_path)
+  s=gsub(".*(c.*)_cc.*","\\1",rdata_path)
+  p=as.numeric(gsub("c\\d+p","",s))/100
+  subset <- sv_dat %>% filter(sample==s)
+  x=doubleBreakPtsRes[[3]]%>%
+  mutate(first=gsub("^(.*)_.*","\\1",mutation_id),
+         second=gsub("^.*_(.*)","\\1",mutation_id),
+         CHROM=gsub("(.*):\\d+.*","\\1",first),
+         POS=as.numeric(gsub(".*:(\\d+).*","\\1",first)),
+         chr2=gsub("(.*):\\d+.*","\\1",second),
+         pos2=as.numeric(gsub(".*:(\\d+).*","\\1",second)),
+         ## here, try to select the same mutation present in SVCFit
+         type = any(which(abs(POS-subset$POS)<tolerance & abs(pos2-subset$pos2)<tolerance)),
+         row=ifelse(type == TRUE,which(abs(POS-subset$POS)<tolerance & abs(pos2-subset$pos2)<tolerance),0),
+         classification=ifelse(row==0,"None",subset$classification[row]),
+         svcf=(ccube_ccf1+ccube_ccf2)/2*p,
+         sample=s)%>%
+    filter(classification!="None")%>%   ## here, force the svclone SV to match SVCFit
+    select(sample, classification, svcf, CHROM, POS, pos2)
+}
+
+svcmp <- list.files("~/Downloads/Figure_1/svc_m_rdata/", full.names = T)
+svcsp <- list.files("~/Downloads/Figure_1/svc_s_rdata/", full.names = T)
+
+svcs <- lapply(svcsp, function(x) get_svclone(x,svs))%>%
+  do.call(rbind,.)%>%
+  mutate(method = "SVclone")
+
+svcm <- lapply(svcmp, function(x) get_svclone(x,svm))%>%
+  do.call(rbind,.)%>%
+  mutate(method = "SVclone")
+svcm=attach_clone(svcm,truth)
+```
+
+## process data for F1AB
+```{r pressure, echo=FALSE}
+## merged SVCFit and SVclone
+combined_svs <- svs %>%
+  select(sample, classification, svcf, CHROM, POS, pos2, method)%>%
+  rbind(svcs) %>%
+  mutate(true_svcf = as.integer(gsub(".*p","",sample))/100,
+         deviation=svcf-true_svcf)
+
+
+combined_svm <- svm %>%
+  select(sample, classification, svcf, CHROM, POS, pos2, clone_num, method)%>%
+  rbind(svcm)%>%
+  mutate(clone_por = case_when(clone_num == "clone1" ~ 0.6, ##mannually assigned clone purity
+                               clone_num == "clone2" ~ 0.3,
+                               clone_num == "clone3" ~ 1),
+         true_svcf = as.integer(gsub(".*p","",sample))/100*clone_por,
+         deviation=svcf-true_svcf)
+
+comb_stat=combined_svs %>%
+  mutate(clone_num="single",
+         clone_por=100)%>%
+  rbind(combined_svm)%>%
+  mutate(purity = paste0(gsub(".*p","",sample), "% purity"),
+         clone_prop = case_when(clone_num == "clone1" ~ "Child 1 (60% tumor cell)",
+                                clone_num == "clone2" ~ "Child 2 (30% tumor cell)",
+                                clone_num == "clone3" ~ "Parent (100% tumor cell)",
+                                clone_num == "single" ~ "Single clone"))%>%
+  group_by(purity,clone_prop, classification)%>%
+  wilcox_test(deviation~method)%>%
+  add_significance()%>%
+  add_xy_position(x = "classification")
+```
+
+
+## plot F1AB
+```{r}
+# Figure 1A, 1B
+
+p_levels <- c('100% purity', '80% purity', '60% purity', '40% purity', '20% purity')
+c_levels <- c("Single clone","Parent (100% tumor cell)","Child 1 (60% tumor cell)","Child 2 (30% tumor cell)")
+
+
+f1a=combined_svs%>%
+  mutate(clone_num="single",
+         clone_por=100)%>%
+  rbind(combined_svm)%>%
+  mutate(purity = paste0(gsub(".*p","",sample), "% purity"),
+         clone_prop = case_when(clone_num == "clone1" ~ "Child 1 (60% tumor cell)",
+                                clone_num == "clone2" ~ "Child 2 (30% tumor cell)",
+                                clone_num == "clone3" ~ "Parent (100% tumor cell)",
+                                clone_num == "single" ~ "Single clone"))%>%
+  ggplot(aes(x=classification, y=deviation))+
+  geom_boxplot(aes(color = method, fill=method),alpha = 0.5)+
+  facet_grid(factor(purity, level = p_levels)~ factor(clone_prop, level = c_levels),scale = "free")+
+  stat_pvalue_manual(comb_stat, hide.ns = TRUE)+
+  ylab("Error")+
+  xlab("Structural variant types")+
+  theme_bw()+
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+        legend.position = "none",
+        strip.text = element_text(size = 7))
+```
+
+
+## load data for F1C
+```{r}
+path= "~/Downloads/Figure_1/"
+tp <- list.files(paste0(path, "in_silico_true"), full.names = T)
+mp <- list.files(paste0(path, "in_silico_vcfs"), full.names = T)
+
+## filter applied: pass, no support reads from normal sample, at least 2 support reads
+## to inplement: sv size > insert size (317)
+## within 6bp is considered same event
+
+########## load ground truth of the mixture #########
+true <- lapply(tp, function(x) SVCF(x,overlap=TRUE, tumor_only = FALSE, length_threshold = 317))%>%
+  do.call(rbind,.)%>%
+  mutate(sample=gsub("co_true/","",sample),
+         id=paste0(CHROM,"_",POS,"_",pos2))%>%
+  #filter(classification != "BND")%>%
+  group_by(id)%>%
+  mutate(n=n(),
+         svcf=mean(svcf))%>%
+  ungroup() %>%
+  mutate(clone = ifelse(n == 2, "clonal", sample))%>%
+  distinct(id, .keep_all = T)%>%
+  arrange(CHROM, POS)
+
+## below assign mixture proportion based on even or odd chromosome
+## detailed information can be found in SVclone paper
+t45 = true %>%
+  filter(!(grepl('hs', CHROM) | grepl("GL", CHROM)))%>%
+  mutate(CHROM = ifelse(CHROM == "X", 23,
+                       ifelse(CHROM == "Y", 24, CHROM)),
+         CHROM = as.numeric(CHROM),
+         t4 = ifelse(sample == "bM" & CHROM%%2 == 0, 0.6,
+                     ifelse(sample == "bM" & CHROM%%2 == 1, 0.2,
+                            ifelse(sample == "gM" & CHROM%%2 == 1, 0.6, 10))),
+         t5 = ifelse(sample == "bM" & CHROM%%2 == 0, 0.6,
+                     ifelse(sample == "bM" & CHROM%%2 == 1, 0.2,
+                            ifelse(sample == "gM" & CHROM%%2 == 1, 0.6,
+                                   ifelse(sample == "gM" & CHROM%%2 == 0, 0.8, 10)))),
+         t4 = ifelse(clone == "clonal", 1, t4),
+         t5 = ifelse(clone == "clonal", 1, t5))
+
+
+############# load svcfit and svclone estimates ###########
+mix <- lapply(mp, function(x) SVCF(x,overlap=TRUE, tumor_only = FALSE, length_threshold = 317))%>%
+  do.call(rbind,.)%>%
+  mutate(sample=gsub("cfs/","",sample))
+
+mix3 <- mix %>%
+  filter(!sample %in% c("4m","5m"))%>%
+  rowwise()%>%
+  mutate(bmr = as.integer(gsub("3m(\\d)(\\d)", "\\1", sample))/10,
+         gmr = as.integer(gsub("3m(\\d)(\\d)", "\\2", sample))/10,
+         purity = 0.49*bmr+0.46*gmr,
+         true_row = ifelse(any(abs(POS-true$POS)<6),which(abs(POS-true$POS)<6), NA),
+         clone= true$clone[true_row],
+         ccf = ifelse(clone == "bM", bmr,
+                      ifelse(clone == "gM", gmr, 1)),
+         my_ccf = svcf/purity,
+         my_ccf = ifelse(my_ccf > 1, 1, my_ccf),
+         error = ccf-my_ccf)%>%
+  ungroup()%>%
+  distinct(ID, .keep_all = T)%>%
+  filter(!is.na(clone))%>%
+  select(sample, ccf, svcf, my_ccf, error, clone)
+
+mix45 <- mix %>%
+  filter(sample %in% c("4m","5m"))%>%
+  rowwise()%>%
+  mutate(true_row = ifelse(any(abs(POS-true$POS)<6),which(abs(POS-true$POS)<6), NA),
+         clone= true$clone[true_row],
+         ccf = ifelse(sample == "4m", t45$t4[true_row], t45$t5[true_row]),
+         purity = 0.475,
+         my_ccf = svcf/purity,
+         my_ccf = ifelse(my_ccf > 1, 1, my_ccf),
+         error = ccf-my_ccf)%>%
+  ungroup()%>%
+  distinct(ID, .keep_all = T)%>%
+  filter(!is.na(true_row))%>%
+  select(sample, ccf, svcf, my_ccf, error, clone)
+
+
+#########merging two data for plotting############
+final_dat = rbind(mix3, mix45) %>%
+  mutate(sample=case_when(
+    sample == "3m19" ~ "3clus 10-90",
+    sample == "3m28" ~ "3clus 20-80",
+    sample == "3m37" ~ "3clus 30-70",
+    sample == "3m46" ~ "3clus 40-60",
+    sample == "3m55" ~ "3clus 50-50",
+    sample == "3m64" ~ "3clus 60-40",
+    sample == "3m73" ~ "3clus 70-30",
+    sample == "3m82" ~ "3clus 80-20",
+    sample == "3m91" ~ "3clus 90-10",
+    sample == "4m" ~ "4clus",
+    sample == "5m" ~ "5clus"))
+svclone <- c(0.11, 0.11, 0.105, 0.118, 0.12, 0.122, 0.108, 0.124, 0.12, 0.09, 0.105)-0.015
+```
+
+# F1C
+```{r}
+error_summ= final_dat %>%
+  group_by(sample)%>%
+  summarise(SVCFit = abs(mean(error)))%>%
+  mutate(SVclone = svclone)%>%
+  gather(key = method, value = error, 2:3)%>%
+  ungroup()%>%
+  group_by(method)%>%
+  summarize(sum_err=sum(error))
+
+F1C=final_dat %>%
+  group_by(sample)%>%
+  summarise(SVCFit = abs(mean(error)))%>%
+  mutate(SVclone = svclone)%>%
+  gather(key = method, value = error, 2:3)%>%
+  ungroup()%>%
+  ggplot()+
+  geom_point(aes(x=sample, y = error, color=method))+
+  geom_line(aes(x=sample, y = error, group = method, color= method))+
+  scale_y_continuous(limits = c(-0.1, 0.2))+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        legend.title = element_blank(),
+        legend.position = "none")+
+  guides(color = guide_legend(override.aes = list(shape = 15, size = 6)))+
+  ylab("Mean error")+
+  xlab("")
+```
+
+
+## F1D
+```{r}
+svclone_in <- read.delim("~/Downloads/Figure_1/svclone_time.txt", header=FALSE)
+colnames(svclone_in) = c("sample","start","end")
+
+svc = svclone_in %>%
+  filter(end !="")%>%
+  mutate(num_sv=as.integer(gsub("speed_(.*)","\\1",sample)),
+         start = gsub("EST ","",start),
+         start = gsub(" (.*) ","\\1", start),
+         end = gsub("EST","",end),
+         end = gsub(" (.*) ","\\1", end),
+         start = as.POSIXct(start, format = "%a %b %d %I:%M:%S %p %Y"),
+         end = as.POSIXct(end, format = "%a %b %d %I:%M:%S %p %Y"),
+         time = as.numeric(difftime(end, start, units = "secs")),
+         method = "svclone")%>%
+  arrange(num_sv)
+
+
+svcfit_in <- read.delim("~/Downloads/Figure_1/svcfit_time.txt", header=FALSE)
+colnames(svcfit_in) = c("sample","start","end")
+svcf = svcfit_in %>%
+  mutate(num_sv=as.integer(gsub("speed_(.*).vcf","\\1",sample)),
+         start = as.POSIXct(start, format="%a %b %d %H:%M:%S %Y",units = "secs"),
+         end = as.POSIXct(end, format="%a %b %d %H:%M:%S %Y",units = "secs"),
+         time = as.integer(end - start),
+         method = "svcfit") %>%
+  filter(num_sv %in% svc$num_sv)%>%
+  arrange(num_sv)
+
+
+p=rbind(svc, svcf)%>%
+  ggplot(aes(x=num_sv, y = time, color = method, group=method))+
+  geom_point()+
+  geom_smooth(method = "glm", aes(color=method),show.legend = FALSE)+
+  scale_y_log10()+
+  ylab("time (sec)")+
+  xlab("number of structural variants")+
+  theme_bw()+
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+        legend.title = element_blank(),
+        legend.position = "none")+
+  guides(color = guide_legend(override.aes = list(shape = 15, size = 6)))
+```

@@ -1,0 +1,100 @@
+---
+title: "Sup Fig"
+author: "Yunzhou Liu"
+date: "2025-01-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SVCFit)
+library(tidyverse)
+library(ggplot2)
+```
+
+## sequencing depth
+```{r}
+## all data can be found from mendeley.com, following the instructions from Github
+## all data path used here should be in your/pathway/Figure_S
+
+hack <- read.delim("~/Downloads/Figure_S/HACk.random.bed", header=FALSE)
+colnames(hack) <- c("chr","left","right","sv","info","flank")
+base <- hack %>%
+  mutate(id=paste0(chr,"_",left,"_",sv))%>%
+  select(chr, left, right, id)%>%
+  gather(key="type", value="loc", 2:3)
+
+## expand the locations 2bp to the left and right
+## used later to join 
+tmp <- lapply(-2:2, function(x) base %>% mutate(loc=loc+x)) %>%
+  do.call(rbind,.)
+
+vfp <- list.files("~/Downloads/Figure_S/depth/", full.names = T)
+
+read_dep <- function(path){
+  test <- read.delim(path, header=FALSE)
+  colnames(test) <- c("chr","loc","dep")
+  out <- test %>%
+    mutate(sample = gsub(".*\\/(.*).txt","\\1",path))
+  return(out)
+}
+
+vf <- lapply(vfp, function(x) read_dep(x))%>%
+  do.call(rbind,.)%>%
+  inner_join(tmp)%>%
+  group_by(id,type,sample)%>%
+  summarise(fin_dep = max(dep))
+
+#pur <- c(90,80,70,60,50,40,30,20,10,100)
+
+dat_start <- vf %>%
+  filter(type == "left")%>%
+  rowwise()%>%
+  mutate(purity = as.numeric(gsub(".*p(\\d+).*","\\1",sample))/100)%>%
+  group_by(purity)%>%
+  mutate(ave = mean(fin_dep))%>%
+  ungroup()
+
+dat_end <- vf %>%
+  filter(type == "right")%>%
+  rowwise()%>%
+  mutate(purity = as.numeric(gsub(".*p(\\d+).*","\\1",sample))/100)%>%
+  group_by(purity)%>%
+  mutate(ave = mean(fin_dep))%>%
+  ungroup()
+
+dat <- vf %>%
+  rowwise()%>%
+  mutate(purity = as.numeric(gsub(".*p(\\d+).*","\\1",sample))/100)%>%
+  group_by(purity)%>%
+  mutate(ave = mean(fin_dep))%>%
+  ungroup()%>%
+  pivot_wider(names_from = type, values_from = fin_dep)
+
+corl <- round(cor(x=dat_start$purity,y=dat_start$fin_dep, method = "pearson"), digits = 2)
+corr <- round(cor(x=dat_end$purity,y=dat_end$fin_dep, method = "pearson"), digit=2)
+```
+
+
+```{r}
+p1=dat_start%>%
+  ggplot(aes(x=purity, y=fin_dep))+
+  geom_point(size = 2, alpha = .3)+
+  geom_smooth(method="glm", show.legend = T)+
+  annotate("text", x=0.3, y=85, label= paste0("pearson corr: ", corl), size = 15/.pt)+
+  xlab("SV purity level (%)")+
+  ylab("read depth")+
+  theme_classic()
+
+p2=dat_end%>%
+  ggplot(aes(x=purity, y=fin_dep))+
+  geom_point(size = 2, alpha = .3)+
+  geom_smooth(method="glm", show.legend = T)+
+  annotate("text", x=0.3, y=85, label= paste0("pearson corr: ", corr), size = 15/.pt)+
+  xlab("SV purity level (%)")+
+  ylab("read depth")+
+  theme_classic()
+
+```
+
+
