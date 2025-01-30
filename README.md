@@ -8,31 +8,32 @@
 
 SVCFit is a fast and scalable computational tool developed to estimate
 the structural variant cellular fraction (SVCF) of inversions, deletions
-and tandem duplications without using tumor sample purity. The SVCF can
-be used to assign these structural variants to tumor clones and/or place
-them on a tumor evolutionary tree.
+and tandem duplications. SVCFit is designed to run in an R environment. 
 
 ## Installation
 
-You can install SVCFit from [GitHub](https://github.com/) with:
+Within an R environment, SVCFit can be installed from [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("pak")
+install.packages("pak")
 pak::pak("KarchinLab/SVCFit")
 ```
 
 ## Dependency
 
+SVCFit requires the tidyverse package.
+
 ``` r
-# install.packages("tidyverse")
+install.packages("tidyverse")
 library(tidyverse)
 ```
 
 ## Input your structural variants into SVCFit
 
-The input should be in Variant Call Format (VCF) as outputed by the
-Manta package \[1\]. If you have a VCF output from a structural variant
-caller other than Manta, you can modify it to match Manta format.
+SVCFit is designed to take input from Variant Call Format (VCF) files.
+By default, it accepts the VCF format produced by the Manta package \[1\]. 
+If you have a VCF output from a structural variant
+caller other than Manta, please modify to match this format:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
 |----|----|----|----|----|----|----|----|----|----|
