@@ -47,14 +47,23 @@ extract_info <- function(path, tumor_only=FALSE, length_threshold=0){
              apr = gsub("\\d+,","", PR),
              rsr = gsub(",\\d+","", SR),
              asr = gsub("\\d+,","", SR),
-             ref = as.numeric(rpr)+as.numeric(rsr),
-             alt = as.numeric(apr)+as.numeric(asr),
              sample = sample_id,
              row = as.integer(row_number()),
-             iid=paste0(CHROM,"_",POS))%>%
+             iid=paste0(CHROM,"_",POS),
+             tmp_id=gsub(":\\d:\\d$","",ID))%>%
+      group_by(tmp_id)%>%
+      mutate(apr=sum(as.integer(apr)),
+             asr=sum(as.integer(asr)),
+             rpr=round(mean(as.integer(rpr))),
+             rsr=round(mean(as.integer(rsr))))%>%
+      distinct(tmp_id, .keep_all = T)%>%
+      ungroup()%>%
+      mutate(ref = as.numeric(rpr)+as.numeric(rsr),
+             alt = as.numeric(apr)+as.numeric(asr))%>%
       filter(FILTER == "PASS",
                     alt > 2,
-                    length>length_threshold)
+                    length>length_threshold)%>%
+      select(-tmp_id)
   }else{
   out <- svt %>%
     mutate(chr2 = gsub(".*(chr.).*","\\1", ALT),
@@ -76,16 +85,25 @@ extract_info <- function(path, tumor_only=FALSE, length_threshold=0){
            apr = gsub("\\d+,","", PR),
            rsr = gsub(",\\d+","", SR),
            asr = gsub("\\d+,","", SR),
-           ref = as.numeric(rpr)+as.numeric(rsr),
-           alt = as.numeric(apr)+as.numeric(asr),
            sample = sample_id,
            row = as.integer(row_number()),
-           iid=paste0(CHROM,"_",POS))%>%
+           iid=paste0(CHROM,"_",POS),
+           tmp_id=gsub(":\\d:\\d$","",ID))%>%
+    group_by(tmp_id)%>%
+    mutate(apr=sum(as.integer(apr)),
+           asr=sum(as.integer(asr)),
+           rpr=round(mean(as.integer(rpr))),
+           rsr=round(mean(as.integer(rsr))))%>%
+    distinct(tmp_id,.keep_all = T)%>%
+    ungroup()%>%
+    mutate(ref = as.numeric(rpr)+as.numeric(rsr),
+           alt = as.numeric(apr)+as.numeric(asr))%>%
     filter(FILTER == "PASS",
                   alt > 2,
                   ansr == 0,
                   anpr == 0,
-                  length>length_threshold)
+                  length>length_threshold)%>%
+    select(-tmp_id)
   }
   return(out)
 }

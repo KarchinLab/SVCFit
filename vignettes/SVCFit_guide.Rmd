@@ -22,32 +22,38 @@ library(ggplot2)
 library(gridExtra)
 ```
 
+# Introduction
+
+This guide provides a walkthrough of the SVCFit package, demonstrating its functionality and usage. We begin by showcasing an example of the input data format and how different functions within SVCFit process and modify it. Next, we present two additional sample datasets to illustrate how SVCFit's output can be visualized and interpreted. 
+
+
 # Input to SVCFit
 
-The input should be in Variant Call Format (VCF) as output by the Manta package (cite). If you have a VCF output from a structural variant caller other than Manta, you can modify it to match Manta format.
+This example VCF file is outputed by Manta [1], the preferred output format by SVCFit.
 
 ```{r,echo = FALSE}
 file_path <- system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
 example_vcf <- read.table(file_path, quote="\"")
 colnames(example_vcf)=c("CHROM",  "POS",     "ID",      "REF",     "ALT",     "QUAL",    "FILTER",  "INFO",    "FORMAT", "tumor")
-#system.file("extdata", "c50p70.0s32.bed.vcf", package = "SVCFit")
 ```
 ```{r, echo=TRUE}
 head(as_tibble(example_vcf))
 ```
 
+Given this input data, let's see how SVCFit works. 
+
 # General workflow
 
 ## 1. Extract information from original VCF (extract_info)
 
-This step assigns column names and extracts key information for downstream calculation and filtering. Key information includes reads, structural variant length, and structural variant coordinates. And the input looks like:
+This step assigns column names and extracts key information for downstream calculation and filtering. Key information includes reads, structural variant length, and structural variant coordinates.
 
 ```{r, echo=TRUE}
 vcf=extract_info(file_path, tumor_only=TRUE, length_threshold=0)
 head(as_tibble(vcf))
 ```
 
-During this step, Extract_info would also filter out structural variants that didn't pass the filter criteria specified by structural variant caller. Below is an example where the FILTER column is not "PASS". 
+During this step, Extract_info can filter out structural variants that didn't pass the filter criteria specified by structural variant caller. Below is an example where the FILTER column is not "PASS". 
 
 ```{r, echo = FALSE}
 print(example_vcf[35,1:7])
@@ -61,7 +67,8 @@ This step checks if structural variants are close enough to be considered as a s
 checked=check_overlap(vcf, vcf)
 ```
 
-During this setp, the number of structural variants went from `r nrow(vcf)` to `r nrow(checked)`.
+During this step, the number of structural variants went from `r nrow(vcf)` to `r nrow(checked)`. 
+
 
 ## 3. Calculate SVCF for structural variants
 
@@ -71,14 +78,14 @@ This step calculates the structural variant cellular fraction (SVCF) for all str
 output <- calculate_svcf(checked, tumor_only=TRUE)
 ```
 
-Finally, all of the above functionality is wrapped within a function SVCF(). Please refer to [our Github page](https://github.com/KarchinLab/SVCFit) for argument details. 
+Finally, all of the above functionality is wrapped within a function SVCF(). Please refer to [our Github page](https://github.com/KarchinLab/SVCFit) for details on function arguments. 
 
 ```{r, echo=TRUE}
 output = SVCF(file_path, overlap = TRUE, tumor_only = TRUE, length_threshold=0)
 ```
 
 # Examples
-Here, we show an example of SVCFit processing simulated single-clone and multiple_clone samples.
+Here, we show examples of SVCFit processing simulated single-clone and multiple-clone samples.
 ```{r, echo = TRUE, message=FALSE, fig.width=6, fig.height=3}
 s_path <- system.file("extdata", "c40p50.0s22.bed.vcf", package = "SVCFit")
 m_path <- system.file("extdata", "c50p50.0s18.bed.vcf", package = "SVCFit")
@@ -105,3 +112,6 @@ pm=multiple %>%
 
 grid.arrange(ps, pm, nrow = 1, ncol = 2)
 ```
+
+## Reference
+1. Chen, X. et al. (2016) Manta: rapid detection of structural variants and indels for germline and cancer sequencing applications. Bioinformatics, 32, 1220-1222. <doi:10.1093/bioinformatics/btv710>

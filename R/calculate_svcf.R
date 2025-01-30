@@ -15,7 +15,7 @@ calculate_svcf <- function(input, tumor_only=FALSE){
   if(tumor_only==FALSE){
     output <- input %>%
       filter(!classification%in%c("INS","BND"))%>%
-      mutate(vaf = alt/(alt+0.5*ref),
+      mutate(vaf = ifelse(classification == "INV", alt/(alt+ref), alt/(alt+0.5*ref)),
                     Rbar= ifelse(classification =="DUP",
                                 (4*alt+2*ref)/ref, 2),
                     r = ifelse(classification=="DUP",
@@ -27,7 +27,7 @@ calculate_svcf <- function(input, tumor_only=FALSE){
   }else{
     output <- input %>%
       filter(!classification%in%c("INS","BND"))%>%
-      mutate(vaf = alt/(alt+0.5*ref),
+      mutate(vaf = ifelse(classification == "INV", alt/(alt+ref), alt/(alt+0.5*ref)),
                     Rbar= ifelse(classification =="DUP",
                                 (4*alt+2*ref)/ref, 2),
                     r = ifelse(classification=="DUP",
