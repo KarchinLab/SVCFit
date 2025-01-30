@@ -122,8 +122,14 @@ checked <- check_overlap(dat, compare)
 This step calculates the structural variant cellular fraction (SVCF) for all structural variants in the input VCF file.
 
 ``` r
-output <- calculate_svcf(checked, tumor_only=FALSE)
+output <- calculate_svcf(input=checked, tumor_only=FALSE)
 ```
+This function has 2 arguments:
+
+| Argument   | Type      | Default | Description |
+|-----------|----------|---------|-------------|
+| `dat`      | DataFrame | N/A     | It stores the set of information for structural variants used to calculate SVCF. |
+| `tumor_only` | Boolean  | `FALSE` | Whether the VCF is created without a matched normal sample. |
 
 The output is an annotated VCF with additional fields for VAF, Rbar, r and SVCF. VAF=variant allele frequency; Rbar=average break interval count in a sample; r = inferred integer copy number of break intervals; SVCF=structural variant cellular fraction.
 
@@ -139,10 +145,10 @@ truth <- read_clone(truth_path, mode="heritage")
 
 This function has 2 arguments:
 
-| Argument      | Type      | Description |
-|--------------|----------|-------------|
-| `truth_path` | Character | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
-| `mode`       | Character | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
+| Argument      | Type      | Default | Description |
+|--------------|----------|-------------|-------------|
+| `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
+| `mode`       | Character | `heritage` | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
 
 
 The file path should follow this structure:
@@ -156,7 +162,7 @@ root/
 │   └── .../
 ```
 
-Following the tree on the left, the files under two modes should look like:
+Following the tree on the left, variants contaibed in bed files under two modes should be:
 
 ![](inst/extdata/tree.png){width="487"}
 
@@ -166,13 +172,13 @@ Following the tree on the left, the files under two modes should look like:
 attched <- attach_clone(dat, truth, tolerance = 6)
 ```
 
-This function has 2 arguments:
+This function has 3 arguments:
 
-1.  dat: a dataframe storing structural variants for clone assignment.
-
-2.  truth: a dataframe storing the clone assignment for each structural variants designed in a simulation.
-
-3.  tolerance: Integer variable setting the threshold for the maximum distance between structural variants to be considered as a single structural variant when assigning clones.
+| Variable   | Type      | Default | Description |
+|------------|----------|-------------|-----------|
+| `dat`      | DataFrame | N/A | Stores structural variants for clone assignment. |
+| `truth`    | DataFrame | N/A | Stores the clone assignment for each structural variant designed in a simulation. |
+| `tolerance` | Integer  | `6` | Sets the threshold for the maximum distance between structural variants to be considered as a single structural variant when assigning clones. |
 
 ## Tutorial
 
