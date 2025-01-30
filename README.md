@@ -15,8 +15,8 @@ and tandem duplications. SVCFit is designed to run in an R environment.
 Within an R environment, SVCFit can be installed from [GitHub](https://github.com/) with:
 
 ``` r
-install.packages("pak")
-pak::pak("KarchinLab/SVCFit")
+install.packages("devtools")
+devtools::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)
 ```
 
 ## Dependency
