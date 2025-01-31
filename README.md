@@ -10,6 +10,10 @@ SVCFit is a fast and scalable computational tool developed to estimate
 the structural variant cellular fraction (SVCF) of inversions, deletions
 and tandem duplications. SVCFit is designed to run in an R environment.
 
+All open access data used in this research can be freely downloaded [here](https://doi.org/10.17632/bwzb6n3xbc.1).
+
+Protected data can be requested from European Genome-phenome Archive (EGAD00001001343) and the script used to create the mixtures is available at https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh \[1\].
+
 ## Installation
 
 Within an R environment, SVCFit can be installed from
@@ -44,7 +48,7 @@ library(igraph)
 
 SVCFit is designed to take input from Variant Call Format (VCF) files.
 By default, it accepts the VCF format produced by the Manta package
-\[1\]. If you have a VCF output from a structural variant caller other
+\[2\]. If you have a VCF output from a structural variant caller other
 than Manta, please modify to match this format:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
@@ -212,15 +216,8 @@ library(SVCFit)
 vignette("SVCFit_guide", package = "SVCFit")
 ```
 
-## Data availability
-
-This repository contains source code used to produce figures for SVCFit
-publication under Paper folder. All data can be downloaded from
-[Mendeley](https://data.mendeley.com) to reproduce figures by searching
-“SVCFit benchmark dataset”.
-
 ## Reference
-
-1.  Chen, X. et al. (2016) Manta: rapid detection of structural variants
+1. Cmero, Marek, Yuan, Ke, Ong, Cheng Soon, Schröder, Jan, Corcoran, Niall M., Papenfuss, Tony, et al., "Inferring Structural Variant Cancer Cell Fraction," Nature Communications, 11(1) (2020), 730.
+2. Chen, X. et al. (2016) Manta: rapid detection of structural variants
     and indels for germline and cancer sequencing applications.
     Bioinformatics, 32, 1220-1222. <doi:10.1093/bioinformatics/btv710>
