@@ -20,7 +20,7 @@ read_clone <- function(truth_path, mode="heritage"){
   read <- function(path){
     clone <- paste0("clone",gsub(".*/\\w(\\d+).bed","\\1",path))
     tmp <- read.delim(path, header=FALSE)%>%
-      dplyr::mutate(id=clone)
+      mutate(id=clone)
     colnames(tmp) <- c("chr","pos1","pos2","sv","info","flank","id")
     return(tmp)
   }
