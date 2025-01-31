@@ -1,0 +1,6 @@
+if (!require("igraph", quietly = TRUE)) install.packages("igraph")
+if (!require("tidyverse", quietly = TRUE)) install.packages("tidyverse")
+if (!require("knitr", quietly = TRUE)) install.packages("knitr") 
+if (!require("rmarkdown", quietly = TRUE)) install.packages("rmarkdown") 
+if (!require("usethis", quietly = TRUE)) install.packages("usethis") 
+if (!require("devtools", quietly = TRUE)) install.packages("devtools") 

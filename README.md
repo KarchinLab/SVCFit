@@ -10,18 +10,27 @@ SVCFit is a fast and scalable computational tool developed to estimate
 the structural variant cellular fraction (SVCF) of inversions, deletions
 and tandem duplications. SVCFit is designed to run in an R environment.
 
-All open access data used in this research can be freely downloaded [here](https://doi.org/10.17632/bwzb6n3xbc.1).
+All open access data used in this research can be freely downloaded
+[here](https://doi.org/10.17632/bwzb6n3xbc.1).
 
-Protected data can be requested from European Genome-phenome Archive (EGAD00001001343) and the script used to create the mixtures is available at https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh \[1\].
+Protected data can be requested from European Genome-phenome Archive
+(EGAD00001001343) and the script used to create the mixtures is
+available at
+<https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh>
+\[1\].
 
 ## Installation
 
-Within an R environment, SVCFit can be installed from
+First, to install all dependencies:
+
+``` r
+source("R/dependency.R")
+```
+
+Then, within an R environment, SVCFit can be installed from
 [GitHub](https://github.com/) with:
 
 ``` r
-install.packages("usethis")
-
 #set config
 usethis::use_git_config(user.name = "Github_user_name")
 
@@ -32,16 +41,7 @@ usethis::create_github_token()
 credentials::set_github_pat()
 
 #now remotes::install_github() will work
-remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)
-```
-
-## Dependency
-
-``` r
-install.packages("tidyverse")
-install.packages("igraph")
-library(tidyverse)
-library(igraph)
+remotes::install_github("KarchinLab/SVCFit")
 ```
 
 ## Input your structural variants into SVCFit
@@ -114,15 +114,16 @@ The output from *extract_info()* will be in annotated VCF format.
 
 ### 2. Check overlapping structural variants (*check_overlap()*)
 
-This step checks if structural variants are close enough to be
-considered as a single structural variant.
+This step checks if structural variants in VCF files are close enough to
+be considered as a single structural variant. Skipping this step doesn’t
+affect the workflow.
 
 This function has 4 arguments:
 
 | Argument | Type | Default | Description |
 |----|----|----|----|
-| `dat` | DataFrame | N/A | A dataframe to be compared. |
-| `compare` | DataFrame | N/A | A dataframe used as a reference for comparison. |
+| `dat` | DataFrame | N/A | A dataframe to be compared. This dataframe should be the output of `extract_info` (an annotated VCF file) and contains structural variant genome coordinates. |
+| `compare` | DataFrame | N/A | A dataframe used as a reference for comparison. This dataframe should be the output of `extract_info` (an annotated VCF file) and contains structural variant genome coordinates. |
 | `tolerance` | Integer | `6` | Threshold for the maximum distance between structural variants to be considered as a single variant. |
 | `window` | Integer | `1000` | Number of structural variants checked for overlap to form a single variant. |
 
@@ -150,7 +151,7 @@ This function has 2 arguments:
 
 | Argument | Type | Default | Description |
 |----|----|----|----|
-| `dat` | DataFrame | N/A | It stores the set of information for structural variants used to calculate SVCF. |
+| `dat` | DataFrame | N/A | It stores the set of information for structural variants used to calculate SVCF. This dataframe should be the output of `extract_info`(an annotated VCF file) . |
 | `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
 
 The output is an annotated VCF with additional fields for VAF, Rbar, r
@@ -188,7 +189,8 @@ root/
 ```
 
 To determine which `mode` suits your data, refer to the illustration
-below.
+below. Parent node should always have higher rank in name (i.e. c3.bed
+instead of c1.bed)
 
 According to the tree on the left, variants in bed files for the two
 modes should look like:
@@ -217,7 +219,10 @@ vignette("SVCFit_guide", package = "SVCFit")
 ```
 
 ## Reference
-1. Cmero, Marek, Yuan, Ke, Ong, Cheng Soon, Schröder, Jan, Corcoran, Niall M., Papenfuss, Tony, et al., "Inferring Structural Variant Cancer Cell Fraction," Nature Communications, 11(1) (2020), 730.
-2. Chen, X. et al. (2016) Manta: rapid detection of structural variants
+
+1.  Cmero, Marek, Yuan, Ke, Ong, Cheng Soon, Schröder, Jan, Corcoran,
+    Niall M., Papenfuss, Tony, et al., “Inferring Structural Variant
+    Cancer Cell Fraction,” Nature Communications, 11(1) (2020), 730.
+2.  Chen, X. et al. (2016) Manta: rapid detection of structural variants
     and indels for germline and cancer sequencing applications.
     Bioinformatics, 32, 1220-1222. <doi:10.1093/bioinformatics/btv710>

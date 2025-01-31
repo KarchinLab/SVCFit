@@ -18,11 +18,16 @@
 read_clone <- function(truth_path, mode="heritage"){
   # functions to read in true SV locations from bed
   read <- function(path){
-    clone <- paste0("clone",gsub(".*/\\w(\\d+).bed","\\1",path))
+    clone <- paste0("clone",gsub(".*/c(\\d+).bed","\\1",path))
     tmp <- read.delim(path, header=FALSE)%>%
       mutate(id=clone)
     colnames(tmp) <- c("chr","pos1","pos2","sv","info","flank","id")
     return(tmp)
+  }
+
+  if(!mode %in% c('heritage','seperate')){
+    print("wrong input for mode")
+    stop()
   }
 
   # process clone

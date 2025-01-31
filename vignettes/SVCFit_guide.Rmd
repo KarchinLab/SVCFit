@@ -92,6 +92,30 @@ Finally, all of the above functionality is wrapped within a function SVCF(). Ple
 output = SVCF(file_path, overlap = TRUE, tumor_only = TRUE, length_threshold=0)
 ```
 
+## Additional functions
+
+`read_clone` and `attach_clone` is only applicable for data from multiple-clone simulations where the clone assignment for each structural variants is known. In the example below, we see 4 structural variants included in this simulation:
+
+```{r, echo=FALSE}
+truth_path=list.files(system.file("extdata", "example_input", package = "SVCFit"), pattern="c\\d.bed", full.names = T)
+clones= read_clone(truth_path, mode = 'heritage')
+as_tibble(clones)
+```
+
+Let's look at the structural variants before clone assignment:
+```{r}
+vcf_p=system.file("extdata", "attach_clone.vcf", package = "SVCFit")
+clone_vcf=extract_info(vcf_p, tumor_only=TRUE)
+as_tibble(clone_vcf[,1:10])
+```
+
+After clone assignment, we see that one structural variant "chr1  513060 MantaINV:19:0:1:0" is missing because it is ourside our `tolerance` threshold. 
+```{r}
+attached = attach_clone(dat = clone_vcf, truth = clones, tolerance = 6)
+as_tibble(attached[,1:10])
+```
+
+
 # Examples
 Here, we show examples of SVCFit processing simulated single-clone and multiple-clone samples.
 ```{r, echo = TRUE, message=FALSE, fig.width=6, fig.height=3}
