@@ -21,16 +21,11 @@ available at
 
 ## Installation
 
-First, to install all dependencies:
-
-``` r
-source("R/dependency.R")
-```
-
 Then, within an R environment, SVCFit can be installed from
 [GitHub](https://github.com/) with:
 
 ``` r
+install.packages("usethis")
 #set config
 usethis::use_git_config(user.name = "Github_user_name")
 
@@ -42,6 +37,12 @@ credentials::set_github_pat()
 
 #now remotes::install_github() will work
 remotes::install_github("KarchinLab/SVCFit")
+```
+
+To install all dependencies:
+
+``` r
+source("R/dependency.R")
 ```
 
 ## Input your structural variants into SVCFit
