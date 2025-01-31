@@ -42,12 +42,12 @@ credentials::set_github_pat()
 
 #A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
 
-remotes::install_github("KarchinLab/SVCFit")
+remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)
 ```
 To install all dependencies:
 
 ``` r
-source("R/dependency.R")
+source(system.file("extdata", "dependency.R", package = "SVCFit"))
 ```
 
 ## Input your structural variants into SVCFit
@@ -59,8 +59,8 @@ than Manta, please modify to match this format:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
 |----|----|----|----|----|----|----|----|----|----|
-| chr1 | 1000 | MantaINV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 |
-| chr2 | 5000 | MantaDEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 |
+| chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 |
+| chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 |
 
 ## General workflow
 
