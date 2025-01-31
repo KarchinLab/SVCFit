@@ -8,32 +8,44 @@
 
 SVCFit is a fast and scalable computational tool developed to estimate
 the structural variant cellular fraction (SVCF) of inversions, deletions
-and tandem duplications. SVCFit is designed to run in an R environment. 
+and tandem duplications. SVCFit is designed to run in an R environment.
 
 ## Installation
 
-Within an R environment, SVCFit can be installed from [GitHub](https://github.com/) with:
+Within an R environment, SVCFit can be installed from
+[GitHub](https://github.com/) with:
 
 ``` r
-install.packages("devtools")
-devtools::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)
+install.packages("usethis")
+
+#set config
+usethis::use_git_config(user.name = "Github_user_name")
+
+#Command below will generate link to github page to generate token 
+usethis::create_github_token() 
+
+#paste your PAT into pop-up that follows...
+credentials::set_github_pat()
+
+#now remotes::install_github() will work
+remotes::install_github("KarchinLab/SVCFit")
 ```
 
 ## Dependency
 
-SVCFit requires the tidyverse package.
-
 ``` r
 install.packages("tidyverse")
+install.packages("igraph")
 library(tidyverse)
+library(igraph)
 ```
 
 ## Input your structural variants into SVCFit
 
 SVCFit is designed to take input from Variant Call Format (VCF) files.
-By default, it accepts the VCF format produced by the Manta package \[1\]. 
-If you have a VCF output from a structural variant
-caller other than Manta, please modify to match this format:
+By default, it accepts the VCF format produced by the Manta package
+\[1\]. If you have a VCF output from a structural variant caller other
+than Manta, please modify to match this format:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
 |----|----|----|----|----|----|----|----|----|----|
@@ -171,8 +183,11 @@ root/
 │   └── .../
 ```
 
-Following the tree on the left, variants contaibed in bed files under
-two modes should be:
+To determine which `mode` suits your data, refer to the illustration
+below.
+
+According to the tree on the left, variants in bed files for the two
+modes should look like:
 
 <img src="inst/extdata/tree.png" width="487" />
 
