@@ -47,7 +47,7 @@ remotes::install_github("KarchinLab/SVCFit")
 To install all dependencies:
 
 ``` r
-source("R/dependency.R")
+source(system.file("extdata", "dependency.R", package = "SVCFit"))
 ```
 
 ## Input your structural variants into SVCFit
