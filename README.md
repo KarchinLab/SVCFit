@@ -21,24 +21,29 @@ available at
 
 ## Installation
 
-Then, within an R environment, SVCFit can be installed from
-[GitHub](https://github.com/) with:
+To install SVCFit from GitHub, you must have a GitHub acount. If you don't have an account, first
+sign up at [GitHub](https://github.com/)
+
+You can then install SVCFit within an R environment.
 
 ``` r
 install.packages("usethis")
-#set config
 usethis::use_git_config(user.name = "Github_user_name")
+usethis::create_github_token()
 
-#Command below will generate link to github page to generate token 
-usethis::create_github_token() 
+#This should launch a web page in a browser where you can sign in to GitHub.
+#When you sign in, you will be directed to a web page where you can generate a
+#new personal access token (PAT). Enter a note describing your PAT. You will see
+#many "Scope Options". If you don't understand them just accept the defaults.
+#Click the "Generate Token" button and copy the PAT that is generated. Store the
+#PAT in a text file or password manager.
 
-#paste your PAT into pop-up that follows...
 credentials::set_github_pat()
 
-#now remotes::install_github() will work
+#A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
+
 remotes::install_github("KarchinLab/SVCFit")
 ```
-
 To install all dependencies:
 
 ``` r
