@@ -42,7 +42,7 @@ credentials::set_github_pat()
 
 #A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
 
-remotes::install_github("KarchinLab/SVCFit")
+remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)
 ```
 To install all dependencies:
 
