@@ -98,7 +98,7 @@ output = SVCF(file_path, overlap = TRUE, tumor_only = TRUE, length_threshold=0)
 
 ```{r, echo=FALSE}
 truth_path=list.files(system.file("extdata", "example_input", package = "SVCFit"), pattern="c\\d.bed", full.names = T)
-clones= read_clone(truth_path, mode = 'heritage')
+clones= read_clone(truth_path, mode = 'inherited')
 as_tibble(clones)
 ```
 

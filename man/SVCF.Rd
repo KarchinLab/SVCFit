@@ -12,7 +12,7 @@ SVCF(
   multiple = FALSE,
   tumor_only = FALSE,
   truth_path = NULL,
-  mode = "heritage",
+  mode = "inherited",
   length_threshold = 0
 )
 }
@@ -41,8 +41,8 @@ Each bed file should be named like "c1.bed, c2.bed" etc. Structural variants
 should be saved in a seperate bed file if they belong to different (sub)clone.}
 
 \item{mode}{an onject of class "Character". This variable describe how true
-clonal information is saved. In "heritage" mode, bed files for all children
-clone contains all ancestral structural variants of their parents. In "separate"
+clonal information is saved. In "inherited" mode, bed files for all children
+clone contains all ancestral structural variants of their parents. In "distinct"
 mode, children clones don't contain any ancestral structural variants.}
 
 \item{length_threshold}{an object of class "integer". This variable set lowest
