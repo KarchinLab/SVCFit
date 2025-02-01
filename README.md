@@ -55,7 +55,7 @@ than Manta, please modify to match this format:
 functionality described below. All functions can also be run separately.
 
 ``` r
-SVCF(vcf_path="~/path/to/file.vcf", tumor_only=FALSE, length_threshold=0, overlap=TRUE, tolerance=6, window=100, multiple=FALSE, truth_path=NULL, mode="heritage")
+SVCF(vcf_path="~/path/to/file.vcf", tumor_only=FALSE, length_threshold=0, overlap=TRUE, tolerance=6, window=100, multiple=FALSE, truth_path=NULL, mode="inherited")
 ```
 
 *SVCF()* requires two arguments and includes several optional
@@ -78,7 +78,7 @@ parameters:
 | `window` | Integer | `1000` | Number of structural variants checked for overlap to form a single variant. |
 | `multiple` | Boolean | `FALSE` | Whether the sample has multiple clones (used in simulated data for assigning clones). |
 | `truth_path` | Character | `NULL` | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
-| `mode` | Character | `"heritage"` | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
+| `mode` | Character | `"inherited"` | Describes how true clonal information is saved:<br>- **`"inherited"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"distinct"`**: Child clones do not contain any ancestral structural variants. |
 
 The steps executed by *SVCF()* are:
 
