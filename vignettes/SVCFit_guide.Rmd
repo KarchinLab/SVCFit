@@ -74,7 +74,7 @@ During this step, the number of structural variants went from `r nrow(vcf)` to `
 Let's look at the overlapping structural variant below. We see that the start (POS) and end (pos2) genome coordinates for all three structural variants are within `tolerance=6`:
 
 ```{r, echo=FALSE}
-head(as_tibble(vcf[c(38,39,42),c(1:7,11,12)]))
+head(as_tibble(vcf[c(38,39),c(1:7,11,12)]))
 ```
 
 
