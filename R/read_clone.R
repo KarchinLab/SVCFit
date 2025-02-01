@@ -6,8 +6,8 @@
 #' Each bed file should be named as "clone" + "number". Structural variants should
 #' be saved in a seperate bed file if they belong to different (sub)clone.
 #' @param mode an onject of class "Character". This variable describe how true
-#' clonal information is saved. In "heritage" mode, bed files for all children
-#' clone contains all ancestral structural variants of their parents. In "separate"
+#' clonal information is saved. In "inherited" mode, bed files for all children
+#' clone contains all ancestral structural variants of their parents. In "distinct"
 #' mode, children clones don't contain any ancestral structural variants.
 #'
 #' @return a dataframe
@@ -15,7 +15,7 @@
 #' @import tidyverse
 #' @importFrom utils read.delim
 
-read_clone <- function(truth_path, mode="heritage"){
+read_clone <- function(truth_path, mode="inherited"){
   # functions to read in true SV locations from bed
   read <- function(path){
     clone <- paste0("clone",gsub(".*/c(\\d+).bed","\\1",path))
@@ -25,18 +25,18 @@ read_clone <- function(truth_path, mode="heritage"){
     return(tmp)
   }
 
-  if(!mode %in% c('heritage','seperate')){
+  if(!mode %in% c('inherited','distinct')){
     print("wrong input for mode")
     stop()
   }
 
   # process clone
-  if(mode =="separate"){
+  if(mode =="distinct"){
     clone <- lapply(truth_path,function(x) read(x))
     out = do.call(rbind, clone)%>%
       arrange(.data$pos1)
 
-  }else if (mode == "heritage"){
+  }else if (mode == "inherited"){
     clone <- lapply(truth_path,function(x) read(x))
     out = do.call(rbind, clone)%>%
       group_by(.data$pos1) %>%
