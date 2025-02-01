@@ -197,8 +197,15 @@ This function has 3 arguments:
 ``` r
 attched <- attach_clone(dat, truth, tolerance = 6)
 ```
+## Test datasets
+
+Test datasets are available in this repository
+https://github.com/KarchinLab/SVCFit/tree/main/inst/extdata
 
 ## Tutorial
+
+The tutorial uses the test datasets and provides detailed instructions about how to use 
+the input and the expected output.
 
 ``` r
 library(SVCFit)
