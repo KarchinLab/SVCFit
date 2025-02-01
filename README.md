@@ -154,23 +154,26 @@ SVCF=structural variant cellular fraction.
 
 ### 4. Additional functions
 
-*attach_clone* and *read_clone* are functions to assign structural
+*read_clone* and *attach_clone* are functions to assign structural
 variants to tumor clones, when the assignment is known.
 
-4.1 read clonal assignment
+For example, if you have run a simulation and know the clonal assignment
+of each structural variant, the first step is to read in your clonal
+assignments.
 
-``` r
-truth <- read_clone(truth_path, mode="heritage")
-```
+4.1 read_clone
 
 This function has 2 arguments:
 
 | Argument | Type | Default | Description |
 |----|----|----|----|
 | `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
-| `mode` | Character | `heritage` | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
+| `mode` | Character | `inherited` | <br>- **`"inherited"`**: BED files for the child clones contain all ancestral structural variants.<br>- **`"distinct"`**: Child clones do not contain any ancestral structural variants. |
 
-The file path should follow this structure:
+``` r
+truth <- read_clone(truth_path, mode="inherited")
+```
+Organize your BED files according to this structure:
 
 ``` r
 root/
@@ -181,28 +184,19 @@ root/
 │   └── .../
 ```
 
-To determine which `mode` suits your data, refer to the illustration
-below. Parent node should always have higher rank in name (i.e. c3.bed
-instead of c1.bed)
-
-According to the tree on the left, variants in bed files for the two
-modes should look like:
-
-<img src="inst/extdata/tree.png" width="487" />
-
-4.2 attach clonal assignment to structural variants
-
-``` r
-attched <- attach_clone(dat, truth, tolerance = 6)
-```
+4.2 attach_clone
 
 This function has 3 arguments:
 
 | Variable | Type | Default | Description |
 |----|----|----|----|
 | `dat` | DataFrame | N/A | Stores structural variants for clone assignment. |
-| `truth` | DataFrame | N/A | Stores the clone assignment for each structural variant designed in a simulation. |
+| `truth` | DataFrame | N/A | Stores the clone assignment for each structural variant. |
 | `tolerance` | Integer | `6` | Sets the threshold for the maximum distance between structural variants to be considered as a single structural variant when assigning clones. |
+
+``` r
+attched <- attach_clone(dat, truth, tolerance = 6)
+```
 
 ## Tutorial
 
