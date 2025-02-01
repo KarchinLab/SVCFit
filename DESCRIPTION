@@ -12,11 +12,9 @@ RoxygenNote: 7.3.2
 VignetteBuilder: knitr
 Imports:
     tidyverse,
-    igraph
-Suggests: 
-    knitr,
-    rmarkdown,
-    ggplot2,
+    igraph,
     gridExtra,
+    knitr
+Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
