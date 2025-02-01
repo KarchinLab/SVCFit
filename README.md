@@ -27,6 +27,8 @@ Then, You can then install SVCFit within an R environment.
 
 ``` r
 install.packages("usethis")
+install.packages("remotes")
+
 usethis::use_git_config(user.name = "Github_user_name")
 usethis::create_github_token()
 
