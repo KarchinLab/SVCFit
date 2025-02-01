@@ -21,33 +21,26 @@ available at
 
 ## Installation
 
-To install SVCFit from GitHub, you must have a GitHub acount. If you don't have an account, first
-sign up at [GitHub](https://github.com/)
-
-You can then install SVCFit within an R environment.
+To install SVCFit from GitHub, you must have a GitHub acount. If you
+don’t have an account, first sign up at [GitHub](https://github.com/).
+Then, You can then install SVCFit within an R environment.
 
 ``` r
 install.packages("usethis")
 usethis::use_git_config(user.name = "Github_user_name")
 usethis::create_github_token()
 
-#This should launch a web page in a browser where you can sign in to GitHub.
-#When you sign in, you will be directed to a web page where you can generate a
-#new personal access token (PAT). Enter a note describing your PAT. You will see
-#many "Scope Options". If you don't understand them just accept the defaults.
-#Click the "Generate Token" button and copy the PAT that is generated. Store the
-#PAT in a text file or password manager.
+# This will open a web page in your browser where you can sign in to GitHub.
+# Once signed in, you will be directed to a page to generate a new Personal Access Token (PAT).
+# Enter a descriptive note for your PAT. Use the default "Scope Options" if you're unsure about them
+# Then, Click the "Generate Token" button, and copy the generated PAT. 
+# Make sure to store it securely in a text file or a password manager.
 
 credentials::set_github_pat()
 
 #A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
 
-remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)
-```
-To install all dependencies:
-
-``` r
-source(system.file("extdata", "dependency.R", package = "SVCFit"))
+remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencies = TRUE)
 ```
 
 ## Input your structural variants into SVCFit
@@ -57,10 +50,10 @@ By default, it accepts the VCF format produced by the Manta package
 \[2\]. If you have a VCF output from a structural variant caller other
 than Manta, please modify to match this format:
 
-| CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
-|----|----|----|----|----|----|----|----|----|----|
-| chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 |
-| chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 |
+| CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
+|----|----|----|----|----|----|----|----|----|----|----|
+| chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 | 23,0:17,0 |
+| chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 | 19,0 |
 
 ## General workflow
 

@@ -27,36 +27,34 @@ Protected data can be requested from European Genome-phenome Archive (EGAD000010
 
 ## Installation
 
-First, to install all dependencies:
+To install SVCFit from GitHub, you must have a GitHub acount. If you don't have an account, first sign up at [GitHub](https://github.com/). Then, You can then install SVCFit within an R environment.
 
 ``` r
-source("R/dependency.R")
-```
-
-Then, within an R environment, SVCFit can be installed from [GitHub](https://github.com/) with:
-
-``` r
-#set config
+install.packages("usethis")
 usethis::use_git_config(user.name = "Github_user_name")
+usethis::create_github_token()
 
-#Command below will generate link to github page to generate token 
-usethis::create_github_token() 
+# This will open a web page in your browser where you can sign in to GitHub.
+# Once signed in, you will be directed to a page to generate a new Personal Access Token (PAT).
+# Enter a descriptive note for your PAT. Use the default "Scope Options" if you're unsure about them
+# Then, Click the "Generate Token" button, and copy the generated PAT. 
+# Make sure to store it securely in a text file or a password manager.
 
-#paste your PAT into pop-up that follows...
 credentials::set_github_pat()
 
-#now remotes::install_github() will work
-remotes::install_github("KarchinLab/SVCFit")
+#A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
+
+remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencies = TRUE)
 ```
 
 ## Input your structural variants into SVCFit
 
 SVCFit is designed to take input from Variant Call Format (VCF) files. By default, it accepts the VCF format produced by the Manta package [2]. If you have a VCF output from a structural variant caller other than Manta, please modify to match this format:
 
-| CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | tumor |
-|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
-| chr1 | 1000 | MantaINV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 |
-| chr2 | 5000 | MantaDEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 |
+| CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
+|----|----|----|----|----|----|----|----|----|----|----|
+| chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | . | PASS | END=1500;SVTYPE=INV;SVLEN=500 | PR:SR | 20,30:19,27 | 23,0:17,0 |
+| chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | . | PASS | END=5300;SVTYPE=DEL;SVLEN=300 | PR | 15,30 | 19,0 |
 
 ## General workflow
 
@@ -71,14 +69,14 @@ SVCF(vcf_path="~/path/to/file.vcf", tumor_only=FALSE, length_threshold=0, overla
 ### Required Arguments
 
 | Argument | Type | Default | Description |
-|------------------|------------------|------------------|------------------|
+|----|----|----|----|
 | `vcf_path` | Character | `NULL` | Path to VCF files. |
 | `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
 
 ### Optional Arguments
 
 | Argument | Type | Default | Description |
-|-------------------|------------------|------------------|------------------|
+|----|----|----|----|
 | `length_threshold` | Integer | `0` | Structural variant length filter threshold. |
 | `overlap` | Boolean | `FALSE` | Whether structural variants should be filtered based on coordinate overlap. |
 | `tolerance` | Integer | `6` | Maximum distance between structural variants to be considered as a single variant. |
@@ -96,7 +94,7 @@ This step assigns column names and extracts key information for downstream calcu
 This function has 3 arguments:
 
 | Argument | Type | Default | Description |
-|-------------------|------------------|------------------|------------------|
+|----|----|----|----|
 | `vcf_path` | Character | `NULL` | Path to VCF files. |
 | `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
 | `length_threshold` | Numeric | `0` | Structural variant length filter threshold. |
@@ -116,7 +114,7 @@ This step checks if structural variants in VCF files are close enough to be cons
 This function has 4 arguments:
 
 | Argument | Type | Default | Description |
-|-----------------|-----------------|-----------------|-----------------------|
+|----|----|----|----|
 | `dat` | DataFrame | N/A | A dataframe to be compared. This dataframe should be the output of `extract_info` (an annotated VCF file) and contains structural variant genome coordinates. |
 | `compare` | DataFrame | N/A | A dataframe used as a reference for comparison. This dataframe should be the output of `extract_info` (an annotated VCF file) and contains structural variant genome coordinates. |
 | `tolerance` | Integer | `6` | Threshold for the maximum distance between structural variants to be considered as a single variant. |
@@ -139,7 +137,7 @@ output <- calculate_svcf(input=checked, tumor_only=FALSE)
 This function has 2 arguments:
 
 | Argument | Type | Default | Description |
-|------------------|------------------|------------------|-------------------|
+|----|----|----|----|
 | `dat` | DataFrame | N/A | It stores the set of information for structural variants used to calculate SVCF. This dataframe should be the output of `extract_info`(an annotated VCF file) . |
 | `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
 
@@ -158,7 +156,7 @@ truth <- read_clone(truth_path, mode="heritage")
 This function has 2 arguments:
 
 | Argument | Type | Default | Description |
-|-------------------|------------------|------------------|------------------|
+|----|----|----|----|
 | `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
 | `mode` | Character | `heritage` | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
 
@@ -188,7 +186,7 @@ attched <- attach_clone(dat, truth, tolerance = 6)
 This function has 3 arguments:
 
 | Variable | Type | Default | Description |
-|------------------|------------------|-------------------|------------------|
+|----|----|----|----|
 | `dat` | DataFrame | N/A | Stores structural variants for clone assignment. |
 | `truth` | DataFrame | N/A | Stores the clone assignment for each structural variant designed in a simulation. |
 | `tolerance` | Integer | `6` | Sets the threshold for the maximum distance between structural variants to be considered as a single structural variant when assigning clones. |
