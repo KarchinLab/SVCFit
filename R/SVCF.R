@@ -18,8 +18,8 @@
 #' Each bed file should be named like "c1.bed, c2.bed" etc. Structural variants
 #' should be saved in a seperate bed file if they belong to different (sub)clone.
 #' @param mode an onject of class "Character". This variable describe how true
-#' clonal information is saved. In "heritage" mode, bed files for all children
-#' clone contains all ancestral structural variants of their parents. In "separate"
+#' clonal information is saved. In "inherited" mode, bed files for all children
+#' clone contains all ancestral structural variants of their parents. In "distinct"
 #' mode, children clones don't contain any ancestral structural variants.
 #' @param length_threshold an object of class "integer". This variable set lowest
 #' threshold on the size of a structural variants
@@ -29,7 +29,7 @@
 #' @import tidyverse
 
 SVCF <- function(vcf_path=NULL, overlap=TRUE, tolerance=6, window=100, multiple=FALSE,
-                 tumor_only=FALSE, truth_path=NULL, mode="heritage", length_threshold=0){
+                 tumor_only=FALSE, truth_path=NULL, mode="inherited", length_threshold=0){
 
   if(is.null(vcf_path)){
     stop("No vcf file path is provided.\n")
@@ -40,7 +40,7 @@ SVCF <- function(vcf_path=NULL, overlap=TRUE, tolerance=6, window=100, multiple=
   if(!is.null(truth_path)){
     #"/Users/lyz928/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/script/sv/visor/input/"
     p <- list.files(ground_truth, pattern = "^c.*.bed", full.names = T)
-    truth = read_clone(p, mode="heritage")
+    truth = read_clone(p, mode)
   }else{
     truth=data.frame()
   }
