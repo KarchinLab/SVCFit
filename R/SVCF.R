@@ -39,7 +39,7 @@ SVCF <- function(vcf_path=NULL, overlap=TRUE, tolerance=6, window=100, multiple=
 
   if(!is.null(truth_path)){
     #"/Users/lyz928/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/script/sv/visor/input/"
-    p <- list.files(ground_truth, pattern = "^c.*.bed", full.names = T)
+    p <- list.files(truth_path, pattern = "^c.*.bed", full.names = T)
     truth = read_clone(p, mode)
   }else{
     truth=data.frame()

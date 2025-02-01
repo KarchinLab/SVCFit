@@ -41,34 +41,20 @@ check_overlap <- function(dat, compare, tolerance=6, window=1000){
       result = append(result, list(sub_idx))
     }
   }
-  ## in rr, when row and column doesn't match there is an overlap
-  rr = as.data.frame(do.call(rbind,result))%>%
-    mutate(Row=ifelse(row>col, col, row),
-           Col=ifelse(col>row, col, row),
-           type=paste0(Row,"-",Col),
-           row=Row,
-           col=Col)%>%
-    distinct(type,.keep_all = T)%>%
-    arrange(Row)%>%
-    select(row, col)
-  ## here, group overlapping with common variable
-  g <- graph_from_edgelist(as.matrix(rr), directed = FALSE)
-  comp <- components(g)
-  component_df <- data.frame(node = unique(c(rr$row, rr$col)), group = comp$membership)
-  rr= rr %>% left_join(component_df, by = c("row" = "node"))
-
+  ## in rr, each pair of row and col is an overlap
+  rr = as.data.frame(do.call(rbind,result))
   out <- dat %>%
     mutate(row=as.integer(row_number()))%>%
     # only kept ones that overlaps: self-compare will retain everything, truth-compare will keep overlap
     filter(row %in% rr$row)%>%
     left_join(rr)%>%
-    group_by(group)%>%
+    group_by(col)%>%
     ## use mean for alt and ref
     mutate(alt=round(mean(alt)),
            ref=round(mean(ref)))%>%
     ungroup()%>%
-    distinct(group, .keep_all = T)%>%
-    select(-c("col", "row","group"))
+    distinct(iid, .keep_all = T)%>%
+    select(-c("col", "row"))
 
   return(out)
 }

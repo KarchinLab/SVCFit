@@ -20,17 +20,17 @@ library(ggsignif) #for plot significance
 
 ground_truth="~/Downloads/Figure_1/input/"
 p <- list.files(ground_truth, pattern = "^c.*.bed", full.names = T)
-truth = read_clone(p, mode="heritage")
+truth = read_clone(p, mode="inherited")
 
 ## get SVCFit data
 svmp <- list.files("~/Downloads/Figure_1/multiple_vcfs",pattern = ".*.vcf", full.names = T)
 svsp <- list.files("~/Downloads/Figure_1/single_vcfs",pattern = ".*.vcf", full.names = T)
 
-svs=lapply(svsp, function(x) SVCF(x, overlap=TRUE, truth_path = p))%>%
+svs=lapply(svsp, function(x) SVCF(x, overlap=TRUE, truth_path = ground_truth))%>%
   do.call(rbind,.)%>%
   mutate(method="SVCFit")
 
-svm=lapply(svmp, function(x) SVCF(x, overlap=TRUE, multiple=TRUE, truth_path = p))%>%
+svm=lapply(svmp, function(x) SVCF(x, overlap=TRUE, multiple=TRUE, truth_path = ground_truth))%>%
   do.call(rbind,.)%>%
   mutate(method="SVCFit")
 
@@ -133,6 +133,8 @@ f1a=combined_svs%>%
   theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
         legend.position = "none",
         strip.text = element_text(size = 7))
+
+
 ```
 
 
