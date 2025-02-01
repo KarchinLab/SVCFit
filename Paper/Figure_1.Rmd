@@ -298,7 +298,7 @@ svcf = svcfit_in %>%
   arrange(num_sv)
 
 
-p=rbind(svc, svcf)%>%
+F1D=rbind(svc, svcf)%>%
   ggplot(aes(x=num_sv, y = time, color = method, group=method))+
   geom_point()+
   geom_smooth(method = "glm", aes(color=method),show.legend = FALSE)+
