@@ -31,7 +31,8 @@ usethis::create_github_token()
 
 credentials::set_github_pat()
 
-#A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
+#If this is your first PAT, a pop-up screen will appear with a box to enter your PAT.
+#Go ahead and enter it. Otherwise, proceed to the next step.
 
 remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencies = TRUE)
 ```
