@@ -34,6 +34,8 @@ svm=lapply(svmp, function(x) SVCF(x, overlap=TRUE, multiple=TRUE, truth_path = g
   do.call(rbind,.)%>%
   mutate(method="SVCFit")
 
+svm=attach_clone(svm,truth)
+
 ## get SVclone data
 ### create function to gather SVclone output
 get_svclone <- function(rdata_path, sv_dat, tolerance=6){

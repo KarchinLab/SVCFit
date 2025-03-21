@@ -92,8 +92,8 @@ extract_info <- function(path, tumor_only=FALSE, length_threshold=0){
     group_by(tmp_id)%>%
     mutate(apr=sum(as.integer(apr)),
            asr=sum(as.integer(asr)),
-           rpr=round(mean(as.integer(rpr))),
-           rsr=round(mean(as.integer(rsr))))%>%
+           rpr=sum(as.integer(rpr)),
+           rsr=sum(as.integer(rsr)))%>%
     distinct(tmp_id,.keep_all = T)%>%
     ungroup()%>%
     mutate(ref = as.numeric(rpr)+as.numeric(rsr),
