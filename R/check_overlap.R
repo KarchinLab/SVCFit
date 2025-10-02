@@ -1,22 +1,27 @@
 #' check_overlap compare two sets of coordinates of structural variants and merge the structural variants with coordinates within tolerance.
 #'
-#' @param dat an object of class "dataframe". This object stores the first set of
-#' structural variants to be compared
-#' @param compare an object of class "dataframe". This object stores the second
-#' set of structural variants for comparison
+#' @param dat an object of class "dataframe". This object stores the set of
+#' structural variants to be self-compared
 #' @param tolerance an object of class "integer". This variable sets the threshold
 #' coordinates overlaps for two SVs
 #' @param window an object of class "Integer". This variable sets how many SVs
 #' should be compared at the same time
 #'
-#' @return an filtered annotated vcf file
+#' @returns an filtered annotated vcf file
 #' @export
 #' @import tidyverse
 #' @import igraph
 
-check_overlap <- function(dat, compare, tolerance=6, window=1000){
+check_overlap <- function(dat, compare=NA, tolerance=6, window=1000){
 
   result = list()
+
+  dat = dat %>% mutate(iid=paste0(CHROM,"_",POS))
+  if(is.na(compare)){
+    compare = dat
+  }else{
+    compare = compare %>% mutate(iid=paste0(CHROM,"_",POS))
+  }
 
   for (i in seq(1, nrow(dat), by = window)) {
     # first start with a chunk of tmp
@@ -41,7 +46,9 @@ check_overlap <- function(dat, compare, tolerance=6, window=1000){
       result = append(result, list(sub_idx))
     }
   }
-  ## in rr, each pair of row and col is an overlap
+
+  ## in rr, each pair of row and col is an overlap.
+  ## every row should at least have one pair with itself, any other pairs signify non-self overlaps
   rr = as.data.frame(do.call(rbind,result))
   out <- dat %>%
     mutate(row=as.integer(row_number()))%>%
@@ -50,11 +57,11 @@ check_overlap <- function(dat, compare, tolerance=6, window=1000){
     left_join(rr)%>%
     group_by(col)%>%
     ## use mean for alt and ref
-    mutate(alt=round(mean(alt)),
-           ref=round(mean(ref)))%>%
+    mutate(ref=mean(ref),
+           alt=mean(alt))%>%
     ungroup()%>%
     distinct(iid, .keep_all = T)%>%
-    select(-c("col", "row"))
+    select(-c("col", "row", "iid"))
 
   return(out)
 }

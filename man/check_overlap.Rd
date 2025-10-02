@@ -4,14 +4,11 @@
 \alias{check_overlap}
 \title{check_overlap compare two sets of coordinates of structural variants and merge the structural variants with coordinates within tolerance.}
 \usage{
-check_overlap(dat, compare, tolerance = 6, window = 1000)
+check_overlap(dat, compare = NA, tolerance = 6, window = 1000)
 }
 \arguments{
-\item{dat}{an object of class "dataframe". This object stores the first set of
-structural variants to be compared}
-
-\item{compare}{an object of class "dataframe". This object stores the second
-set of structural variants for comparison}
+\item{dat}{an object of class "dataframe". This object stores the set of
+structural variants to be self-compared}
 
 \item{tolerance}{an object of class "integer". This variable sets the threshold
 coordinates overlaps for two SVs}
