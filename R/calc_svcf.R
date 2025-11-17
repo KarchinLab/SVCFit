@@ -35,6 +35,6 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
     ungroup()%>%
     distinct(tmp_id, .keep_all = T)%>%
     select(-tmp_id)
-
+  
   return(final)
 }

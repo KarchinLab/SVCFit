@@ -8,10 +8,10 @@
 #' @returns sth
 #' @export
 #'
-analyze <- function(sample, experiment, threshold = 0.1, chr_list=NULL) {
-  print(c(sample,experiment))
+analyze <- function(samp, exper, thresh = 0.1) {
+  print(c(samp,exper))
   print('now loading data')
-  data      <- load_data(sample, experiment)
+  data      <- load_data(samp, exper)
   print('now processing bnd')
   bnd_tmp   <- preproc_bnd(data$sv)
   del       <- process_del(data$sv, bnd_tmp)
@@ -31,16 +31,14 @@ analyze <- function(sample, experiment, threshold = 0.1, chr_list=NULL) {
   print('now creating cnv phasing')
   anno_sv_cnv     <- annotate_cnv(sv_cnv)
   print('now load the truth')
-  truth <- load_truth(experiment)
+  truth <- load_truth(exper)
   print('now calculating svcf')
-  final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, sample, experiment)
+  final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
   print('now attach truth to final')
   final_truth <- attach_truth(final, truth)
   print('now analyzing svclone')
-  svc <- analyze_svclone(sample,experiment, final_truth, sv_info)
+  svc <- analyze_svclone(samp,exper, final_truth, sv_info)
   common_dat <- final_truth %>%
     filter(ID %in% svc$ID)
-  print('now svcfit w svclone read')
-  w_svc_read=svcfit_w_svc(svc, final_truth, thresh=0.1, sample, experiment)
-  return(list(final_truth, svc, common_dat, w_svc_read))
+  return(list(final_truth, svc, common_dat))
 }

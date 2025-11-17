@@ -28,6 +28,6 @@ sum_sv_info <- function(sv_phase, assign_id, sv_info){
     select(-POS)%>%
     left_join(sv_info, by=c('ID','CHROM'))%>%
     filter(!is.na(POS))
-
+  
   return(sv_sum)
 }

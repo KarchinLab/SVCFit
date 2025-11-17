@@ -13,6 +13,6 @@ parse_het_snps <- function(het_snp) {
            snp_alt=as.integer(gsub(".*:(\\d+),(\\d+):.*", "\\2", bulk)),
            dep=as.integer(gsub("^(?:[^:]+:){2}([^:]+).*", "\\1",bulk)))%>%
     select(CHROM, POS, REF,ALT,snp_ref, snp_alt, dep)
-
+  
   return(snp_df)
 }

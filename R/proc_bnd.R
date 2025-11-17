@@ -6,36 +6,21 @@
 #' @returns sth
 #' @export
 #'
-preproc_bnd <- function(sv, bnd_thresh=200) {
-
-  # bnd_tmp=sv %>%
-  #   filter(grepl("BND", ID)) %>%
-  #   mutate(tmp_id=gsub("((:[^:\\D:]){6}$)","", ID))%>%
-  #   group_by(tmp_id)%>%
-  #   mutate(n=n(),
-  #          class=ifelse(n>4, "rtl", "ubtl"))%>%
-  #   ungroup()%>%
-  #   group_by(tmp_id, CHROM)%>%
-  #   mutate(length=max(POS)-min(POS))%>%
-  #   ungroup()%>%
-  #   group_by(tmp_id)%>%
-  #   mutate(class=ifelse((max(length)-min(length))<10, "rtl", class),
-  #          donor=unique(CHROM[which.max(length)]),
-  #          receiver=unique(CHROM[which.min(length)]),
-  #          receiver=ifelse(class=='rtl', CHROM[which(CHROM!=donor)], receiver))%>%
-  #   filter(n>=2)%>%
-  #   ungroup()
-
+preproc_bnd <- function(sv) {
+  
   tmp=sv %>%
     filter(grepl("BND", INFO)) %>%
     mutate(chr2=paste0('chr',gsub('.*chr(.*):.*','\\1', ALT)),
            pos2=gsub('.*chr.*:(\\d+).*','\\1', ALT),
            pos2=as.integer(pos2))
-
+  #chr2=gsub('.*CHR2=(.*);END.*','\\1', INFO),
+  #pos2=gsub('.*END=(.*);CIPOS.*','\\1', INFO),
+  #pos2=as.integer(pos2),
+  
   bnd_tmp=tmp %>%
     rowwise()%>%
-    mutate(rn1=which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<bnd_thresh & chr2==tmp$chr2)[1]*2-1,
-           rn2=which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<bnd_thresh & CHROM==tmp$CHROM)[1]*2-1)%>%
+    mutate(rn1=which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<400 & chr2==tmp$chr2)[1]*2-1,
+           rn2=which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<400 & CHROM==tmp$CHROM)[1]*2-1)%>%
     group_by(rn2)%>%
     mutate(len1=max(POS)-min(POS))%>%
     group_by(rn1)%>%
@@ -50,11 +35,14 @@ preproc_bnd <- function(sv, bnd_thresh=200) {
     mutate(donor=unique(CHROM[which.max(len1)]),
            receiver=unique(CHROM[which.min(len1)]),
            receiver=ifelse(receiver==donor, unique(chr2[chr2!=receiver]), receiver))%>%
+    # donor=unique(CHROM[which.max(len1)]),
+    # receiver=unique(CHROM[which.min(len1)]),
+    # receiver=ifelse(class=='rtl', CHROM[which(CHROM!=donor)], receiver))%>%
     filter(CHROM==receiver)%>%
     mutate(n=n(),
            class=ifelse(n>2, 'rtl','ubtl'),
            class=ifelse(max(len2)<50, 'rtl',class))
-
+  
   return(bnd_tmp)
 }
 
@@ -69,8 +57,8 @@ preproc_bnd <- function(sv, bnd_thresh=200) {
 #' @returns sth
 #' @export
 #'
-process_del <- function(sv, bnd_tmp, flank_del = 50) {
-
+process_del <- function(sv, bnd_tmp, flank = 50) {
+  
   del=sv %>%
     filter(str_detect(INFO, 'DEL'))%>%
     mutate(chr2=CHROM,
@@ -81,7 +69,7 @@ process_del <- function(sv, bnd_tmp, flank_del = 50) {
       #check any del is associated with trans (cut-paste)
       overlap = any(
         CHROM == bnd_tmp$chr2 &
-          abs(POS-bnd_tmp$pos2)<flank_del
+          abs(POS-bnd_tmp$pos2)<50
       )
     )%>%
     filter(overlap) %>%
@@ -89,7 +77,7 @@ process_del <- function(sv, bnd_tmp, flank_del = 50) {
     mutate(
       BNDid = bnd_tmp$ID[which(
         CHROM == bnd_tmp$chr2 &
-          abs(POS-bnd_tmp$pos2)<flank_del
+          abs(POS-bnd_tmp$pos2)<50
       )]
     ) %>%
     ungroup()
@@ -106,25 +94,6 @@ process_del <- function(sv, bnd_tmp, flank_del = 50) {
 #' @export
 #'
 annotate_bnd <- function(bnd_tmp, del) {
-  # bnd=bnd_tmp %>%
-  #   # use del to classify cut-paste, and rest to copy paste
-  #   mutate(
-  #     class = case_when(
-  #       tmp_id %in% del$BNDid ~ 'cuttl',
-  #       class == 'ubtl'      ~ 'coptl',
-  #       TRUE                 ~ class
-  #     ),
-  #     BND_num = as.integer(str_extract(tmp_id, '\\d+'))
-  #   ) %>%
-  #   # figure out the segment length that was translocated
-  #   group_by(class) %>%
-  #   arrange(BND_num, .by_group = TRUE) %>%
-  #   mutate(group = cumsum(c(0, diff(BND_num) > 1)) + 1) %>%
-  #   ungroup() %>%
-  #   group_by(class, group, CHROM) %>%
-  #   mutate(nPOS=min(POS),
-  #          mPOS=max(POS))
-
   bnd=bnd_tmp %>%
     # use del to classify cut-paste, and rest to copy paste
     mutate(
@@ -135,6 +104,12 @@ annotate_bnd <- function(bnd_tmp, del) {
       ))%>%
     group_by(n_sum_rn2)%>%
     mutate(class=ifelse(any(grepl('cuttl', class)), 'cuttl',class))%>%
+    # figure out the segment length that was translocated
+    # group_by(class) %>%
+    # mutate(BND_num = as.integer(str_extract(ID, '\\d+')))%>%
+    # arrange(BND_num, .by_group = TRUE) %>%
+    # mutate(group = cumsum(c(0, diff(BND_num) > 1)) + 1) %>%
+    # ungroup()
     group_by(class, n_sum_rn2, CHROM) %>%
     mutate(nPOS=min(pos2),
            mPOS=max(pos2))

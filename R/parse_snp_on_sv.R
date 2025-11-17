@@ -24,6 +24,6 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
     # join in all het SNP
     left_join(snp_df, by = c("CHROM", "POS", "REF"))%>%
     select(-ID)
-
+  
   return(sv_phase)
 }

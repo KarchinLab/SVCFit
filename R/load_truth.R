@@ -37,6 +37,6 @@ load_truth <- function(exper){
     mutate(chr2=gsub('.*(chr\\d+).*', "\\1",info),
            pos2=ifelse(grepl('trans', type),gsub('.*:(\\d+).*', '\\1',info), end),
            pos2=as.integer(pos2))
-
+  
   return(truth)
 }
