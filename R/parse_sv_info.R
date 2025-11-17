@@ -13,7 +13,7 @@
 #'
 parse_sv_info <- function(sv, bnd, del) {
   sv_info <- sv %>%
-    filter(grepl('INS', INFO),
+    filter(!grepl('SVTYPE=INS', INFO),
            FILTER %in% c("PASS") | QUAL >100,
            !ID %in% del$ID)%>%
     rowwise()%>%
