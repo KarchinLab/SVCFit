@@ -30,7 +30,7 @@ analyze_svclone <- function(samp, exper, final_truth, sv_info, tolerance=100){
            sample=samp,
            expmt=exper)%>%
     filter(any(grepl(tmpid, final_truth$ID)))%>% ## here, force the svclone SV to match SVCFit
-    mutate(ID=final_truth$ID[which(grepl(tmpid, final_truth$ID))],
+    mutate(ID=final_truth$ID[which(grepl(tmpid, final_truth$ID))[1]],
            zygosity=final_truth$zygosity[which(ID==final_truth$ID)],
            classification=final_truth$classification[which(ID==final_truth$ID)],
            clone=final_truth$clone[which(ID==final_truth$ID)])%>%

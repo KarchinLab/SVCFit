@@ -40,18 +40,16 @@ parse_sv_info <- function(sv, bnd, del) {
       class=='cuttl' ~ 'CUTBND',
       class=='coptl' ~ 'COPBND',
       is.na(class) ~ classification),
-      END=ifelse(grepl("BND", ID),mPOS, gsub(".*END=(\\d+).*", "\\1", INFO)),
+      END=ifelse(grepl("BND", ID),mPOS, gsub(".*END=(\\d+);CIPOS.*", "\\1", INFO)),
       END=as.numeric(END),
       END=ifelse(abs(POS-END)<50, nPOS, END),
       nPOS=ifelse(!grepl('BND',ID), POS, nPOS),
       mPOS=ifelse(!grepl('BND',ID), END, mPOS),
       chr2=ifelse(grepl('BND', ID), receiver, CHROM))%>%
     filter(!is.na(END))%>%
-    select(CHROM, chr2,POS, END,nPOS, mPOS, ID, sv_ref, sv_alt, class, donor, receiver, classification)%>%
-    mutate(CHROM=ifelse(grepl('BND', classification), donor, CHROM),
-           chr2=ifelse(grepl('BND', classification), receiver, chr2),
-           POS=ifelse(grepl('BND', classification), nPOS, POS),
-           END=ifelse(grepl('BND', classification), mPOS, END))
-  
+    select(CHROM, chr2,POS, END,nPOS, mPOS, ID, sv_ref, sv_alt, class, donor, receiver, classification, mate) %>%
+    rowwise() %>%
+    mutate(mate=ifelse(grepl('INV', classification), paste0('inv',as.character(which(abs(POS-sv$POS)<50)[1])), mate))%>% #Find mate for inversion
+    ungroup()
   return(sv_info)
 }

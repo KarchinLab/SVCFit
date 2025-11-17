@@ -29,12 +29,10 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
            expmt=exper,
            sample=samp,
            tmp_id=ifelse(grepl('BND', ID), gsub("((:[^:\\D:]){6}$)","", ID),gsub("((:[^:\\D:]){5}$)","", ID)))%>%
-    group_by(tmp_id)%>%
+    group_by(mate)%>%
     mutate(final_svcf=mean(final_svcf),
            classification=ifelse(grepl('BND', classification), 'BND', classification))%>%
-    ungroup()%>%
-    distinct(tmp_id, .keep_all = T)%>%
-    select(-tmp_id)
+    ungroup()
   
   return(final)
 }

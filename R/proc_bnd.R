@@ -18,30 +18,29 @@ preproc_bnd <- function(sv) {
   #pos2=as.integer(pos2),
   
   bnd_tmp=tmp %>%
-    rowwise()%>%
-    mutate(rn1=which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<400 & chr2==tmp$chr2)[1]*2-1,
-           rn2=which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<400 & CHROM==tmp$CHROM)[1]*2-1)%>%
-    group_by(rn2)%>%
-    mutate(len1=max(POS)-min(POS))%>%
-    group_by(rn1)%>%
-    mutate(len2=max(pos2)-min(pos2),
-           sum_rn2=sum(as.integer(rn2))) %>%
-    ungroup()%>%
     mutate(mateid=gsub(".*MATEID=([^;]+);.*", "\\1", INFO))%>%
     rowwise()%>%
-    mutate(t_sum_rn2=.$sum_rn2[which(mateid==.$ID)[1]],
-           n_sum_rn2=sum(sum_rn2, t_sum_rn2))%>%
-    group_by(n_sum_rn2)%>%
-    mutate(donor=unique(CHROM[which.max(len1)]),
-           receiver=unique(CHROM[which.min(len1)]),
-           receiver=ifelse(receiver==donor, unique(chr2[chr2!=receiver]), receiver))%>%
-    # donor=unique(CHROM[which.max(len1)]),
-    # receiver=unique(CHROM[which.min(len1)]),
-    # receiver=ifelse(class=='rtl', CHROM[which(CHROM!=donor)], receiver))%>%
-    filter(CHROM==receiver)%>%
-    mutate(n=n(),
-           class=ifelse(n>2, 'rtl','ubtl'),
-           class=ifelse(max(len2)<50, 'rtl',class))
+    mutate(left=which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<400 & chr2==tmp$chr2)[1]*2-1, # check left breakpoint to group
+           right=which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<400 & CHROM==tmp$CHROM)[1]*2-1) %>% # check right breakpoint to group
+    group_by(left)%>%
+    mutate(grp_right=sum(right))%>%
+    group_by(right)%>%
+    mutate(grp_left=sum(left))%>%
+    group_by(grp_left, grp_right)%>%
+    mutate(len1=max(POS)-min(POS),
+           len2=max(pos2)-min(pos2),
+           donor=unique(CHROM[which.max(len1)]),
+           receiver=unique(chr2[which.max(len2)]),
+           len_dif=abs(len1-len2)) %>%
+    rowwise()%>%
+    mutate(match_pos_id=which(abs(pos2-tmp$POS)<50)[1],
+           match_chrom=(chr2==tmp$CHROM[match_pos_id])) %>% # find which two records are mates: if they are, pos2 should have a match in POS and same chromosome
+    ungroup()%>%
+    mutate(match_pos=ifelse(match_chrom==TRUE, grp_left[match_pos_id], NA),
+           mate=as.character(match_pos+grp_right))%>% #label mate recods
+    group_by(len_dif)%>%
+    mutate(class=ifelse(max(len_dif)>50, 'utl','rtl')) %>%
+    filter(!is.na(mate))
   
   return(bnd_tmp)
 }
@@ -99,19 +98,13 @@ annotate_bnd <- function(bnd_tmp, del) {
     mutate(
       class = case_when(
         ID %in% del$BNDid ~ 'cuttl',
-        class == 'ubtl'      ~ 'coptl',
+        class == 'utl'      ~ 'coptl',
         TRUE                 ~ class
       ))%>%
-    group_by(n_sum_rn2)%>%
-    mutate(class=ifelse(any(grepl('cuttl', class)), 'cuttl',class))%>%
-    # figure out the segment length that was translocated
-    # group_by(class) %>%
-    # mutate(BND_num = as.integer(str_extract(ID, '\\d+')))%>%
-    # arrange(BND_num, .by_group = TRUE) %>%
-    # mutate(group = cumsum(c(0, diff(BND_num) > 1)) + 1) %>%
-    # ungroup()
-    group_by(class, n_sum_rn2, CHROM) %>%
-    mutate(nPOS=min(pos2),
-           mPOS=max(pos2))
+    group_by(len_dif)%>%
+    mutate(class=ifelse(any(grepl('cuttl', class)), 'cuttl',class)) %>%
+    group_by(class, mate, CHROM) %>%
+    mutate(nPOS=min(POS),
+           mPOS=max(POS))
   return(bnd)
 }
