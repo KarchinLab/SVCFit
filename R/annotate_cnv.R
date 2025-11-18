@@ -31,6 +31,6 @@ annotate_cnv <- function(sv_cnv) {
       )
     )%>%
     arrange(POS)%>%
-    select(CHROM, POS, ID, zygosity, sv_phase, cnv_phase, cncf, major, minor, cna, ASCN,cn_type, tascn, mate)
+    select(CHROM, POS, ID, zygosity, sv_phase, cnv_phase, cncf, major, minor, cna, ASCN,cn_type, tascn, no_snp, mate)
   return(anno_sv_cnv)
 }

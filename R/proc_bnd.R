@@ -105,6 +105,13 @@ annotate_bnd <- function(bnd_tmp, del) {
     mutate(class=ifelse(any(grepl('cuttl', class)), 'cuttl',class)) %>%
     group_by(class, mate, CHROM) %>%
     mutate(nPOS=min(POS),
-           mPOS=max(POS))
+           mPOS=max(POS))%>%
+    group_by(mate)%>%
+    mutate(n=n())%>%
+    filter(n>1)%>%
+    mutate(type=ifelse(class=='rtl' & n<4, 'out','stay'))%>%
+    filter(type=='stay')%>%
+    ungroup()
+  
   return(bnd)
 }
