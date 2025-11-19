@@ -8,22 +8,22 @@
 #' @returns sth
 #' @export
 #'
-analyze <- function(samp, exper, thresh = 0.1) {
+analyze <- function(samp, exper, thresh = 0.1, chr_lst=NULL) {
   print(c(samp,exper))
   print('now loading data')
-  data      <- load_data(samp, exper)
+  data      <- load_data(samp, exper, chr=chr_lst)
   print('now processing bnd')
   bnd_tmp   <- preproc_bnd(data$sv)
-  del       <- process_del(data$sv, bnd_tmp)
+  del       <- process_del(data$sv, bnd_tmp, flank_del=50)
   bnd       <- annotate_bnd(bnd_tmp, del)
   print('now pharsing sv info')
-  sv_info   <- parse_sv_info(data$sv, bnd, del)
+  sv_info   <- parse_sv_info(data$sv, bnd, del, QUAL_tresh=100, min_alt=2)
   print('now pharsing het snp')
   snp_df    <- parse_het_snps(data$het_snp)
   print('now pharsing snp on sv')
   sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
   print('now assign sv id to snp')
-  assign_id <- assign_svids(sv_phase, sv_info)
+  assign_id <- assign_svids(sv_phase, sv_info, flank=500)
   print('now summarizing sv zygosity and phasing')
   sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
   print('now assinging cnv to sv')

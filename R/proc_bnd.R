@@ -56,7 +56,7 @@ preproc_bnd <- function(sv) {
 #' @returns sth
 #' @export
 #'
-process_del <- function(sv, bnd_tmp, flank = 50) {
+process_del <- function(sv, bnd_tmp, flank_del = 50) {
   
   del=sv %>%
     filter(str_detect(INFO, 'DEL'))%>%
@@ -68,7 +68,7 @@ process_del <- function(sv, bnd_tmp, flank = 50) {
       #check any del is associated with trans (cut-paste)
       overlap = any(
         CHROM == bnd_tmp$chr2 &
-          abs(POS-bnd_tmp$pos2)<50
+          abs(POS-bnd_tmp$pos2)<flank_del
       )
     )%>%
     filter(overlap) %>%
@@ -76,7 +76,7 @@ process_del <- function(sv, bnd_tmp, flank = 50) {
     mutate(
       BNDid = bnd_tmp$ID[which(
         CHROM == bnd_tmp$chr2 &
-          abs(POS-bnd_tmp$pos2)<50
+          abs(POS-bnd_tmp$pos2)<flank_del
       )]
     ) %>%
     ungroup()

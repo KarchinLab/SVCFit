@@ -55,10 +55,10 @@
 #   
 #   return(sv_info)
 # }
-parse_sv_info <- function(sv, bnd, del) {
+parse_sv_info <- function(sv, bnd, del, QUAL_tresh=100, min_alt=2) {
   sv_info <- sv %>%
     filter(!grepl('SVTYPE=INS', INFO),
-           FILTER %in% c("PASS") | QUAL >100,
+           FILTER %in% c("PASS") | QUAL > QUAL_tresh,
            !ID %in% del$ID)%>%
     left_join(bnd)%>%
     rowwise()%>%
@@ -76,7 +76,7 @@ parse_sv_info <- function(sv, bnd, del) {
       # half the ref reads for dup and del to unify equations
       sv_ref=ifelse(classification %in% c('DUP','DEL'), sv_ref/2, sv_ref))%>%
     ungroup()%>%
-    filter(sv_alt > 2)%>%
+    filter(sv_alt > min_alt)%>%
     mutate(classification=case_when(
       class=='rtl' ~ 'RBND',
       class=='cuttl' ~ 'CUTBND',
