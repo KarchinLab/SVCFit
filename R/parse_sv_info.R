@@ -82,7 +82,7 @@ parse_sv_info <- function(sv, bnd, del) {
       class=='cuttl' ~ 'CUTBND',
       class=='coptl' ~ 'COPBND',
       is.na(class) ~ classification),
-      END=ifelse(grepl("BND", INFO),mPOS, gsub(".*END=(\\d+).*", "\\1", INFO)),
+      END=ifelse(grepl("BND", INFO),mPOS, gsub(".*END=(\\d+);.*", "\\1", INFO)),
       END=as.numeric(END),
       END=ifelse(abs(POS-END)<50, nPOS, END),
       nPOS=ifelse(!grepl('BND',INFO), POS, nPOS),

@@ -26,11 +26,11 @@ sum_sv_info <- function(sv_phase, assign_id, sv_info){
       .groups="drop"
     )%>%
     select(-POS)%>%
-    left_join(sv_info, by=c('ID','CHROM'))%>%
+    right_join(sv_info, by=c('ID','CHROM'))%>%
     #assign info to SV with no het snps
     mutate(no_snp = ifelse(is.na(snp_alt), 1, 0),
            sv_phase=ifelse(no_snp==1, 'pat', sv_phase),
-    zygosity=ifelse(no_snp==1, zygosity_tmp, zygosity_snp))%>%
+    zygosity=ifelse(no_snp==1, 'het', zygosity_snp))%>%
     filter(!is.na(POS))
   
   return(sv_sum)
