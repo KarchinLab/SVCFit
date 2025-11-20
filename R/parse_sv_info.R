@@ -62,6 +62,7 @@ parse_sv_info <- function(sv, bnd, del, QUAL_tresh=100, min_alt=2) {
            !ID %in% del$ID)%>%
     left_join(bnd)%>%
     rowwise()%>%
+    #collect read count
     mutate(sv_ref = setNames(strsplit(tumor,  ":")[[1]], strsplit(FORMAT, ":")[[1]])["RO"],
            sv_alt = setNames(strsplit(tumor,  ":")[[1]], strsplit(FORMAT, ":")[[1]])["AO"],
            sv_ref=as.integer(sv_ref),

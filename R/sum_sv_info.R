@@ -11,6 +11,7 @@ sum_sv_info <- function(sv_phase, assign_id, sv_info){
   sv_sum    <- sv_phase %>%
     left_join(assign_id, by=c('snp_id'))%>%
     filter(!is.na(ID))%>%
+    # use het snp to decide zygosity and phasing
     mutate(sv_zy = ifelse(a_count == 1, "het", "hom"),
            sv_phase = ifelse(allele == REF, "mat", "pat"))%>%
     group_by(ID, CHROM) %>%

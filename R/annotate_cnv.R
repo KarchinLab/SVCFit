@@ -7,6 +7,7 @@
 #'
 annotate_cnv <- function(sv_cnv) {
   anno_sv_cnv = sv_cnv %>%
+    # label CNA
     mutate(
       vaf = snp_alt/dep,
       tascn = round(vaf/(1-vaf),2),
