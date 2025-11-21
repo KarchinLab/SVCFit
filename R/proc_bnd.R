@@ -1,12 +1,13 @@
-#' Title
+#' Process translocation
 #'
 #' @param sv an object of class 'data frame' which stores the sv input from `load_data`.
-#' @param bnd_thresh an object of class 'integer' which describes.
+#' @param flank_del an object of class 'integer' which describes the maximum genomic location 
+#' difference between a deletion and a translocation to be considered overlapping 
 #'
 #' @returns sth
 #' @export
 #'
-preproc_bnd <- function(sv) {
+proc_bnd <- function(sv, flank_del=50) {
   
   # only get BND records
   tmp=sv %>%
@@ -41,24 +42,7 @@ preproc_bnd <- function(sv) {
     mutate(class=ifelse(max(len_dif)>50, 'utl','rtl')) %>%
     filter(!is.na(mate))
   
-  return(bnd_tmp)
-}
-
-# 2b. Identify DEL overlapping BND
-#' Title
-#'
-#' @param sv an object of class 'data frame' which stores the sv input from `load_data`.
-#' @param bnd_tmp an object of class 'data frame' which is the output from `preproc_bnd`.
-#' @param flank_del an object of class 'integer' which describes the maximum genomic
-#' location difference between a deletion and translocation to be considered related.
-#'
-#' @returns sth
-#' @export
-#'
-process_del <- function(sv, bnd_tmp, flank_del = 50) {
-  
-  # isolate deletion to find cut-paste trans
-  # check if a deletion overlaps with a trans
+  # Identify DEL overlapping BND
   del=sv %>%
     filter(str_detect(INFO, 'DEL'))%>%
     mutate(chr2=CHROM,
@@ -81,21 +65,8 @@ process_del <- function(sv, bnd_tmp, flank_del = 50) {
       )]
     ) %>%
     ungroup()
-  return(del)
-}
-
-# 2c. Annotate BND classes
-#' Title
-#'
-#' @param bnd_tmp an object of class 'data frame' which stores the sv input from `preproc_bnd`.
-#' @param del an object of class 'data frame' which stores the sv input from `process_del`.
-#'
-#' @returns sth
-#' @export
-#'
-annotate_bnd <- function(bnd_tmp, del) {
   
-  # assign cut-paste, copy-paste, and reciprocal
+  # Annotate BND classes
   bnd=bnd_tmp %>%
     # use del to classify cut-paste, and rest to copy paste
     mutate(
@@ -116,5 +87,62 @@ annotate_bnd <- function(bnd_tmp, del) {
     filter(type=='stay')%>%
     ungroup()
   
-  return(bnd)
+  return(list(bnd, del))
 }
+
+# # 2b. Identify DEL overlapping BND
+# process_del <- function(sv, bnd_tmp, flank_del = 50) {
+# 
+#   # isolate deletion to find cut-paste trans
+#   # check if a deletion overlaps with a trans
+#   del=sv %>%
+#     filter(str_detect(INFO, 'DEL'))%>%
+#     mutate(chr2=CHROM,
+#            pos2=gsub('.*END=(.*);CIPOS.*','\\1',INFO),
+#            pos2=as.integer(pos2))%>%
+#     rowwise() %>%
+#     mutate(
+#       #check any del is associated with trans (cut-paste)
+#       overlap = any(
+#         CHROM == bnd_tmp$chr2 &
+#           abs(POS-bnd_tmp$pos2)<flank_del
+#       )
+#     )%>%
+#     filter(overlap) %>%
+#     # assign trans id to associated del
+#     mutate(
+#       BNDid = bnd_tmp$ID[which(
+#         CHROM == bnd_tmp$chr2 &
+#           abs(POS-bnd_tmp$pos2)<flank_del
+#       )]
+#     ) %>%
+#     ungroup()
+#   return(del)
+# }
+# 
+# # 2c. Annotate BND classes
+# annotate_bnd <- function(bnd_tmp, del) {
+# 
+#   # assign cut-paste, copy-paste, and reciprocal
+#   bnd=bnd_tmp %>%
+#     # use del to classify cut-paste, and rest to copy paste
+#     mutate(
+#       class = case_when(
+#         ID %in% del$BNDid ~ 'cuttl',
+#         class == 'utl'      ~ 'coptl',
+#         TRUE                 ~ class
+#       ))%>%
+#     group_by(len_dif)%>%
+#     mutate(class=ifelse(any(grepl('cuttl', class)), 'cuttl',class)) %>%
+#     group_by(class, mate, CHROM) %>%
+#     mutate(nPOS=min(POS),
+#            mPOS=max(POS))%>%
+#     group_by(mate)%>%
+#     mutate(n=n())%>%
+#     filter(n>1)%>%
+#     mutate(type=ifelse(class=='rtl' & n<4, 'out','stay'))%>%
+#     filter(type=='stay')%>%
+#     ungroup()
+# 
+#   return(bnd)
+# }

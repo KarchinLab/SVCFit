@@ -2,18 +2,16 @@
 % Please edit documentation in R/proc_bnd.R
 \name{preproc_bnd}
 \alias{preproc_bnd}
-\title{Title}
+\title{Process translocation}
 \usage{
-preproc_bnd(sv, bnd_thresh = 200)
+preproc_bnd(sv)
 }
 \arguments{
 \item{sv}{an object of class 'data frame' which stores the sv input from \code{load_data}.}
-
-\item{bnd_thresh}{an object of class 'integer' which describes.}
 }
 \value{
 sth
 }
 \description{
-Title
+Process translocation
 }

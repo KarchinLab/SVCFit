@@ -4,15 +4,15 @@
 \alias{analyze}
 \title{main wrapper to run all functions}
 \usage{
-analyze(sample, experiment, threshold = 0.1, chr_list = NULL)
+analyze(samp, exper, thresh = 0.1, chr_lst = NULL)
 }
 \arguments{
-\item{sampan}{object of class 'character'. This object describes the sample name.}
-
 \item{exper}{an object of class 'character'. This object describes the experiment number.}
 
 \item{thresh}{an object of class 'numeric'. This object is strictly between 0 and 1, and describes the
 threshold for SVCFit to decide whether an SV occurs before CNV or after.}
+
+\item{sampan}{object of class 'character'. This object describes the sample name.}
 }
 \value{
 sth

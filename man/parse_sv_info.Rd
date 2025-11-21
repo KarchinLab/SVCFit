@@ -4,7 +4,7 @@
 \alias{parse_sv_info}
 \title{parse SV information}
 \usage{
-parse_sv_info(sv, bnd, del, QUAL_thresh = 100, min_alt = 2)
+parse_sv_info(sv, bnd, del, QUAL_tresh = 100, min_alt = 2)
 }
 \arguments{
 \item{sv}{an object of class 'data frame'. This object stores the sv data loaded from \code{load_data}.}
@@ -13,11 +13,11 @@ parse_sv_info(sv, bnd, del, QUAL_thresh = 100, min_alt = 2)
 
 \item{del}{an object of class 'data frame'. This object stores the output from \code{proc_bnd}.}
 
-\item{min_alt}{an object of class 'integer'. This object describes the minimum alternative read
-count for a structural varinats to have to be included for anlaysis.}
-
 \item{QUAL_tresh}{an object of class 'integer'. This object describes the minimum QUAL score
 to include for analysis.}
+
+\item{min_alt}{an object of class 'integer'. This object describes the minimum alternative read
+count for a structural varinats to have to be included for anlaysis.}
 }
 \value{
 sth

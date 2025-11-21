@@ -4,21 +4,18 @@
 \alias{load_data}
 \title{load input data}
 \usage{
-load_data(
-  samp,
-  exper,
-  base_dir = "~/Documents/Karchin_lab/visor/m_benchmark",
-  chr = NULL
-)
+load_data(p_het, p_onsv, p_sv, p_cnv, chr = NULL, tumor_only = FALSE)
 }
 \arguments{
+\item{chr}{an object of class 'character'. This object describes what chromosome to include for analysis.}
+
+\item{tumor_only}{object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM}
+
 \item{samp}{an object of class 'character'. This object describes the sample name.}
 
 \item{exper}{an object of class 'character'. This object describes the experiment number.}
 
 \item{base_dir}{an object of class 'character'. This object describes the path where file is stored.}
-
-\item{chr}{an object of class 'character'. This object describes what chromosome to include for analysis.}
 }
 \value{
 sth
