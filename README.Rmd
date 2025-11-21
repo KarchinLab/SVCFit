@@ -54,7 +54,7 @@ remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencie
 SVCFit is designed to take input from Variant Call Format (VCF) files. By default, it accepts the VCF format produced by the SVTyper package [2]. If you have a VCF output from a structural variant caller other than Manta, please modify to match this format:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
-|-------|-------|--------------|-------|-------|-------|-------|------------------------------|-----------|--------------|--------------|
+|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | 100 | PASS | END=1500;SVTYPE=INV;SVLEN=500;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 | chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | 100 | PASS | END=5300;SVTYPE=DEL;SVLEN=300;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 
@@ -93,7 +93,7 @@ sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 #### `load_data()`
 
 | Argument | Type | Default | Description |
-|-----------------|-----------------|-----------------|-----------------------|
+|-----------------|-----------------|-----------------|---------------------|
 | `p_het` | Character | — | Path to VCF of heterozygous SNPs. |
 | `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
 | `p_sv` | Character | — | Path to SV VCF. |
@@ -104,7 +104,7 @@ sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 #### `proc_bnd()`
 
 | Argument | Type | Default | Description |
-|-----------------|-----------------|-----------------|----------------------|
+|-----------------|-----------------|-----------------|---------------------|
 | `sv` | data.frame | — | SV VCF data. |
 | `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
 
@@ -195,7 +195,7 @@ output <- calculate_svcf(input=checked, tumor_only=FALSE)
 #### Function Arguments
 
 | Argument      | Type       | Default | Description                            |
-|---------------|------------|---------|----------------------------------------|
+|--------------|--------------|--------------|--------------------------------|
 | `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
 | `sv_info`     | data.frame | —       | Parsed SV info.                        |
 | `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |

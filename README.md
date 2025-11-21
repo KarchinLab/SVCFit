@@ -51,101 +51,141 @@ than Manta, please modify to match this format:
 
 ## General workflow
 
-*SVCF()* is the main function in this package that wraps all
-functionality described below. All functions can also be run separately.
+### 1. Extract SV and SNP Information — `extract_info()`
+
+This step loads and preprocesses the input VCF and CNV files. `extract_info()` internally performs:
+
+1.  **Load input data** — `load_data()`
+2.  **Process BND events** — `proc_bnd()`
+3.  **Parse SV metadata** — `parse_sv_info()`
+4.  **Parse heterozygous SNPs** — `parse_het_snp()`, `parse_snp_on_sv()`
 
 ``` r
-SVCF(vcf_path="~/path/to/file.vcf", tumor_only=FALSE, length_threshold=0, overlap=TRUE, tolerance=6, window=100, multiple=FALSE, truth_path=NULL, mode="inherited")
+# all in one
+info <- extract_info(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
+
+# step by step
+data      <- load_data(samp, exper, chr=chr_lst, tumor_only=FALSE)
+bnd_info   <- proc_bnd(data$sv, flank_del=50)
+sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_tresh=100, min_alt=2)
+snp_df    <- parse_het_snps(data$het_snp)
+sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 ```
 
-*SVCF()* requires two arguments and includes several optional
-parameters:
+#### Function Arguments
 
-### Required Arguments
-
-| Argument | Type | Default | Description |
-|----|----|----|----|
-| `vcf_path` | Character | `NULL` | Path to VCF files. |
-| `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
-
-### Optional Arguments
+#### `load_data()`
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
-| `length_threshold` | Integer | `0` | Structural variant length filter threshold. |
-| `overlap` | Boolean | `FALSE` | Whether structural variants should be filtered based on coordinate overlap. |
-| `tolerance` | Integer | `6` | Maximum distance between structural variants to be considered as a single variant. |
-| `window` | Integer | `1000` | Number of structural variants checked for overlap to form a single variant. |
-| `multiple` | Boolean | `FALSE` | Whether the sample has multiple clones (used in simulated data for assigning clones). |
-| `truth_path` | Character | `NULL` | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
-| `mode` | Character | `"inherited"` | Describes how true clonal information is saved:<br>- **`"inherited"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"distinct"`**: Child clones do not contain any ancestral structural variants. |
+|-----------------|-----------------|-----------------|---------------------|
+| `p_het` | Character | — | Path to VCF of heterozygous SNPs. |
+| `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
+| `p_sv` | Character | — | Path to SV VCF. |
+| `p_cnv` | Character | — | Path to CNV file. |
+| `chr` | Character | — | Chromosomes to include. |
+| `tumor_only` | Logical | FALSE | Whether SVs come from tumor-only calling. |
 
-The steps executed by *SVCF()* are:
-
-### 1. Extract information from input VCF (*extract_info()*)
-
-This step assigns column names and extracts key information for
-downstream calculation and filtering. Key information includes reads,
-structural variant length, and structural variant coordinates.
-
-This function has 3 arguments:
+#### `proc_bnd()`
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
-| `vcf_path` | Character | `NULL` | Path to VCF files. |
-| `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
-| `length_threshold` | Numeric | `0` | Structural variant length filter threshold. |
+|-----------------|-----------------|-----------------|---------------------|
+| `sv` | data.frame | — | SV VCF data. |
+| `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
 
-For example, the following command will generate an annotated VCF file
-with all structural variants with length\>50
+#### `parse_sv_info()`
+
+| Argument     | Type       | Default | Description                 |
+|--------------|------------|---------|-----------------------------|
+| `sv`         | data.frame | —       | SV VCF data.                |
+| `bnd`        | data.frame | —       | Translocations (BNDs).      |
+| `del`        | data.frame | —       | Deletions overlapping BNDs. |
+| `QUAL_tresh` | numeric    | —       | Minimum QUAL score.         |
+| `min_alt`    | numeric    | —       | Minimum alternative reads.  |
+
+#### `parse_het_snp()`
+
+| Argument  | Type       | Default | Description        |
+|-----------|------------|---------|--------------------|
+| `het_snp` | data.frame | —       | Heterozygous SNPs. |
+
+#### `parse_snp_on_sv()`
+
+| Argument    | Type       | Default | Description                  |
+|-------------|------------|---------|------------------------------|
+| `het_on_sv` | data.frame | —       | SNPs on SV-supporting reads. |
+| `snp_df`    | data.frame | —       | Parsed heterozygous SNPs.    |
+
+**Output:** A list of data frames containing parsed SV + SNP information.
+
+### 2. Annotate SVs Using CNV and SNP Information — `characterize_sv()`
+
+This step integrates CNV and heterozygous SNPs to infer additional information for SVs, 
+including phasing, zygosity, and overlapping CNV. `characterize_sv()` internally performs:
+
+1.  **Assign SV IDs to SNPs** — `assign_svids()`
+2.  **Summarizes phasing + zygosity** — `sum_sv_info()`
+3.  **Assign CNV to SV** — `assign_cnv()`
+4.  **Annotate overlapping CNV** — `annotate_cnv()`, `parse_snp_on_sv()`
 
 ``` r
-vcf <- extract_info("~/path/to/file.vcf", tumor_only=TRUE, length_threshold=50)
+# all in one
+sv_char <- characterize_sv(sv_phase, sv_info, cnv)
+
+# step by step 
+assign_id <- assign_svids(sv_phase, sv_info, flank=500)
+sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
+sv_cnv    <- assign_cnv(sv_sum, cnv)
+anno_sv_cnv     <- annotate_cnv(sv_cnv)
 ```
 
-The output from *extract_info()* will be in annotated VCF format.
+#### Function Arguments
 
-### 2. Check overlapping structural variants (*check_overlap()*)
+#### `assign_svids()`
 
-This step checks if structural variants in VCF files are close enough to
-be considered as a single structural variant. Skipping this step doesn’t
-affect the workflow.
+| Argument   | Type       | Default | Description                 |
+|------------|------------|---------|-----------------------------|
+| `sv_phase` | data.frame | —       | Phasing/zygosity from SNPs. |
+| `sv_info`  | data.frame | —       | Parsed SV metadata.         |
+| `flank`    | numeric    | —       | Max assignment distance.    |
 
-This function has 4 arguments:
+#### `sum_sv_info()`
 
-| Argument | Type | Default | Description |
-|----|----|----|----|
-| `dat` | DataFrame | N/A | A dataframe to be compared. This dataframe should be the output of `extract_info` (an annotated VCF file) and contains structural variant genome coordinates. |
-| `compare` | DataFrame | N/A | A dataframe used as a reference for comparison. This dataframe should be the output of `extract_info` (an annotated VCF file) and contains structural variant genome coordinates. |
-| `tolerance` | Integer | `6` | Threshold for the maximum distance between structural variants to be considered as a single variant. |
-| `window` | Integer | `1000` | Number of structural variants checked for overlap to form a single variant. |
+| Argument    | Type       | Default | Description          |
+|-------------|------------|---------|----------------------|
+| `sv_phase`  | data.frame | —       | Phasing information. |
+| `assign_id` | data.frame | —       | SNP→SV assignment.   |
+| `sv_info`   | data.frame | —       | Parsed SV metadata.  |
 
-Note: When *dat* and *compare* are the same dataframe, this function
-will merge overlapping structural variants and recompute the reads
-supporting the new structural variant by taking the average of the
-overlapping structural variants. When *compare* is the ground truth from
-a simulation, this function will also remove false positive structural
-variants that were not included in the simulation.
+#### `assign_cnv()`
 
-``` r
-checked <- check_overlap(dat, compare)
-```
+| Argument | Type       | Default | Description     |
+|----------|------------|---------|-----------------|
+| `sv_sum` | data.frame | —       | Summarized SVs. |
+| `cnv`    | data.frame | —       | CNV data.       |
 
-### 3. Calculate SVCF for structural variants (*calculate_svcf()*)
+#### `annotate_cnv()`
 
-This step calculates the structural variant cellular fraction (SVCF) for
-all structural variants in the input VCF file.
+| Argument | Type       | Default | Description              |
+|----------|------------|---------|--------------------------|
+| `sv_cnv` | data.frame | —       | SVs annotated with CNVs. |
+
+### 3. Calculate SVCF for Structural Variants — `calculate_svcf()`
+
+This step computes the **Structural Variant Cellular Fraction (SVCF)**.
 
 ``` r
 output <- calculate_svcf(input=checked, tumor_only=FALSE)
 ```
 
-This function has 2 arguments:
+#### Function Arguments
 
-| Argument | Type | Default | Description |
-|----|----|----|----|
-| `dat` | DataFrame | N/A | It stores the set of information for structural variants used to calculate SVCF. This dataframe should be the output of `extract_info`(an annotated VCF file) . |
-| `tumor_only` | Boolean | `FALSE` | Whether the VCF is created without a matched normal sample. |
+| Argument      | Type       | Default | Description                            |
+|--------------|--------------|--------------|--------------------------------|
+| `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
+| `sv_info`     | data.frame | —       | Parsed SV info.                        |
+| `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
+| `samp`        | character  | —       | Sample name.                           |
+| `exper`       | character  | —       | Experiment name.                       |
 
 The output is an annotated VCF with additional fields for VAF, Rbar, r
 and SVCF. VAF=variant allele frequency; Rbar=average break interval
