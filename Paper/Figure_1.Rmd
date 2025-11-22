@@ -144,7 +144,7 @@ all_stat=all_dat %>%
   add_significance()%>%
   add_xy_position(x = "new_class")
 
-p=all_dat %>%
+f1a=all_dat %>%
   ggplot()+
   geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
   facet_grid(purity ~ clone)+
@@ -152,27 +152,6 @@ p=all_dat %>%
   ylab("estimation error from true svcf")+
   xlab("")+
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-```
-
-
-## plot F1 VISOR benchmark
-```{r}
-all_stat=all_dat %>%
-  mutate(deviation=abs(svcf-true_svcf))%>%
-  group_by(purity,clone, new_class)%>%
-  wilcox_test(deviation~tool, paired = TRUE)%>%
-  add_significance()%>%
-  add_xy_position(x = "new_class")
-
-all_dat %>%
-  ggplot()+
-  geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
-  facet_grid(purity ~ clone)+
-  stat_pvalue_manual(all_stat, hide.ns = TRUE)+
-  ylab("estimation error from true svcf")+
-  xlab("")+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-
 ```
 
 
@@ -199,6 +178,15 @@ load_data <- function(samp, exper, base_dir = "~/Documents/Karchin_lab/visor/pro
               het_on_sv = het_on_sv,
               sv = sv,
               cnv = cnv))
+}
+
+extract_info <- function(samp, exper, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
+  data      <- load_data(samp, exper)
+  bnd_info   <- proc_bnd(data$sv, flank_del=50)
+  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=100, min_alt=2)
+  snp_df    <- parse_het_snps(data$het_snp)
+  sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
+  return(list(data, sv_info, snp_df, sv_phase))
 }
 
 parse_snp_on_sv <- function(het_on_sv, snp_df) {
@@ -246,20 +234,16 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
   return(sv_phase)
 }
 
-analyze <- function(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE, samp, exper) {
-  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
+
+analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE) {
+  info <- extract_info(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
   sv_phase <- info[[4]]
   anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
   final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
-  truth <- load_truth(exper)
-  final_truth <- attach_truth(final, truth)
-  svc <- analyze_svclone(samp,exper, final_truth, sv_info)
-  common_dat <- final_truth %>%
-    filter(ID %in% svc$ID)
-  return(list(final_truth, svc, common_dat))
+  return(final)
 }
 
 ```
@@ -395,8 +379,7 @@ paper_dat=data.frame(expmt=name, mean_error=svclone) %>%
 
 final=rbind(svcfit, svcfit45, paper_dat)
 
-library(ggplot2)
-final %>%
+f1b=final %>%
   ggplot()+
   geom_point(aes(x=expmt, y = mean_error, color=method))+
   geom_line(aes(x=expmt, y = mean_error, group = method, color= method))+
