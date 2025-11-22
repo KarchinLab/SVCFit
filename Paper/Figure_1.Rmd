@@ -7,7 +7,10 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(SVCFit)
-library(tidyverse)
+library(dplyr)
+library(stringr)
+library(GenomicRanges)
+library(ggplot2)
 library(ggpubr) #for stat
 library(rstatix) #for stat
 library(ggsignif) #for plot significance
@@ -15,13 +18,13 @@ library(ggsignif) #for plot significance
 
 # F1 VISOR benchmark
 ```{r}
-analyze <- function(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE, samp, exper) {
-  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
+analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE) {
+  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
   sv_phase <- info[[4]]
-  anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
+  anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data[[4]])
   final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
   truth <- load_truth(exper)
   final_truth <- attach_truth(final, truth)
@@ -32,79 +35,67 @@ analyze <- function(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, mi
 }
 
 exp_list=c("exp1","exp2","exp3", "exp4","exp5")
-
+base_dir = '~/Documents/Karchin_lab/visor/m_benchmark'
 p81 = lapply(exp_list, function(x) analyze("c50p80m10",x,
                                            file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p80m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p80m10", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p80m10", x, paste0(x, '.bed'))))
 p83 = lapply(exp_list, function(x) analyze("c50p80m30",x,
                                            file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p80m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p80m30", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p80m30", x, paste0(x, '.bed'))))
 p85 = lapply(exp_list, function(x) analyze("c50p80m50",x,
                                            file.path(base_dir, 'SNP', "c50p80m50", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p80m50", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p80m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p80m50", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p80m50", x, paste0(x, '.bed'))))
 p61 = lapply(exp_list, function(x) analyze("c50p60m10",x,
                                            file.path(base_dir, 'SNP', "c50p60m10", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p60m10", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p60m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p60m10", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p60m10", x, paste0(x, '.bed'))))
 p63 = lapply(exp_list, function(x) analyze("c50p60m30",x,
                                            file.path(base_dir, 'SNP', "c50p60m30", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p60m30", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p60m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p60m30", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p60m30", x, paste0(x, '.bed'))))
 p65 = lapply(exp_list, function(x) analyze("c50p60m50",x,
                                            file.path(base_dir, 'SNP', "c50p60m50", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p60m50", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p60m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p60m50", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p60m50", x, paste0(x, '.bed'))))
 p41 = lapply(exp_list, function(x) analyze("c50p40m10",x,
                                            file.path(base_dir, 'SNP', "c50p40m10", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p40m10", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p40m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p40m10", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p40m10", x, paste0(x, '.bed'))))
 p43 = lapply(exp_list, function(x) analyze("c50p40m30",x,
                                            file.path(base_dir, 'SNP', "c50p40m30", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p40m30", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p40m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p40m30", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p40m30", x, paste0(x, '.bed'))))
 p45 = lapply(exp_list, function(x) analyze("c50p40m50",x,
                                            file.path(base_dir, 'SNP', "c50p40m50", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p40m50", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p40m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p40m50", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p40m50", x, paste0(x, '.bed'))))
 p21 = lapply(exp_list, function(x) analyze("c50p20m10",x,
                                            file.path(base_dir, 'SNP', "c50p20m10", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p20m10", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p20m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p20m10", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p20m10", x, paste0(x, '.bed'))))
 p23 = lapply(exp_list, function(x) analyze("c50p20m30",x,
                                            file.path(base_dir, 'SNP', "c50p20m30", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p20m30", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p20m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p20m30", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p20m30", x, paste0(x, '.bed'))))
 p25 = lapply(exp_list, function(x) analyze("c50p20m50",x,
                                            file.path(base_dir, 'SNP', "c50p20m50", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p20m50", x, paste0("het_on_sv_",x,".vcf")),
                                            file.path(base_dir, 'svtyp', "c50p20m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p20m50", x, paste0(x, '.bed')),
-                                           0.1, chr_list = NULL))
+                                           file.path(base_dir, 'facet', "c50p20m50", x, paste0(x, '.bed'))))
 ```
 
 ## process data for F1 VISOR benchmark
@@ -153,7 +144,7 @@ all_stat=all_dat %>%
   add_significance()%>%
   add_xy_position(x = "new_class")
 
-all_dat %>%
+p=all_dat %>%
   ggplot()+
   geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
   facet_grid(purity ~ clone)+

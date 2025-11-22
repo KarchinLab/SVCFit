@@ -12,13 +12,9 @@
 #'
 
 characterize_sv <- function(sv_phase, sv_info, cnv){
-  print('now assign sv id to snp')
   assign_id <- assign_svids(sv_phase, sv_info, flank=500)
-  print('now summarizing sv zygosity and phasing')
   sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
-  print('now assinging cnv to sv')
   sv_cnv    <- assign_cnv(sv_sum, cnv)
-  print('now creating cnv phasing')
   anno_sv_cnv     <- annotate_cnv(sv_cnv)
   return(anno_sv_cnv)
 }

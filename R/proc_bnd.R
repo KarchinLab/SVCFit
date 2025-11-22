@@ -12,8 +12,8 @@ proc_bnd <- function(sv, flank_del=50) {
   # only get BND records
   tmp=sv %>%
     filter(grepl("BND", INFO)) %>%
-    mutate(chr2=paste0('chr',gsub('.*chr(.*):.*','\\1', ALT)),
-           pos2=gsub('.*chr.*:(\\d+).*','\\1', ALT),
+    mutate(chr2=paste0('chr',gsub("\\D+(.*):(\\d+).*", "\\1", ALT)),
+           pos2=gsub("\\D+(.*):(\\d+).*",'\\2', ALT),
            pos2=as.integer(pos2))
   
   # get BND information

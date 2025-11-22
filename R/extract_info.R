@@ -20,17 +20,11 @@
 #' @export
 #'
 
-extract_info <- function(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
-  print(c(samp,exper))
-  print('now loading data')
-  data      <- load_data(samp, exper, chr=chr_lst, tumor_only=FALSE)
-  print('now processing bnd')
+extract_info <- function(p_het, p_onsv, p_sv, p_cnv, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
+  data      <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=chr_lst, tumor_only=FALSE)
   bnd_info   <- proc_bnd(data$sv, flank_del=50)
-  print('now pharsing sv info')
-  sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_tresh=100, min_alt=2)
-  print('now pharsing het snp')
+  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=100, min_alt=2)
   snp_df    <- parse_het_snps(data$het_snp)
-  print('now pharsing snp on sv')
   sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
   return(list(data, sv_info, snp_df, sv_phase))
 }
