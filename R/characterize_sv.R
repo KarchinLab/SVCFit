@@ -20,5 +20,5 @@ characterize_sv <- function(sv_phase, sv_info, cnv){
   sv_cnv    <- assign_cnv(sv_sum, cnv)
   print('now creating cnv phasing')
   anno_sv_cnv     <- annotate_cnv(sv_cnv)
-  return(list(anno_sv_cnv, sv_info))
+  return(anno_sv_cnv)
 }
