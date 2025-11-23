@@ -120,7 +120,7 @@ ll=list(p81,p83,p85,p61,p63,p65,p41,p43,p45,p21,p23,p25)
 all_dat=lapply(1:12, function(x) gather_data(ll,x)) %>% 
   do.call(rbind,.)%>%
   mutate(pur=as.integer(gsub(".*p(\\d+).*","\\1",sample))/100,
-         purity=paste0(pur*100,"%"),
+         purity=paste0('purity ', pur*100,"%"),
          mixture=as.integer(gsub(".*m","",sample))/100,
          true_svcf=pur,
          true_svcf=case_when(
@@ -151,7 +151,61 @@ f1a=all_dat %>%
   stat_pvalue_manual(all_stat, hide.ns = TRUE)+
   ylab("estimation error from true svcf")+
   xlab("")+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+  theme(text = element_text(size = 15))
+
+```
+
+
+# summary of SV for visor
+```{r}
+library(tidyr)
+exp_list=c("exp1","exp2","exp3", "exp4","exp5")
+truth <- lapply(exp_list, function(x) load_truth(x) %>% mutate(exp=x)) %>%
+  do.call(rbind,.)%>%
+  mutate(classification=case_when(
+           type=='deletion' ~ 'DEL',
+           type=='tandem duplication' ~ 'DUP',
+           type=='inversion' ~ 'INV',
+           grepl('tran', type) ~ 'BND'
+         ),
+         expmt=exp) %>%
+  group_by(classification, expmt)%>%
+  tally()%>%
+  mutate(n_true=n*12)%>% # 4 purity x 3 subclone proportion
+  select(-n)
+
+dat_used <- all_dat %>%
+  group_by(classification, expmt)%>%
+  tally()%>%
+  mutate(n=n/2)
+
+f1b <- left_join(truth, dat_used)%>%
+  mutate(n=ifelse(is.na(n), 0, n),
+         missing=n_true-n,
+         called=n)%>%
+  pivot_longer(cols = c('missing', 'called'), values_to = 'counts', names_to = 'condition')%>%
+  ggplot(aes(x=classification, y=counts, fill=condition))+
+  geom_bar(position="fill", stat="identity")+
+  theme_minimal()+
+  xlab('')+
+  ylab('Percentage')+
+  scale_fill_manual(values = c("called" = "skyblue", "missing" = "orange"))+
+  theme(text = element_text(size = 13))
+
+f1b_t <- left_join(truth, dat_used)%>%
+  mutate(n=ifelse(is.na(n), 0, n),
+         missing=n_true-n,
+         called=n)%>%
+  pivot_longer(cols = c('missing', 'called'), values_to = 'counts', names_to = 'condition')%>%
+  mutate(tool=ifelse(condition=='missing', 'SVclone', 'SVCFit'))%>%
+  ggplot(aes(x=classification, y=counts, fill=tool))+
+  geom_bar(position="fill", stat="identity")+
+  theme_minimal()+
+  xlab('')+
+  ylab('Percentage')+
+  theme(text = element_text(size = 13))
 ```
 
 
@@ -247,6 +301,7 @@ analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_
 }
 
 ```
+
 
 # process for F1 prostate mixture
 ```{r}
@@ -379,14 +434,15 @@ paper_dat=data.frame(expmt=name, mean_error=svclone) %>%
 
 final=rbind(svcfit, svcfit45, paper_dat)
 
-f1b=final %>%
+f1c=final %>%
   ggplot()+
   geom_point(aes(x=expmt, y = mean_error, color=method))+
   geom_line(aes(x=expmt, y = mean_error, group = method, color= method))+
   ylim(c(-0.5, 0.5))+
-  ylab("True-ccf")+
-  xlab("mixtures")+
-  theme_minimal()
+  ylab("Mean of CCF estimation error")+
+  xlab("")+
+  theme_minimal()+
+  theme(text = element_text(size = 13))
 ```
 
 
