@@ -106,7 +106,7 @@ assign_background_cnv <- function(sv_sum, cnv, flank = 1000) {
     mutate(sv_idx = row_number()) %>%
     left_join(bg_wide, by = "sv_idx") %>%
     select(-sv_idx)%>%
-    mutate(bkg_cna=(cna_left+cna_right)/2,
+    mutate(bkg_cna=rowMeans(.[, c("cna_left", "cna_right")], na.rm = TRUE),
            bkg_cnv=case_when(
              bkg_cna > 2 ~ 'DUP',
              bkg_cna ==2 ~ 'norm',

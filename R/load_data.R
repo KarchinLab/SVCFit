@@ -14,7 +14,7 @@
 #' @returns sth
 #' @export
 #'
-load_data <- function(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only=FALSE) {
+load_data <- function(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only) {
 
   het_snp <- read.table(p_het, quote="\"")
   colnames(het_snp) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','bulk')
@@ -39,7 +39,7 @@ load_data <- function(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only=FALSE) {
     mutate(lcn.em=ifelse(is.na(lcn.em), 1, lcn.em),
            chrom=paste0("chr",chrom))
   if(!is.null(chr)){
-    cnv <- het_snp %>% filter(chrom %in% chr)
+    cnv <- cnv %>% filter(chrom %in% chr)
   }
 
   return(list(het_snp = het_snp,

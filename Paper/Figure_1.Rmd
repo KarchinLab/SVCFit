@@ -19,8 +19,8 @@ library(ggsignif) #for plot significance
 
 # F1 VISOR benchmark
 ```{r, message=FALSE}
-analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE) {
-  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
+analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
@@ -208,7 +208,7 @@ all_dat %>%
 #tmp supplementary figure
 ```{r, message=FALSE}
 tmp_stat=all_dat %>%
-  filter(expmt=='exp5')%>%
+  filter(expmt=='exp2')%>%
   mutate(deviation=abs(svcf-true_svcf))%>%
   group_by(purity,clone, new_class)%>%
   wilcox_test(deviation~tool, paired = TRUE)%>%
@@ -216,7 +216,7 @@ tmp_stat=all_dat %>%
   add_xy_position(x = "new_class")
 
 tmp <- all_dat %>%
-  filter(expmt=='exp5')%>%
+  filter(expmt=='exp2')%>%
   ggplot()+
   geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
   facet_grid(purity ~ clone)+
