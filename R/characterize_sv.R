@@ -16,5 +16,7 @@ characterize_sv <- function(sv_phase, sv_info, cnv){
   sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
   sv_cnv    <- assign_cnv(sv_sum, cnv)
   anno_sv_cnv     <- annotate_cnv(sv_cnv)
-  return(anno_sv_cnv)
+  sv_background <- assign_background_cnv(sv_sum, cnv, flank = 1000)
+  sv_all <- left_join(anno_sv_cnv, sv_background)
+  return(sv_all)
 }

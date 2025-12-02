@@ -5,9 +5,10 @@ date: "2025-11-21"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE}
 library(SVCFit)
 library(dplyr)
+library(tidyr)
 library(stringr)
 library(GenomicRanges)
 library(ggplot2)
@@ -17,7 +18,7 @@ library(ggsignif) #for plot significance
 ```
 
 # F1 VISOR benchmark
-```{r}
+```{r, message=FALSE}
 analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE) {
   info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
   data <- info[[1]]
@@ -36,16 +37,18 @@ analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NUL
 
 exp_list=c("exp1","exp2","exp3", "exp4","exp5")
 base_dir = '~/Documents/Karchin_lab/visor/m_benchmark'
-p81 = lapply(exp_list, function(x) analyze("c50p80m10",x,
-                                           file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p80m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p80m10", x, paste0(x, '.bed'))))
-p83 = lapply(exp_list, function(x) analyze("c50p80m30",x,
-                                           file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p80m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p80m30", x, paste0(x, '.bed'))))
+p81 = lapply(exp_list, 
+             function(x) analyze("c50p80m10",x,
+                                 file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'svtyp', "c50p80m10", x, paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', "c50p80m10", x, paste0(x, '.bed'))))
+p83 = lapply(exp_list, 
+             function(x) analyze("c50p80m30",x,
+                                 file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'svtyp', "c50p80m30", x, paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', "c50p80m30", x, paste0(x, '.bed'))))
 p85 = lapply(exp_list, function(x) analyze("c50p80m50",x,
                                            file.path(base_dir, 'SNP', "c50p80m50", x, paste0("het_near_sv_",x, ".vcf")),
                                            file.path(base_dir, 'SNP', "c50p80m50", x, paste0("het_on_sv_",x,".vcf")),
@@ -99,7 +102,7 @@ p25 = lapply(exp_list, function(x) analyze("c50p20m50",x,
 ```
 
 ## process data for F1 VISOR benchmark
-```{r pressure, echo=FALSE}
+```{r pressure, echo=FALSE, message=FALSE}
 gather_data=function(lst, idx){
   test=lst[[idx]]
   #svcfit=as.data.frame(rbind(test[[1]],test[[2]],test[[3]],test[[4]],test[[5]]))
@@ -133,9 +136,53 @@ all_dat=lapply(1:12, function(x) gather_data(ll,x)) %>%
            clone=='2' ~ 'subclone1',
            clone=='sub' ~ 'subclone2',
            clone=='clonal' ~ 'clonal'
-         ))
+         ),
+         error=abs(svcf-true_svcf))
 
 all_dat$tool <- factor(all_dat$tool, levels = c("svcfit", "svclone"))
+
+plot_dat <- all_dat %>%
+  mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
+         purity = factor(purity, levels = c("purity 80%", "purity 40%"))) %>%
+  filter(purity %in% c("purity 80%", "purity 40%")) %>%
+  group_by(classification, clonality, tool, purity) %>%
+  summarise(mean_err = mean(abs(true_svcf - svcf), na.rm = TRUE),
+            .groups  = "drop") %>%
+  mutate(sv = paste0(clonality, " ", classification),
+         sv = factor(sv, levels = c(
+        "subclonal INV",    "clonal INV",
+        "subclonal DUP",    "clonal DUP",
+        "subclonal DEL",    "clonal DEL",
+        "subclonal BND",    "clonal BND")),
+        classification = factor(classification,
+                            levels = c("INV","DUP","DEL","BND")),
+        y = as.numeric(classification) + if_else(clonality == "clonal",  0.2, -0.2))
+
+x=ggplot(plot_dat, aes(x = mean_err, y = y)) +
+  geom_line(aes(group = sv, linetype = clonality)) +
+  geom_point(aes(color = tool), size = 3) +
+  facet_grid(purity ~ .) +
+  scale_y_continuous(
+    breaks = seq_len(nlevels(plot_dat$classification)),
+    labels = levels(plot_dat$classification),
+    limits = c(0.5, nlevels(plot_dat$classification) + 0.5)
+  ) +
+  theme_bw()+
+  ylab('')+
+  xlab('mean SVCF estimation error')
+
+
+y=all_dat %>%
+  mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
+         purity = factor(purity, levels = c("purity 80%", "purity 40%"))) %>%
+  filter(purity %in% c("purity 80%", "purity 40%")) %>%
+  ggplot()+
+  geom_violin(aes(x=zygosity, y=(abs(svcf-true_svcf)), fill = tool))+
+  ylim(c(0,1.2))+
+  ylab('mean SVCF estimation error')+
+  theme_minimal()+
+  theme(text = element_text(size = 9))
+
 
 all_stat=all_dat %>%
   mutate(deviation=abs(svcf-true_svcf))%>%
@@ -144,9 +191,9 @@ all_stat=all_dat %>%
   add_significance()%>%
   add_xy_position(x = "new_class")
 
-f1a=all_dat %>%
+all_dat %>%
   ggplot()+
-  geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
+  geom_boxplot(aes(x=new_class, y = error, fill = tool))+
   facet_grid(purity ~ clone)+
   stat_pvalue_manual(all_stat, hide.ns = TRUE)+
   ylab("estimation error from true svcf")+
@@ -155,6 +202,30 @@ f1a=all_dat %>%
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
   theme(text = element_text(size = 15))
 
+```
+
+
+#tmp supplementary figure
+```{r, message=FALSE}
+tmp_stat=all_dat %>%
+  filter(expmt=='exp5')%>%
+  mutate(deviation=abs(svcf-true_svcf))%>%
+  group_by(purity,clone, new_class)%>%
+  wilcox_test(deviation~tool, paired = TRUE)%>%
+  add_significance()%>%
+  add_xy_position(x = "new_class")
+
+tmp <- all_dat %>%
+  filter(expmt=='exp5')%>%
+  ggplot()+
+  geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
+  facet_grid(purity ~ clone)+
+  stat_pvalue_manual(tmp_stat, hide.ns = TRUE)+
+  ylab("estimation error from true svcf")+
+  xlab("")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+  theme(text = element_text(size = 15))
 ```
 
 
@@ -427,10 +498,12 @@ svcfit45=prost45 %>%
   summarize(mean_error=abs(mean(error)))%>%
   mutate(method="svcfit")
 
-svclone <- c(0.095, 0.095, 0.090, 0.103, 0.105, 0.107, 0.093, 0.109, 0.105, 0.075, 0.090)+0.015
+svclone <- c(0.095, 0.095, 0.090, 0.103, 0.105, 0.107, 0.093, 0.109, 0.105, 0.075, 0.090)
 name <- c('3m19','3m28','3m37','3m46','3m55','3m64','3m73','3m82','3m91','4m','5m')
 paper_dat=data.frame(expmt=name, mean_error=svclone) %>%
   mutate(method="svclone")
+
+x_lab <- c('10-90','20-80','30-70','40-60','50-50','60-40','70-30','80-20','90-10','4 clust','5 clust')
 
 final=rbind(svcfit, svcfit45, paper_dat)
 
@@ -441,8 +514,11 @@ f1c=final %>%
   ylim(c(-0.5, 0.5))+
   ylab("Mean of CCF estimation error")+
   xlab("")+
+  scale_x_discrete(labels = x_lab)+
   theme_minimal()+
-  theme(text = element_text(size = 13))
+  theme(text = element_text(size = 13),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
 ```
 
 
@@ -489,4 +565,55 @@ F1D=rbind(svc, svcf)%>%
         legend.title = element_blank(),
         legend.position = "none")+
   guides(color = guide_legend(override.aes = list(shape = 15, size = 6)))
+```
+
+
+```{r}
+library(ggalluvial)
+
+n_sv2cluster <- read.csv("~/Documents/Karchin_lab/combat/annotsv/n_sv2cluster.csv")
+
+dat_alluv <- n_sv2cluster %>% 
+  filter(pair==10)%>%
+  mutate(
+    pre_BAT_cat = cut(pre_BAT,
+                      breaks = c(0, 0.25, 0.5, 0.75, 1),
+                      include.lowest = TRUE),
+    on_BAT_cat  = cut(on_BAT,
+                      breaks = c(0, 0.25, 0.5, 0.75, 1),
+                      include.lowest = TRUE)
+  )
+
+# 2. (optional but common) aggregate to counts/frequencies
+tab <- as.data.frame(
+  table(dat_alluv$cluster_num,
+        dat_alluv$pre_BAT_cat,
+        dat_alluv$on_BAT_cat)
+)
+
+# tab <- as.data.frame(
+#   table(dat_alluv$cluster_num,
+#         round(dat_alluv$pre_center, digits = 2),
+#         round(dat_alluv$post_center, digits = 2))
+# )
+
+names(tab) <- c("cluster", "pre_BAT_cat", "on_BAT_cat", "Freq")
+
+# Drop zero-count combinations
+tab <- tab[tab$Freq > 0, ]
+tab$cluster <- factor(tab$cluster, levels = rev(levels(tab$cluster)))
+tab$pre_BAT_cat <- factor(tab$pre_BAT_cat, levels = rev(levels(tab$pre_BAT_cat)))
+tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
+
+
+# 3. Make the alluvial plot
+x=ggplot(data = tab,
+       aes(axis1 = cluster, axis2 = pre_BAT_cat, axis3 = on_BAT_cat,
+           y = Freq)) +
+  scale_x_discrete(limits = c("cluster", "pre_BAT", "on_BAT"), expand = c(.15, .03)) +
+  geom_alluvium(aes(fill = cluster)) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal()
+
 ```

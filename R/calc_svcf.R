@@ -41,7 +41,8 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
   final <- inner_join(anno_sv_cnv, sv_info)%>%
     filter(!is.na(ASCN))%>%
     ##ss2 is cnv and sv diff phase, ss1 is same phase
-    mutate(raw_svcf=ifelse(classification=="DUP", major*sv_alt/(sv_alt+sv_ref), 2*sv_alt/(sv_alt+sv_ref)),
+    mutate(r_bar=2*(sv_alt+sv_ref)/sv_ref,
+           raw_svcf=ifelse(classification=="DUP", (r_bar*sv_alt/(sv_alt+sv_ref))/(major+minor-2), 2*sv_alt/(sv_alt+sv_ref)),
            raw_svcf=ifelse(zygosity=='hom', raw_svcf/2, raw_svcf),
            s1=(2*sv_alt-sv_ref*(ASCN-1))/(sv_alt+sv_ref),
            s2=((sv_alt+sv_alt*ASCN)/(sv_alt+sv_ref))%%2,
@@ -49,12 +50,13 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
            ss2=ifelse(zygosity=="hom", 0.5*s2, s2),
            ## decide order (only consider del happened before sv, so cn_type==del always ss2)
            final_svcf=ifelse(cn_type=="DEL" | ss1<=thresh, ss2,ss1 ),
-           final_svcf=ifelse(classification=="COPBND" & cn_type=='DUP', round(cncf, 2), final_svcf),
+           final_svcf=ifelse(classification=="COPBND" & bkg_cnv=='norm', round(raw_svcf, 2), final_svcf),
            ## if del or dup is detected in facet, directly use cncf to avoid unnecessary modification when cnv doesn't overlap with them
-           final_svcf=ifelse(cn_type=='DEL' & classification=='DEL' , round(cncf, 2), round(final_svcf,2)),
-           final_svcf=ifelse(cn_type=='DUP' & classification=='DUP' , round(cncf, 2), round(final_svcf,2)),
+           final_svcf=ifelse(bkg_cnv=='norm' & classification=='DEL' , round(raw_svcf,2), round(final_svcf,2)),
+           final_svcf=ifelse(bkg_cnv=='norm' & classification=='DUP' , round(raw_svcf,2), round(final_svcf,2)),
            expmt=exper,
            sample=samp)%>%
+    filter(final_svcf != Inf)%>%
     group_by(mate)%>%
     mutate(classification=ifelse(grepl('BND', classification), 'BND', classification),
            final_svcf=ifelse(classification %in% c('INV', 'BND'), mean(final_svcf), final_svcf))%>%
