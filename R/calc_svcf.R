@@ -42,7 +42,8 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
     filter(!is.na(ASCN))%>%
     ##ss2 is cnv and sv diff phase, ss1 is same phase
     mutate(r_bar=2*(sv_alt+sv_ref)/sv_ref,
-           raw_svcf=ifelse(classification=="DUP", (r_bar*sv_alt/(sv_alt+sv_ref))/(major+minor-2), 2*sv_alt/(sv_alt+sv_ref)),
+           r_2=ifelse((major+minor-2)< 1, r_bar*sv_alt/(sv_alt+sv_ref), (major+minor-2)),
+           raw_svcf=ifelse(classification=="DUP", (r_bar*sv_alt/(sv_alt+sv_ref))/r_2, 2*sv_alt/(sv_alt+sv_ref)),
            raw_svcf=ifelse(zygosity=='hom', raw_svcf/2, raw_svcf),
            s1=(2*sv_alt-sv_ref*(ASCN-1))/(sv_alt+sv_ref),
            s2=((sv_alt+sv_alt*ASCN)/(sv_alt+sv_ref))%%2,
