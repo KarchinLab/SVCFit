@@ -191,7 +191,7 @@ all_stat=all_dat %>%
   add_significance()%>%
   add_xy_position(x = "new_class")
 
-all_dat %>%
+p=all_dat %>%
   ggplot()+
   geom_boxplot(aes(x=new_class, y = error, fill = tool))+
   facet_grid(purity ~ clone)+
@@ -208,7 +208,7 @@ all_dat %>%
 #tmp supplementary figure
 ```{r, message=FALSE}
 tmp_stat=all_dat %>%
-  filter(expmt=='exp2')%>%
+  filter(expmt=='exp5')%>%
   mutate(deviation=abs(svcf-true_svcf))%>%
   group_by(purity,clone, new_class)%>%
   wilcox_test(deviation~tool, paired = TRUE)%>%
@@ -216,7 +216,7 @@ tmp_stat=all_dat %>%
   add_xy_position(x = "new_class")
 
 tmp <- all_dat %>%
-  filter(expmt=='exp2')%>%
+  filter(expmt=='exp5')%>%
   ggplot()+
   geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
   facet_grid(purity ~ clone)+
@@ -280,7 +280,7 @@ f1b_t <- left_join(truth, dat_used)%>%
 ```
 
 
-## load data for F1 Prostate_mixture
+## define functions for F1 Prostate_mixture
 ```{r}
 load_data <- function(samp, exper, base_dir = "~/Documents/Karchin_lab/visor/prostate") {
   dir <- file.path(base_dir)
@@ -360,8 +360,8 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
 }
 
 
-analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE) {
-  info <- extract_info(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
+analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+  info <- extract_info(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
@@ -371,6 +371,21 @@ analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_
   return(final)
 }
 
+# analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+#   info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
+#   data <- info[[1]]
+#   sv_info <- info[[2]]
+#   snp_df <- info[[3]]
+#   sv_phase <- info[[4]]
+#   anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data[[4]])
+#   final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
+#   truth <- load_truth(exper)
+#   final_truth <- attach_truth(final, truth)
+#   svc <- analyze_svclone(samp,exper, final_truth, sv_info)
+#   common_dat <- final_truth %>%
+#     filter(ID %in% svc$ID)
+#   return(list(final_truth, svc, common_dat))
+# }
 ```
 
 
@@ -571,16 +586,16 @@ F1D=rbind(svc, svcf)%>%
 ```{r}
 library(ggalluvial)
 
-n_sv2cluster <- read.csv("~/Documents/Karchin_lab/combat/annotsv/n_sv2cluster.csv")
+n_sv2cluster <- read.csv("~/Documents/Karchin_lab/combat/annotsv/testing.csv")
 
 dat_alluv <- n_sv2cluster %>% 
   filter(pair==10)%>%
   mutate(
     pre_BAT_cat = cut(pre_BAT,
-                      breaks = c(0, 0.25, 0.5, 0.75, 1),
+                      breaks = c(0,0.15, 0.7, 1),
                       include.lowest = TRUE),
     on_BAT_cat  = cut(on_BAT,
-                      breaks = c(0, 0.25, 0.5, 0.75, 1),
+                      breaks = c(0,0.15, 0.7, 1),
                       include.lowest = TRUE)
   )
 
@@ -608,9 +623,9 @@ tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
 
 # 3. Make the alluvial plot
 x=ggplot(data = tab,
-       aes(axis1 = cluster, axis2 = pre_BAT_cat, axis3 = on_BAT_cat,
+       aes(axis1 = pre_BAT_cat, axis2 = on_BAT_cat,
            y = Freq)) +
-  scale_x_discrete(limits = c("cluster", "pre_BAT", "on_BAT"), expand = c(.15, .03)) +
+  scale_x_discrete(limits = c("pre_BAT", "on_BAT"), expand = c(.15, .03)) +
   geom_alluvium(aes(fill = cluster)) +
   geom_stratum() +
   geom_text(stat = "stratum", aes(label = after_stat(stratum))) +

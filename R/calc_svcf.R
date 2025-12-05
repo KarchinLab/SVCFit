@@ -51,10 +51,13 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
            ss2=ifelse(zygosity=="hom", 0.5*s2, s2),
            ## decide order (only consider del happened before sv, so cn_type==del always ss2)
            final_svcf=ifelse(cn_type=="DEL" | ss1<=thresh, ss2,ss1 ),
-           final_svcf=ifelse(classification=="COPBND" & bkg_cnv=='norm', round(raw_svcf, 2), final_svcf),
+           final_svcf=ifelse(classification=="COPBND" & cn_type=='DUP', round(cncf, 2), final_svcf),
+           #final_svcf=ifelse(classification=="COPBND" & bkg_cnv=='norm', round(raw_svcf, 2), final_svcf),
            ## if del or dup is detected in facet, directly use cncf to avoid unnecessary modification when cnv doesn't overlap with them
-           final_svcf=ifelse(bkg_cnv=='norm' & classification=='DEL' , round(raw_svcf,2), round(final_svcf,2)),
-           final_svcf=ifelse(bkg_cnv=='norm' & classification=='DUP' , round(raw_svcf,2), round(final_svcf,2)),
+           final_svcf=ifelse(cn_type=='DEL' & classification=='DEL' , round(cncf, 2), round(final_svcf,2)),
+           final_svcf=ifelse(cn_type=='DUP' & classification=='DUP' , round(cncf, 2), round(final_svcf,2)),
+           #final_svcf=ifelse(bkg_cnv=='norm' & classification=='DEL' , round(raw_svcf,2), round(final_svcf,2)),
+           #final_svcf=ifelse(bkg_cnv=='norm' & classification=='DUP' , round(raw_svcf,2), round(final_svcf,2)),
            expmt=exper,
            sample=samp)%>%
     filter(final_svcf != Inf)%>%
