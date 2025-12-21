@@ -1,0 +1,67 @@
+chr1	9909453	10015676	tandem duplication	3	8
+chr1	10059147	10154322	reciprocal translocation	h1:chr2:6283265:forward:reverse	7
+chr1	10170808	10268583	deletion	None	5
+chr1	10956447	11050230	tandem duplication	3	3
+chr1	25323237	25420004	deletion	None	5
+chr1	27517878	27622137	deletion	None	7
+chr1	31015795	31106467	translocation copy-paste	h1:chr2:7921541:reverse	6
+chr1	32735209	32840592	translocation cut-paste	h1:chr2:10619196:forward	7
+chr1	37001540	37089236	inversion	None	7
+chr1	44093855	44197257	inversion	None	1
+chr1	47956088	48047357	tandem duplication	5	5
+chr1	51131670	51227203	inversion	None	2
+chr1	51942646	52020963	inversion	None	5
+chr1	55579505	55691497	reciprocal translocation	h1:chr2:12586449:reverse:reverse	5
+chr1	60094089	60197166	tandem duplication	5	2
+chr1	61764234	61860049	translocation copy-paste	h1:chr2:12772616:forward	0
+chr1	62016339	62129806	inversion	None	3
+chr1	64525528	64621901	deletion	None	7
+chr1	68004561	68095398	tandem duplication	2	9
+chr1	69472468	69595381	deletion	None	1
+chr1	69802660	69888291	tandem duplication	4	0
+chr1	71939777	72041873	inversion	None	7
+chr1	73010839	73116839	deletion	None	2
+chr1	73203231	73295231	tandem duplication	2	0
+chr1	74525106	74624244	inversion	None	3
+chr1	77307332	77413243	tandem duplication	3	7
+chr1	77586236	77681891	translocation cut-paste	h1:chr2:17904031:reverse	3
+chr1	81550958	81643580	deletion	None	0
+chr1	83250214	83354588	inversion	None	1
+chr1	85273842	85368707	deletion	None	9
+chr1	85909579	86035758	tandem duplication	2	6
+chr1	87375079	87475216	tandem duplication	3	10
+chr1	90201373	90304584	tandem duplication	5	7
+chr1	197689363	197781246	tandem duplication	5	6
+chr1	199701093	199798887	tandem duplication	2	0
+chr1	199826697	199914124	tandem duplication	3	5
+chr1	202502398	202600454	deletion	None	6
+chr1	203661822	203755858	reciprocal translocation	h1:chr2:38378220:reverse:forward	8
+chr1	205030303	205121484	translocation copy-paste	h1:chr2:39756205:forward	7
+chr1	205757396	205867774	deletion	None	8
+chr1	206590844	206693526	inversion	None	7
+chr1	208507024	208602851	tandem duplication	4	3
+chr1	210554839	210673388	tandem duplication	2	4
+chr1	211585705	211688082	translocation cut-paste	h1:chr2:43318176:reverse	10
+chr1	212000105	212096882	deletion	None	6
+chr1	212170372	212281529	reciprocal translocation	h1:chr2:46186973:reverse:forward	1
+chr1	212301761	212412763	tandem duplication	4	4
+chr1	214388453	214495733	inversion	None	0
+chr1	215226979	215338946	deletion	None	8
+chr1	216791217	216898017	tandem duplication	2	8
+chr1	217918315	217990609	deletion	None	4
+chr1	219346044	219462827	tandem duplication	4	4
+chr1	220079165	220173344	deletion	None	4
+chr1	225291575	225407327	inversion	None	1
+chr1	226949476	227035990	inversion	None	1
+chr1	227336868	227456775	inversion	None	10
+chr1	230088182	230185082	inversion	None	7
+chr1	232532049	232637136	deletion	None	10
+chr1	234210725	234309034	translocation copy-paste	h1:chr2:46860066:forward	2
+chr1	234488178	234602862	translocation cut-paste	h1:chr2:46961829:reverse	2
+chr1	236648313	236729983	tandem duplication	3	3
+chr1	238401127	238488884	reciprocal translocation	h1:chr2:50863936:reverse:forward	10
+chr1	239599122	239702070	translocation copy-paste	h1:chr2:52715007:forward	2
+chr1	242432686	242534695	translocation cut-paste	h1:chr2:52988894:reverse	7
+chr1	242727257	242830113	inversion	None	7
+chr1	243449522	243546363	tandem duplication	5	7
+chr1	244431681	244538075	reciprocal translocation	h1:chr2:56565663:forward:forward	7
