@@ -19,57 +19,65 @@ knitr::opts_chunk$set(
 
 <!-- badges: end -->
 
-SVCFit is a fast and scalable computational tool developed to estimate the structural variant cellular fraction (SVCF) of inversions, deletions, tandem duplications and translocations. SVCFit is designed to run in an R environment.
+SVCFit is a fast and scalable computational tool designed to estimate the Structural Variant Cellular Fraction (SVCF) of inversions, deletions, tandem duplications, and translocations. Developed for the R environment, SVCFit integrates structural variant (SV) calls with Copy Number Variation (CNV) and Single Nucleotide Polymorphism (SNP) data to provide accurate cellular fraction estimates.
 
-All open access data used in this research can be freely downloaded [here](https://doi.org/10.17632/bwzb6n3xbc.1).
+**Resources**
 
-Protected data can be requested from European Genome-phenome Archive (EGAD00001001343) and the script used to create the mixtures is available at <https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh> [1].
+-   Open access data: Download here.
+
+-   Protected Data: Available via European Genome-phenome Archive (EGAD00001001343).
+
+-   Prostate mixture scripts: [GitHub Repository](https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh)
 
 ## Installation
 
-To install SVCFit from GitHub, you must have a GitHub acount. If you don't have an account, first sign up at [GitHub](https://github.com/). Then, You can then install SVCFit within an R environment.
+SVCFit is hosted on GitHub. You can install it directly within R using the `remotes` package.
+
+**Note:** Installation requires a GitHub Personal Access Token (PAT) because the repository is hosted on GitHub.\\.
 
 ``` r
-install.packages("usethis")
-install.packages("remotes")
+if (!requireNamespace("remotes", quietly = TRUE))
+    install.packages("remotes")
 
-usethis::use_git_config(user.name = "Github_user_name")
-usethis::create_github_token()
+# 1. Setup GitHub Credentials (if not already configured)
+if (!requireNamespace("usethis", quietly = TRUE))
+    install.packages("usethis")
 
-# This will open a web page in your browser where you can sign in to GitHub.
-# Once signed in, you will be directed to a page to generate a new Personal Access Token (PAT).
-# Enter a descriptive note for your PAT. Use the default "Scope Options" if you're unsure about them
-# Then, Click the "Generate Token" button, and copy the generated PAT. 
-# Make sure to store it securely in a text file or a password manager.
+# Create a token in your browser
+usethis::create_github_token() 
 
+# Store the token (paste when prompted)
 credentials::set_github_pat()
 
-#A pop-up screen will appear with a box to enter your PAT. Go ahead and enter it
-
+# 2. Install SVCFit
 remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencies = TRUE)
 ```
 
-## Input your structural variants into SVCFit
+## Input Requirements
 
-SVCFit is designed to take input from Variant Call Format (VCF) files. By default, it accepts the VCF format produced by the SVTyper package [2]. If you have a VCF output from a structural variant caller other than Manta, please modify to match this format:
+SVCFit accepts Variant Call Format (VCF) files. By default, it is optimized for VCFs produced by the SVTyper package [2].
+
+If using a different caller (e.g., Manta), ensure your VCF aligns with the following specification:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
-|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
+|----|----|----|----|----|----|----|----|----|----|----|
 | chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | 100 | PASS | END=1500;SVTYPE=INV;SVLEN=500;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 | chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | 100 | PASS | END=5300;SVTYPE=DEL;SVLEN=300;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 
-SVCFit requires the **INFO** field to contain at minimum:
+Required **INFO** fields:
 
--   `SVTYPE`
+-   `SVTYPE` (e.g., INV, DEL, DUP, BND)
 -   `END`
 -   `SVLEN`
 -   supporting read counts (e.g., `PR`, `SR`)
 
-## General workflow
+## Usage Workflow
+
+The SVCFit pipeline consists of three main steps: **Extraction**, **Characterization**, and **Calculation**.
 
 ### 1. Extract SV and SNP Information — `extract_info()`
 
-This step loads and preprocesses the input VCF and CNV files. `extract_info()` internally performs:
+Load and preprocess input VCF and CNV files. This step parses metadata, processes breakends (BND), and handles heterozygous SNPs. `extract_info()` internally performs:
 
 1.  **Load input data** — `load_data()`
 2.  **Process BND events** — `proc_bnd()`
@@ -78,10 +86,19 @@ This step loads and preprocesses the input VCF and CNV files. `extract_info()` i
 
 ``` r
 # all in one
-info <- extract_info(p_het, p_onsv, p_sv, p_cnv, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE)
+info <- extract_info(
+  p_het      = "path/to/het_snps.vcf",
+  p_onsv     = "path/to/snps_on_sv.vcf",
+  p_sv       = "path/to/structural_variants.vcf",
+  p_cnv      = "path/to/cnv_file.txt",
+  flank_del  = 50, 
+  QUAL_tresh = 100, 
+  min_alt    = 2, 
+  tumor_only = FALSE
+)
 
 # step by step
-data      <- load_data(samp, exper, chr=chr_lst, tumor_only=FALSE)
+data      <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only)
 bnd_info   <- proc_bnd(data$sv, flank_del=50)
 sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_tresh=100, min_alt=2)
 snp_df    <- parse_het_snps(data$het_snp)
@@ -93,7 +110,7 @@ sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 #### `load_data()`
 
 | Argument | Type | Default | Description |
-|-----------------|-----------------|-----------------|---------------------|
+|----|----|----|----|
 | `p_het` | Character | — | Path to VCF of heterozygous SNPs. |
 | `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
 | `p_sv` | Character | — | Path to SV VCF. |
@@ -104,7 +121,7 @@ sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 #### `proc_bnd()`
 
 | Argument | Type | Default | Description |
-|-----------------|-----------------|-----------------|---------------------|
+|----|----|----|----|
 | `sv` | data.frame | — | SV VCF data. |
 | `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
 
@@ -135,7 +152,7 @@ sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 
 ### 2. Annotate SVs Using CNV and SNP Information — `characterize_sv()`
 
-This step integrates CNV and heterozygous SNPs to infer additional information for SVs, including phasing, zygosity, and overlapping CNV. `characterize_sv()` internally performs:
+This step integrates CNV and heterozygous SNPs to infer phasing, zygosity, and overlapping CNV. `characterize_sv()` internally performs:
 
 1.  **Assign SV IDs to SNPs** — `assign_svids()`
 2.  **Summarizes phasing + zygosity** — `sum_sv_info()`
@@ -144,7 +161,11 @@ This step integrates CNV and heterozygous SNPs to infer additional information f
 
 ``` r
 # all in one
-sv_char <- characterize_sv(sv_phase, sv_info, cnv)
+sv_char <- characterize_sv(
+  sv_phase = info$sv_phase, 
+  sv_info  = info$sv_info, 
+  cnv      = info$cnv
+)
 
 # step by step 
 assign_id <- assign_svids(sv_phase, sv_info, flank=500)
@@ -189,13 +210,20 @@ anno_sv_cnv     <- annotate_cnv(sv_cnv)
 This step computes the **Structural Variant Cellular Fraction (SVCF)**.
 
 ``` r
-output <- calculate_svcf(input=checked, tumor_only=FALSE)
+
+svcf_out <- calculate_svcf(
+  anno_sv_cnv = sv_char$anno_sv_cnv,
+  sv_info     = sv_char$sv_info,
+  thresh      = 0.1,
+  samp        = "SampleID",
+  exper       = "ExperimentID"
+)
 ```
 
 #### Function Arguments
 
 | Argument      | Type       | Default | Description                            |
-|--------------|--------------|--------------|--------------------------------|
+|---------------|------------|---------|----------------------------------------|
 | `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
 | `sv_info`     | data.frame | —       | Parsed SV info.                        |
 | `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
@@ -204,22 +232,25 @@ output <- calculate_svcf(input=checked, tumor_only=FALSE)
 
 The output is an annotated VCF with additional fields for VAF, Rbar, r and SVCF. VAF=variant allele frequency; Rbar=average break interval count in a sample; r = inferred integer copy number of break intervals; SVCF=structural variant cellular fraction.
 
-### 4. Additional functions
+### 4. Simulation & Benchmarking
 
-*load_truth()* and *attach_truth()* are functions to assign structural variants to tumor clones, when the assignment is known. *analyze_svclone()* is the function to process SVclone data for benchmarking purposes.
+SVCFit includes utility functions for processing simulation data from VISOR and attaching "ground truth" labels to structural variants for benchmarking.
 
 4.1 read clonal assignment
 
 ``` r
-truth <- read_clone(truth_path, mode="heritage")
+truth <- load_truth(
+  truth_path = "path/to/truth_beds", 
+  overlap = FALSE
+  )
 ```
 
-This function has 2 arguments:
+This function has 1 arguments:
 
 | Argument | Type | Default | Description |
-|------------------|------------------|------------------|------------------|
-| `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
-| `mode` | Character | `heritage` | Describes how true clonal information is saved:<br>- **`"heritage"`**: BED files for child clones contain all ancestral structural variants of their parents.<br>- **`"separate"`**: Child clones do not contain any ancestral structural variants. |
+|----|----|----|----|
+| `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc for non-overlapping simulations and `"c11.bed, c22.bed"`, etc for overlapping simulations. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
+| `overlap` | Logical | FALSE | Whether the simulation has SV-CNV overlap. |
 
 The file path should follow this structure:
 
@@ -232,25 +263,24 @@ root/
 │   └── .../
 ```
 
-To determine which `mode` suits your data, refer to the illustration below. Parent node should always have higher rank in name (i.e. c3.bed instead of c1.bed)
-
-According to the tree on the left, variants in bed files for the two modes should look like:
+Parent nodes should always have higher rank in name than its children (i.e. c3.bed instead of c1.bed) and all child node bed file should conatins its ancesters mutations.
 
 ![](inst/extdata/tree.png){width="487"}
 
-4.2 attach clonal assignment to structural variants
+4.2 attach clonal assignment to output
 
 ``` r
-attched <- attach_clone(dat, truth, tolerance = 6)
+svcf_truth <- attach_truth(svcf_out, truth)
 ```
 
 This function has 3 arguments:
 
 | Variable | Type | Default | Description |
-|------------------|------------------|------------------|------------------|
-| `dat` | DataFrame | N/A | Stores structural variants for clone assignment. |
+|----|----|----|----|
+| `svcf_out` | DataFrame | N/A | The output from `calc_svcf` |
 | `truth` | DataFrame | N/A | Stores the clone assignment for each structural variant designed in a simulation. |
-| `tolerance` | Integer | `6` | Sets the threshold for the maximum distance between structural variants to be considered as a single structural variant when assigning clones. |
+
+This appends the known clonal assignment to the calculated SVCF output for performance evaluation.
 
 ## Tutorial
 
