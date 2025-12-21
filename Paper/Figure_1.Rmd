@@ -6,9 +6,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
-library(SVCFit)
+#library(SVCFit)
 library(dplyr)
 library(tidyr)
+library(purrr)
 library(stringr)
 library(GenomicRanges)
 library(ggplot2)
@@ -17,9 +18,10 @@ library(rstatix) #for stat
 library(ggsignif) #for plot significance
 ```
 
-# F1 VISOR benchmark
+# Fig 1 VISOR benchmark
 ```{r, message=FALSE}
-analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+## can directly load data from /int/extdata/VISOR_bench_data.bed
+analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
   info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
@@ -27,7 +29,8 @@ analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NUL
   sv_phase <- info[[4]]
   anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data[[4]])
   final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
-  truth <- load_truth(exper)
+  overlap=ifelse(exper=='exp1', FALSE, TRUE)
+  truth <- load_truth(p_truth, overlap)
   final_truth <- attach_truth(final, truth)
   svc <- analyze_svclone(samp,exper, final_truth, sv_info)
   common_dat <- final_truth %>%
@@ -35,92 +38,62 @@ analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NUL
   return(list(final_truth, svc, common_dat))
 }
 
-exp_list=c("exp1","exp2","exp3", "exp4","exp5")
-base_dir = '~/Documents/Karchin_lab/visor/m_benchmark'
-p81 = lapply(exp_list, 
-             function(x) analyze("c50p80m10",x,
-                                 file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', "c50p80m10", x, paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'svtyp', "c50p80m10", x, paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', "c50p80m10", x, paste0(x, '.bed'))))
-p83 = lapply(exp_list, 
-             function(x) analyze("c50p80m30",x,
-                                 file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', "c50p80m30", x, paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'svtyp', "c50p80m30", x, paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', "c50p80m30", x, paste0(x, '.bed'))))
-p85 = lapply(exp_list, function(x) analyze("c50p80m50",x,
-                                           file.path(base_dir, 'SNP', "c50p80m50", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p80m50", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p80m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p80m50", x, paste0(x, '.bed'))))
-p61 = lapply(exp_list, function(x) analyze("c50p60m10",x,
-                                           file.path(base_dir, 'SNP', "c50p60m10", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p60m10", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p60m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p60m10", x, paste0(x, '.bed'))))
-p63 = lapply(exp_list, function(x) analyze("c50p60m30",x,
-                                           file.path(base_dir, 'SNP', "c50p60m30", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p60m30", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p60m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p60m30", x, paste0(x, '.bed'))))
-p65 = lapply(exp_list, function(x) analyze("c50p60m50",x,
-                                           file.path(base_dir, 'SNP', "c50p60m50", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p60m50", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p60m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p60m50", x, paste0(x, '.bed'))))
-p41 = lapply(exp_list, function(x) analyze("c50p40m10",x,
-                                           file.path(base_dir, 'SNP', "c50p40m10", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p40m10", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p40m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p40m10", x, paste0(x, '.bed'))))
-p43 = lapply(exp_list, function(x) analyze("c50p40m30",x,
-                                           file.path(base_dir, 'SNP', "c50p40m30", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p40m30", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p40m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p40m30", x, paste0(x, '.bed'))))
-p45 = lapply(exp_list, function(x) analyze("c50p40m50",x,
-                                           file.path(base_dir, 'SNP', "c50p40m50", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p40m50", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p40m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p40m50", x, paste0(x, '.bed'))))
-p21 = lapply(exp_list, function(x) analyze("c50p20m10",x,
-                                           file.path(base_dir, 'SNP', "c50p20m10", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p20m10", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p20m10", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p20m10", x, paste0(x, '.bed'))))
-p23 = lapply(exp_list, function(x) analyze("c50p20m30",x,
-                                           file.path(base_dir, 'SNP', "c50p20m30", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p20m30", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p20m30", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p20m30", x, paste0(x, '.bed'))))
-p25 = lapply(exp_list, function(x) analyze("c50p20m50",x,
-                                           file.path(base_dir, 'SNP', "c50p20m50", x, paste0("het_near_sv_",x, ".vcf")),
-                                           file.path(base_dir, 'SNP', "c50p20m50", x, paste0("het_on_sv_",x,".vcf")),
-                                           file.path(base_dir, 'svtyp', "c50p20m50", x, paste0('svt_', x, '.vcf')),
-                                           file.path(base_dir, 'facet', "c50p20m50", x, paste0(x, '.bed'))))
-```
+condition_list=c(
+  "c50p20m10", "c50p20m30", "c50p20m50",
+  "c50p40m10", "c50p40m30", "c50p40m50",
+  "c50p60m10", "c50p60m30", "c50p60m50",
+  "c50p80m10", "c50p80m30", "c50p80m50"
+)
+base_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data/VISOR_benchmark'
 
-## process data for F1 VISOR benchmark
-```{r pressure, echo=FALSE, message=FALSE}
+e1 = lapply(condition_list, 
+             function(x) analyze(x,'exp1',
+                                 file.path(base_dir, 'SNP', 'exp1', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp1', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp1', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp1', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e2 = lapply(condition_list, 
+             function(x) analyze(x,'exp2',
+                                 file.path(base_dir, 'SNP', 'exp2', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp2', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp2', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp2', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e3 = lapply(condition_list, 
+             function(x) analyze(x,'exp3',
+                                 file.path(base_dir, 'SNP', 'exp3', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp3', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp3', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp3', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e4 = lapply(condition_list, 
+             function(x) analyze(x,'exp4',
+                                 file.path(base_dir, 'SNP', 'exp4', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp4', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp4', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp4', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e5 = lapply(condition_list, 
+             function(x) analyze(x,'exp5',
+                                 file.path(base_dir, 'SNP', 'exp5', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp5', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp5', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp5', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+
 gather_data=function(lst, idx){
   test=lst[[idx]]
-  #svcfit=as.data.frame(rbind(test[[1]],test[[2]],test[[3]],test[[4]],test[[5]]))
-  svclone=as.data.frame(rbind(test[[1]][[2]],test[[2]][[2]],test[[3]][[2]],test[[4]][[2]],test[[5]][[2]]))
-  com_svcf=as.data.frame(rbind(test[[1]][[3]],test[[2]][[3]],test[[3]][[3]],test[[4]][[3]],test[[5]][[3]]))
-  #w_svc_r=as.data.frame(rbind(test[[1]][[4]],test[[2]][[4]],test[[3]][[4]],test[[4]][[4]],test[[5]][[4]]))
-  print("yay")
+  svclone=as.data.frame(map_dfr(test, 2))
+  com_svcf=as.data.frame(map_dfr(test, 3))
   tsvf=com_svcf %>% mutate(tool="svcfit", svcf=final_svcf) %>% select(tool,svcf, expmt, zygosity, classification, sample, clone)
   tsvc=svclone %>% mutate(tool="svclone")%>% select(tool,svcf, expmt, zygosity, classification, sample,clone)
-  #twsvcr=w_svc_r %>% mutate(tool="w_svc_r", svcf=final_svcf)%>% select(tool,svcf, expmt, zygosity, classification, sample,clone)
-  #tsvcfit=svcfit %>% mutate(tool="svcfit", svcf=final_svcf) %>% select(tool,svcf, expmt, zygosity, classification, sample, clone)
-  output=rbind(tsvf, tsvc)#, non_filter)
+  output=rbind(tsvf, tsvc)
   return(output)
-  #return(tsvcfit)
 }
 
-ll=list(p81,p83,p85,p61,p63,p65,p41,p43,p45,p21,p23,p25)
-all_dat=lapply(1:12, function(x) gather_data(ll,x)) %>% 
+ll=list(e1,e2,e3,e4,e5)
+all_dat=lapply(1:5, function(x) gather_data(ll,x)) %>% 
   do.call(rbind,.)%>%
   mutate(pur=as.integer(gsub(".*p(\\d+).*","\\1",sample))/100,
          purity=paste0('purity ', pur*100,"%"),
@@ -157,8 +130,11 @@ plot_dat <- all_dat %>%
         classification = factor(classification,
                             levels = c("INV","DUP","DEL","BND")),
         y = as.numeric(classification) + if_else(clonality == "clonal",  0.2, -0.2))
+```
 
-x=ggplot(plot_dat, aes(x = mean_err, y = y)) +
+## plot F1A,B
+```{r pressure, echo=FALSE, message=FALSE}
+f1a=ggplot(plot_dat, aes(x = mean_err, y = y)) +
   geom_line(aes(group = sv, linetype = clonality)) +
   geom_point(aes(color = tool), size = 3) +
   facet_grid(purity ~ .) +
@@ -168,11 +144,12 @@ x=ggplot(plot_dat, aes(x = mean_err, y = y)) +
     limits = c(0.5, nlevels(plot_dat$classification) + 0.5)
   ) +
   theme_bw()+
+  theme(text = element_text(size = 15))+
   ylab('')+
   xlab('mean SVCF estimation error')
 
 
-y=all_dat %>%
+f1b=all_dat %>%
   mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
          purity = factor(purity, levels = c("purity 80%", "purity 40%"))) %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
@@ -181,120 +158,35 @@ y=all_dat %>%
   ylim(c(0,1.2))+
   ylab('mean SVCF estimation error')+
   theme_minimal()+
-  theme(text = element_text(size = 9))
-
-
-all_stat=all_dat %>%
-  mutate(deviation=abs(svcf-true_svcf))%>%
-  group_by(purity,clone, new_class)%>%
-  wilcox_test(deviation~tool, paired = TRUE)%>%
-  add_significance()%>%
-  add_xy_position(x = "new_class")
-
-p=all_dat %>%
-  ggplot()+
-  geom_boxplot(aes(x=new_class, y = error, fill = tool))+
-  facet_grid(purity ~ clone)+
-  stat_pvalue_manual(all_stat, hide.ns = TRUE)+
-  ylab("estimation error from true svcf")+
-  xlab("")+
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
   theme(text = element_text(size = 15))
 
 ```
 
 
-#tmp supplementary figure
-```{r, message=FALSE}
-tmp_stat=all_dat %>%
-  filter(expmt=='exp5')%>%
-  mutate(deviation=abs(svcf-true_svcf))%>%
-  group_by(purity,clone, new_class)%>%
-  wilcox_test(deviation~tool, paired = TRUE)%>%
-  add_significance()%>%
-  add_xy_position(x = "new_class")
-
-tmp <- all_dat %>%
-  filter(expmt=='exp5')%>%
-  ggplot()+
-  geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
-  facet_grid(purity ~ clone)+
-  stat_pvalue_manual(tmp_stat, hide.ns = TRUE)+
-  ylab("estimation error from true svcf")+
-  xlab("")+
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
-  theme(text = element_text(size = 15))
-```
-
-
-# summary of SV for visor
+## define functions for F1C
 ```{r}
-library(tidyr)
-exp_list=c("exp1","exp2","exp3", "exp4","exp5")
-truth <- lapply(exp_list, function(x) load_truth(x) %>% mutate(exp=x)) %>%
-  do.call(rbind,.)%>%
-  mutate(classification=case_when(
-           type=='deletion' ~ 'DEL',
-           type=='tandem duplication' ~ 'DUP',
-           type=='inversion' ~ 'INV',
-           grepl('tran', type) ~ 'BND'
-         ),
-         expmt=exp) %>%
-  group_by(classification, expmt)%>%
-  tally()%>%
-  mutate(n_true=n*12)%>% # 4 purity x 3 subclone proportion
-  select(-n)
-
-dat_used <- all_dat %>%
-  group_by(classification, expmt)%>%
-  tally()%>%
-  mutate(n=n/2)
-
-f1b <- left_join(truth, dat_used)%>%
-  mutate(n=ifelse(is.na(n), 0, n),
-         missing=n_true-n,
-         called=n)%>%
-  pivot_longer(cols = c('missing', 'called'), values_to = 'counts', names_to = 'condition')%>%
-  ggplot(aes(x=classification, y=counts, fill=condition))+
-  geom_bar(position="fill", stat="identity")+
-  theme_minimal()+
-  xlab('')+
-  ylab('Percentage')+
-  scale_fill_manual(values = c("called" = "skyblue", "missing" = "orange"))+
-  theme(text = element_text(size = 13))
-
-f1b_t <- left_join(truth, dat_used)%>%
-  mutate(n=ifelse(is.na(n), 0, n),
-         missing=n_true-n,
-         called=n)%>%
-  pivot_longer(cols = c('missing', 'called'), values_to = 'counts', names_to = 'condition')%>%
-  mutate(tool=ifelse(condition=='missing', 'SVclone', 'SVCFit'))%>%
-  ggplot(aes(x=classification, y=counts, fill=tool))+
-  geom_bar(position="fill", stat="identity")+
-  theme_minimal()+
-  xlab('')+
-  ylab('Percentage')+
-  theme(text = element_text(size = 13))
-```
-
-
-## define functions for F1 Prostate_mixture
-```{r}
-load_data <- function(samp, exper, base_dir = "~/Documents/Karchin_lab/visor/prostate") {
+load_data <- function(samp, exper, base_dir) {
   dir <- file.path(base_dir)
 
   het_snp <- read.table(file.path(dir, paste0("SNP/het_near_sv_",exper, ".vcf")), quote="\"")
   colnames(het_snp) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','bulk')
-  het_snp=het_snp %>% filter(CHROM %in% c(1:22)) %>% mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  het_snp=het_snp %>% 
+    filter(CHROM %in% c(1:22)) %>% 
+    mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  
   het_on_sv <- read.table(file.path(dir, paste0("SNP/het_on_sv_",exper,".vcf")), quote = "\"")
   colnames(het_on_sv) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','bm','gm')
-  het_on_sv=het_on_sv %>% filter(CHROM %in% c(1:22)) %>% mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
-  sv <- read.table(file.path(dir, paste0('svtyp/', exper, "/svt_", exper,'.vcf')), quote = '"')
+  het_on_sv=het_on_sv %>% 
+    filter(CHROM %in% c(1:22)) %>% 
+    mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  
+  sv <- read.table(file.path(dir, paste0('prostate_vcfs/svt_', exper,'.vcf')), quote = '"')
   colnames(sv) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
-  sv=sv %>% filter(CHROM %in% c(1:22)) %>% mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
-  cnv <- read.delim(file.path(dir, paste0("facet/",exper,"/", exper, '.bed')), header = TRUE) %>%
+  sv=sv %>% 
+    filter(CHROM %in% c(1:22)) %>% 
+    mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  
+  cnv <- read.delim(file.path(dir, paste0("facet/", exper, '.bed')), header = TRUE) %>%
     mutate(lcn.em=ifelse(is.na(lcn.em), 1, lcn.em),
            chrom=paste0("chr",chrom))%>%
     filter(chrom %in% paste0('chr',c(1:22)))
@@ -305,8 +197,8 @@ load_data <- function(samp, exper, base_dir = "~/Documents/Karchin_lab/visor/pro
               cnv = cnv))
 }
 
-extract_info <- function(samp, exper, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
-  data      <- load_data(samp, exper)
+extract_info <- function(samp, exper, dir, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
+  data      <- load_data(samp, exper, dir)
   bnd_info   <- proc_bnd(data$sv, flank_del=50)
   sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=100, min_alt=2)
   snp_df    <- parse_het_snps(data$het_snp)
@@ -360,8 +252,8 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
 }
 
 
-analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
-  info <- extract_info(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
+analyze <- function(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+  info <- extract_info(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
@@ -370,30 +262,15 @@ analyze <- function(samp, exper, flank_del=50, QUAL_tresh=100, min_alt=2, t_only
   final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
   return(final)
 }
-
-# analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
-#   info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
-#   data <- info[[1]]
-#   sv_info <- info[[2]]
-#   snp_df <- info[[3]]
-#   sv_phase <- info[[4]]
-#   anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data[[4]])
-#   final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
-#   truth <- load_truth(exper)
-#   final_truth <- attach_truth(final, truth)
-#   svc <- analyze_svclone(samp,exper, final_truth, sv_info)
-#   common_dat <- final_truth %>%
-#     filter(ID %in% svc$ID)
-#   return(list(final_truth, svc, common_dat))
-# }
 ```
 
 
 # process for F1 prostate mixture
 ```{r}
 ### load the truth
-tbm = read.table("~/Documents/Karchin_lab/visor/prostate/in_silico_true/bM.vcf", quote="\"")
-tgm = read.table("~/Documents/Karchin_lab/visor/prostate/in_silico_true/gM.vcf", quote="\"")
+base_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data/Prostate_mixture'
+tbm = read.table(paste0(base_dir, "/in_silico_true/bM.vcf"), quote="\"")
+tgm = read.table(paste0(base_dir, "/in_silico_true/gM.vcf"), quote="\"")
 colnames(tbm) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
 colnames(tgm) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
 bm = tbm %>%
@@ -454,7 +331,7 @@ rm(bm, gm, subb, subg, clonal, tbm, tgm)
 
 ############## now load svcfit data
 exp_list=c("3m19","3m28","3m37","3m46","3m55","3m64","3m73","3m82","3m91")
-prost = lapply(exp_list, function(x) analyze('prostate', x,0.1))
+prost = lapply(exp_list, function(x) analyze('prostate', x,base_dir, 0.1))
 
 svcfit=prost %>%
   do.call(rbind,.)%>%
@@ -481,7 +358,7 @@ svcfit=prost %>%
 
 # 4 and 5 clusters---------
 exp_list=c('4m','5m')
-prost45 = lapply(exp_list, function(x) analyze('prostate', x,0.1))
+prost45 = lapply(exp_list, function(x) analyze('prostate', x, base_dir, 0.1))
 
 svcfit45=prost45 %>%
   do.call(rbind,.)%>%
@@ -531,68 +408,23 @@ f1c=final %>%
   xlab("")+
   scale_x_discrete(labels = x_lab)+
   theme_minimal()+
-  theme(text = element_text(size = 13),
+  theme(text = element_text(size = 15),
         axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
 
-## F1D
-```{r}
-svclone_in <- read.delim("~/Downloads/Figure_1/svclone_time.txt", header=FALSE)
-colnames(svclone_in) = c("sample","start","end")
-
-svc = svclone_in %>%
-  filter(end !="")%>%
-  mutate(num_sv=as.integer(gsub("speed_(.*)","\\1",sample)),
-         start = gsub("EST ","",start),
-         start = gsub(" (.*) ","\\1", start),
-         end = gsub("EST","",end),
-         end = gsub(" (.*) ","\\1", end),
-         start = as.POSIXct(start, format = "%a %b %d %I:%M:%S %p %Y"),
-         end = as.POSIXct(end, format = "%a %b %d %I:%M:%S %p %Y"),
-         time = as.numeric(difftime(end, start, units = "secs")),
-         method = "svclone")%>%
-  arrange(num_sv)
-
-
-svcfit_in <- read.delim("~/Downloads/Figure_1/svcfit_time.txt", header=FALSE)
-colnames(svcfit_in) = c("sample","start","end")
-svcf = svcfit_in %>%
-  mutate(num_sv=as.integer(gsub("speed_(.*).vcf","\\1",sample)),
-         start = as.POSIXct(start, format="%a %b %d %H:%M:%S %Y",units = "secs"),
-         end = as.POSIXct(end, format="%a %b %d %H:%M:%S %Y",units = "secs"),
-         time = as.integer(end - start),
-         method = "svcfit") %>%
-  filter(num_sv %in% svc$num_sv)%>%
-  arrange(num_sv)
-
-
-F1D=rbind(svc, svcf)%>%
-  ggplot(aes(x=num_sv, y = time, color = method, group=method))+
-  geom_point()+
-  geom_smooth(method = "glm", aes(color=method),show.legend = FALSE)+
-  scale_y_log10()+
-  ylab("time (sec)")+
-  xlab("number of structural variants")+
-  theme_bw()+
-  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
-        legend.title = element_blank(),
-        legend.position = "none")+
-  guides(color = guide_legend(override.aes = list(shape = 15, size = 6)))
-```
-
-
+#Figure 2
 ```{r}
 library(ggalluvial)
 
-n_sv2cluster <- read.csv("~/Documents/Karchin_lab/combat/annotsv/testing.csv")
+n_sv2cluster <- read.csv("~/Documents/Karchin_lab/combat/annotsv/sv2cluster.csv")
 
 dat_alluv <- n_sv2cluster %>% 
   filter(pair==10)%>%
   mutate(
     pre_BAT_cat = cut(pre_BAT,
-                      breaks = c(0,0.15, 0.7, 1),
+                      breaks = c(0, 0.15, 0.7, 1),
                       include.lowest = TRUE),
     on_BAT_cat  = cut(on_BAT,
                       breaks = c(0,0.15, 0.7, 1),
@@ -616,7 +448,7 @@ names(tab) <- c("cluster", "pre_BAT_cat", "on_BAT_cat", "Freq")
 
 # Drop zero-count combinations
 tab <- tab[tab$Freq > 0, ]
-tab$cluster <- factor(tab$cluster, levels = rev(levels(tab$cluster)))
+tab$cluster <- factor(tab$cluster, levels = levels(tab$cluster))
 tab$pre_BAT_cat <- factor(tab$pre_BAT_cat, levels = rev(levels(tab$pre_BAT_cat)))
 tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
 
@@ -626,9 +458,12 @@ x=ggplot(data = tab,
        aes(axis1 = pre_BAT_cat, axis2 = on_BAT_cat,
            y = Freq)) +
   scale_x_discrete(limits = c("pre_BAT", "on_BAT"), expand = c(.15, .03)) +
-  geom_alluvium(aes(fill = cluster)) +
+  geom_alluvium(aes(fill = cluster), alpha=0.7) +
   geom_stratum() +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
-  theme_minimal()
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size=5) +
+  theme_minimal()+
+  theme(text = element_text(size = 20))+
+  scale_color_viridis_d(option = "viridis") +
+  scale_fill_viridis_d(option = "viridis")
 
 ```
