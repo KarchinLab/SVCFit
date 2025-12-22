@@ -9,35 +9,21 @@ output: html_document
 library(dplyr)
 library(tidyr)
 library(readr)
-
 # Visualization
 library(ggplot2)
 library(ggpubr)
 library(viridis)
 library(circlize)
-
 # Stats & Python Integration
 library(rstatix)
 library(reticulate)
-
 # Network/Phylogeny
 library(igraph)
-# Note: Ensure the package containing 'enumerateSpanningTreesModified' is loaded here 
-# (e.g., library(clonevol) or source("my_phylogeny_functions.R"))
+library(ggalluvial)
 
 # --- Global Parameters ---
-BASE_DIR    <- "/projects/karchin-lab-hpc/COMBAT/COMBAT_WGS"
-LOCAL_DIR   <- "~/Documents/Karchin_lab/combat"
+mendeley_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data'
 PYTHON_ENV  <- "py3" # Name of your Conda env
-
-# --- Input Files ---
-CYTO_FILE   <- file.path(BASE_DIR, "cytoBand.txt")
-PAIR_FILE   <- file.path(LOCAL_DIR, "pair.bed")
-PURITY_FILE <- file.path(LOCAL_DIR, "samp_pur.csv")
-
-# --- Output Paths ---
-OUTPUT_DIR  <- file.path(LOCAL_DIR, "output_figures")
-if(!dir.exists(OUTPUT_DIR)) dir.create(OUTPUT_DIR)
 
 # Initialize Python
 use_condaenv(PYTHON_ENV, required = TRUE)
@@ -46,7 +32,7 @@ sk <- import("sklearn", delay_load = TRUE)
 
 # define function for circos plot
 ```{r}
-plot_circos <- function(samp, sv_path, cnv_path, bed_path, cyto_path) {
+plot_circos <- function(samp, sv_path, cnv_path, svcfit_path, cyto_path) {
   
   # 1. Setup Cytoband
   cyto <- read.delim(cyto_path, header=FALSE)
@@ -56,7 +42,7 @@ plot_circos <- function(samp, sv_path, cnv_path, bed_path, cyto_path) {
   
   # 2. Prepare SV Info
   # Read sub-selection BED if exists
-  svcfit_dat <- read.delim(bed_path)
+  svcfit_dat <- read.delim(svcfit_path)
   
   sv <- read.table(sv_path, quote="\"")
   colnames(sv) <- c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','tumor')
@@ -131,30 +117,32 @@ plot_circos <- function(samp, sv_path, cnv_path, bed_path, cyto_path) {
 #circus plot
 ```{r}
 samp = "86921"
-sv_name='/projects/karchin-lab-hpc/COMBAT/COMBAT_WGS/svcfit/sv_call/survivor/86921/svcfit_86921.vcf'
-cnv_name='/projects/karchin-lab-hpc/COMBAT/COMBAT_WGS/VY_COMBAT_WGS_000_analysis/facets/86921_vs_PBMC_31_FACETS_cncf.txt'
-sv_2_cluster <- read.csv("/projects/karchin-lab-hpc/COMBAT/COMBAT_WGS/svcfit/sv_2_cluster.csv")
-plot_circus(opts$sample, opts$sv, opts$cnv, has_snp = TRUE)
+sv_path=paste0(mendeley_dir, '/COMBAT/SVs/svcfit_', samp, '.vcf')
+cnv_path=grep(list.files(paste0(mendeley_dir, '/COMBAT/facets')), samp)
+svcfit_path=paste0(mendeley_dir, '/COMBAT/SVCFit_output/', samp, '.bed')
+cyto_path=paste0(mendeley_dir, '/COMBAT/cytoBand.txt')
+
+plot_circus(samp, sv_path, cnv_path, svcfit_path, cyto_path)
 ```
 
 # clustering
 ```{r}
 # read data---------
-sample_pair <- read.delim("~/Documents/Karchin_lab/combat/pair.bed", header=FALSE)
+sample_pair <- read.delim(paste0(mendeley_dir, '/COMBAT/pair.bed'), header=FALSE)
 colnames(sample_pair)=c("pre_BAT","on_BAT")
-samp_pur <- read.delim("~/Documents/Karchin_lab/combat/samp_pur.csv")
+samp_pur <- read.delim(paste0(mendeley_dir, '/COMBAT/samp_pur.csv'))
 
 read_data <- function(pair, row, pur_file){
   pre_samp=pair$pre_BAT[row]
   on_samp=pair$on_BAT[row]
   pre_pur=pur_file$purity[pur_file$sample==pre_samp]
   on_pur=pur_file$purity[pur_file$sample==on_samp]
-  pre <- read.delim(paste0("~/Documents/Karchin_lab/combat/output/", pre_samp, ".bed")) %>%
+  pre <- read.delim(paste0(mendeley_dir, '/COMBAT/SVCFit_output/', pre_samp, '.bed')) %>%
     mutate(sample_ID=pre_samp,
            pair=row,
            stage='pre_BAT',
            purity=as.numeric(pre_pur))
-  on <- read.delim(paste0("~/Documents/Karchin_lab/combat/output/", on_samp, ".bed")) %>%
+  on <- read.delim(paste0(mendeley_dir, '/COMBAT/SVCFit_output/', on_samp, '.bed')) %>%
     mutate(sample_ID=on_samp,
            pair=row,
            stage='on_BAT',
@@ -252,10 +240,6 @@ new_dat <- rbind(shared, non_shared) %>%
 
 
 #### cluster
-
-library(tidyverse)
-library(reticulate)
-
 # point to your Python env (adjust "py3" if needed)
 use_condaenv("py3", required = TRUE)
 py_config()
@@ -418,11 +402,6 @@ run_dp_gmm_pair <- function(input, pair_num,
       alpha = "cluster\nprob."
     ) +
     theme_classic()
-
-  # ## 7) Print/show plots
-  # print(p_conv)
-  # print(p_delta)
-  # print(p_clusters)
   
   ## 8) Return objects for further use
   list(
@@ -540,10 +519,10 @@ cc=new_plot %>%
   group_by(pair)%>%
   mutate(cluster_num=paste0('cluster', row_number()))
 
-new_plot <- new_plot %>% left_join(cc)
+cluster_result <- new_plot %>% left_join(cc)
 
 # --- plot ---
-p <- new_plot%>%
+p <- cluster_result%>%
   #filter(pair==4)%>%
   ggplot(aes(pre_ccf, post_ccf, color = cluster_num)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", alpha = 0.6) +
@@ -564,19 +543,15 @@ p <- new_plot%>%
 
  print(p)
 
-write.csv(new_plot, '~/Documents/Karchin_lab/combat/cluster_result.csv')
-
-check_sv = new_plot%>%
+sv2cluster = new_plot%>%
   mutate(pre_BAT=pre_ccf,
          on_BAT=post_ccf,
          pair=as.character(pair))%>%
   right_join(new_dat, by=c('pair','pre_BAT','on_BAT'))%>%
   mutate(sv_len=END-POS)%>%
   select(CHROM, POS, END, classification, pair, cluster_num, pre_center, post_center, pre_BAT, on_BAT, sv_len)
-x=check_sv %>% filter(pair==10, cluster_num=='cluster3')
-write.csv(y, '~/Documents/Karchin_lab/combat/annotsv/p10_dup.csv', row.names = F)
 
-write.csv(check_sv, '~/Documents/Karchin_lab/combat/annotsv/sv2cluster.csv', row.names = F)
+
 
 ```
 
@@ -584,7 +559,7 @@ write.csv(check_sv, '~/Documents/Karchin_lab/combat/annotsv/sv2cluster.csv', row
 #build phylogeny
 ```{r}
 #get cluster info
-cluster_result <- read.csv(paste0(base_dir, "COMBAT/cluster_result.csv"))
+cluster_result <- read.csv(paste0(mendeley_dir, "COMBAT/cluster_result.csv"))
 clones = cluster_result %>%
   select(pair, cluster_num, pre_center, post_center)%>%
   group_by(pair, cluster_num)%>%
@@ -620,4 +595,52 @@ plotTree(best_tree)
 #clone proportion
 subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
 plotSubclonePie(subclone_props, sample_names = c('before-BAT','on-BAT'))
+```
+
+
+#Figure 2
+```{r}
+sv2cluster <- read.csv(paste0(mendeley_dir, "/COMBAT/sv2cluster.csv"))
+
+dat_alluv <- sv2cluster %>% 
+  filter(pair==10)%>%
+  mutate(
+    pre_BAT_cat = cut(pre_BAT,
+                      breaks = c(0, 0.15, 0.7, 1),
+                      include.lowest = TRUE),
+    on_BAT_cat  = cut(on_BAT,
+                      breaks = c(0,0.15, 0.7, 1),
+                      include.lowest = TRUE)
+  )
+
+# 2. (optional but common) aggregate to counts/frequencies
+tab <- as.data.frame(
+  table(dat_alluv$cluster_num,
+        dat_alluv$pre_BAT_cat,
+        dat_alluv$on_BAT_cat)
+)
+
+
+names(tab) <- c("cluster", "pre_BAT_cat", "on_BAT_cat", "Freq")
+
+# Drop zero-count combinations
+tab <- tab[tab$Freq > 0, ]
+tab$cluster <- factor(tab$cluster, levels = levels(tab$cluster))
+tab$pre_BAT_cat <- factor(tab$pre_BAT_cat, levels = rev(levels(tab$pre_BAT_cat)))
+tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
+
+
+# 3. Make the alluvial plot
+f2=ggplot(data = tab,
+       aes(axis1 = pre_BAT_cat, axis2 = on_BAT_cat,
+           y = Freq)) +
+  scale_x_discrete(limits = c("pre_BAT", "on_BAT"), expand = c(.15, .03)) +
+  geom_alluvium(aes(fill = cluster), alpha=0.7) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size=5) +
+  theme_minimal()+
+  theme(text = element_text(size = 20))+
+  scale_color_viridis_d(option = "viridis") +
+  scale_fill_viridis_d(option = "viridis")
+
 ```

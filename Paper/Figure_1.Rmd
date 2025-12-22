@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
-#library(SVCFit)
+library(SVCFit)
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -16,6 +16,7 @@ library(ggplot2)
 library(ggpubr) #for stat
 library(rstatix) #for stat
 library(ggsignif) #for plot significance
+mendeley_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data'
 ```
 
 # Fig 1 VISOR benchmark
@@ -44,7 +45,7 @@ condition_list=c(
   "c50p60m10", "c50p60m30", "c50p60m50",
   "c50p80m10", "c50p80m30", "c50p80m50"
 )
-base_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data/VISOR_benchmark'
+base_dir = paste0(mendeley_dir, '/VISOR_benchmark')
 
 e1 = lapply(condition_list, 
              function(x) analyze(x,'exp1',
@@ -268,7 +269,7 @@ analyze <- function(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t
 # process for F1 prostate mixture
 ```{r}
 ### load the truth
-base_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data/Prostate_mixture'
+base_dir = paste0(mendeley_dir, '/Prostate_mixture')
 tbm = read.table(paste0(base_dir, "/in_silico_true/bM.vcf"), quote="\"")
 tgm = read.table(paste0(base_dir, "/in_silico_true/gM.vcf"), quote="\"")
 colnames(tbm) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
@@ -410,60 +411,5 @@ f1c=final %>%
   theme_minimal()+
   theme(text = element_text(size = 15),
         axis.text.x = element_text(angle = 45, hjust = 1))
-
-```
-
-
-#Figure 2
-```{r}
-library(ggalluvial)
-
-n_sv2cluster <- read.csv("~/Documents/Karchin_lab/combat/annotsv/sv2cluster.csv")
-
-dat_alluv <- n_sv2cluster %>% 
-  filter(pair==10)%>%
-  mutate(
-    pre_BAT_cat = cut(pre_BAT,
-                      breaks = c(0, 0.15, 0.7, 1),
-                      include.lowest = TRUE),
-    on_BAT_cat  = cut(on_BAT,
-                      breaks = c(0,0.15, 0.7, 1),
-                      include.lowest = TRUE)
-  )
-
-# 2. (optional but common) aggregate to counts/frequencies
-tab <- as.data.frame(
-  table(dat_alluv$cluster_num,
-        dat_alluv$pre_BAT_cat,
-        dat_alluv$on_BAT_cat)
-)
-
-# tab <- as.data.frame(
-#   table(dat_alluv$cluster_num,
-#         round(dat_alluv$pre_center, digits = 2),
-#         round(dat_alluv$post_center, digits = 2))
-# )
-
-names(tab) <- c("cluster", "pre_BAT_cat", "on_BAT_cat", "Freq")
-
-# Drop zero-count combinations
-tab <- tab[tab$Freq > 0, ]
-tab$cluster <- factor(tab$cluster, levels = levels(tab$cluster))
-tab$pre_BAT_cat <- factor(tab$pre_BAT_cat, levels = rev(levels(tab$pre_BAT_cat)))
-tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
-
-
-# 3. Make the alluvial plot
-x=ggplot(data = tab,
-       aes(axis1 = pre_BAT_cat, axis2 = on_BAT_cat,
-           y = Freq)) +
-  scale_x_discrete(limits = c("pre_BAT", "on_BAT"), expand = c(.15, .03)) +
-  geom_alluvium(aes(fill = cluster), alpha=0.7) +
-  geom_stratum() +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size=5) +
-  theme_minimal()+
-  theme(text = element_text(size = 20))+
-  scale_color_viridis_d(option = "viridis") +
-  scale_fill_viridis_d(option = "viridis")
 
 ```
