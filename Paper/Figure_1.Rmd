@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
-library(SVCFit)
+#library(SVCFit)
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -128,8 +128,14 @@ plot_dat <- all_dat %>%
         "subclonal DUP",    "clonal DUP",
         "subclonal DEL",    "clonal DEL",
         "subclonal BND",    "clonal BND")),
+        classification = case_when(
+          classification == 'INV' ~ 'inversion',
+          classification == 'DUP' ~ 'tandem duplication',
+          classification == 'DEL' ~ 'deletion',
+          classification == 'BND' ~ 'translocation'
+        ),
         classification = factor(classification,
-                            levels = c("INV","DUP","DEL","BND")),
+                            levels = c("translocation","tandem duplication","inversion","deletion")),
         y = as.numeric(classification) + if_else(clonality == "clonal",  0.2, -0.2))
 ```
 
@@ -152,12 +158,14 @@ f1a=ggplot(plot_dat, aes(x = mean_err, y = y)) +
 
 f1b=all_dat %>%
   mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
-         purity = factor(purity, levels = c("purity 80%", "purity 40%"))) %>%
+         purity = factor(purity, levels = c("purity 80%", "purity 40%")),
+         zygosity=ifelse(zygosity=='het', 'heterozygous', 'homozygous')) %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
   ggplot()+
   geom_violin(aes(x=zygosity, y=(abs(svcf-true_svcf)), fill = tool))+
   ylim(c(0,1.2))+
-  ylab('mean SVCF estimation error')+
+  ylab('SVCF estimation error')+
+  xlab('')+
   theme_minimal()+
   theme(text = element_text(size = 15))
 

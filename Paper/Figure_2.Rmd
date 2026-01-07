@@ -37,7 +37,7 @@ plot_circos <- function(samp, sv_path, cnv_path, svcfit_path, cyto_path) {
   # 1. Setup Cytoband
   cyto <- read.delim(cyto_path, header=FALSE)
   colnames(cyto) <- c("chrom", "start", "end", "name", "gieStain")
-  chr_lst <- paste0("chr", c(1:22))
+  chr_lst <- paste0("chr", c(1:22, 'X', 'Y'))
   cyto <- cyto %>% filter(chrom %in% chr_lst)
   
   # 2. Prepare SV Info
@@ -114,7 +114,7 @@ plot_circos <- function(samp, sv_path, cnv_path, svcfit_path, cyto_path) {
 
 ```
 
-#circus plot
+# F2: circus plot 
 ```{r}
 samp = "86921"
 sv_path=paste0(mendeley_dir, '/COMBAT/SVs/svcfit_', samp, '.vcf')
@@ -125,7 +125,7 @@ cyto_path=paste0(mendeley_dir, '/COMBAT/cytoBand.txt')
 plot_circus(samp, sv_path, cnv_path, svcfit_path, cyto_path)
 ```
 
-# clustering
+# clustering preprocess
 ```{r}
 # read data---------
 sample_pair <- read.delim(paste0(mendeley_dir, '/COMBAT/pair.bed'), header=FALSE)
@@ -219,27 +219,14 @@ new_dat <- rbind(shared, non_shared) %>%
   filter((pre_BAT+on_BAT)!=0) %>%
   mutate(
     pre_BAT = ifelse(pre_BAT < 0.1, 0, pre_BAT),
-    on_BAT = ifelse(on_BAT < 0.1, 0, on_BAT),
-    pre_BAT_brkt = cut(pre_BAT,
-                       breaks = c(0,0.15, 0.7, 1),
-                       include.lowest = TRUE),
-    on_BAT_brkt  = cut(on_BAT,
-                       breaks = c(0, 0.15, 0.7, 1),
-                       include.lowest = TRUE),
-    pre_cat= case_when(
-      pre_BAT_brkt == '(0.7,1]' ~ 3,
-      pre_BAT_brkt == '(0.15,0.7]' ~ 2,
-      pre_BAT_brkt == '[0,0.15]' ~ 1
-    ),
-    on_cat= case_when(
-      on_BAT_brkt == '(0.7,1]' ~ 3,
-      on_BAT_brkt == '(0.15,0.7]' ~ 2,
-      on_BAT_brkt == '[0,0.15]' ~ 1
-    )
+    on_BAT = ifelse(on_BAT < 0.1, 0, on_BAT)
   )
+
+```
 
 
 #### cluster
+```{r}
 # point to your Python env (adjust "py3" if needed)
 use_condaenv("py3", required = TRUE)
 py_config()
@@ -556,7 +543,7 @@ sv2cluster = new_plot%>%
 ```
 
 
-#build phylogeny
+#F2: build phylogeny
 ```{r}
 #get cluster info
 cluster_result <- read.csv(paste0(mendeley_dir, "COMBAT/cluster_result.csv"))
@@ -598,7 +585,7 @@ plotSubclonePie(subclone_props, sample_names = c('before-BAT','on-BAT'))
 ```
 
 
-#Figure 2
+#F2: alluvial
 ```{r}
 sv2cluster <- read.csv(paste0(mendeley_dir, "/COMBAT/sv2cluster.csv"))
 
