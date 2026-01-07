@@ -2,13 +2,13 @@
 #'
 #' @param sv_phase an object of class 'data frame'. This object stores the output from `parse_snp_on_sv`.
 #' @param sv_info an object of class 'data frame'. This object stores the output from `parse_sv_info`.
-#' @param flank an object of class 'integer'. This object describes the upper limit of location difference
+#' @param flank_snp an object of class 'integer'. This object describes the upper limit of location difference
 #' for an SNP to be assigned to an SV
 #'
 #' @returns sth
 #' @export
 #'
-assign_svids <- function(sv_phase, sv_info, flank = 500) {
+assign_svids <- function(sv_phase, sv_info, flank_snp = 500) {
   # GRanges for SNPs (sv_phase) and SVs (sv_info)
   snp_gr <- GRanges(
     seqnames = sv_phase$CHROM,
@@ -22,16 +22,16 @@ assign_svids <- function(sv_phase, sv_info, flank = 500) {
   )
   
   #Create ±500 bp “start” and “end” windows
-  starts  <- pmax(start(sv_gr) - flank, 1)
-  ends_st <- start(sv_gr) + flank
+  starts  <- pmax(start(sv_gr) - flank_snp, 1)
+  ends_st <- start(sv_gr) + flank_snp
   sv_start_win <- GRanges(
     seqnames = seqnames(sv_gr),
     ranges   = IRanges(start=starts, end=ends_st),
     sv_id    = sv_gr$sv_id
   )
   
-  ends    <- end(sv_gr) + flank
-  starts_en <- pmax(end(sv_gr) - flank, 1)
+  ends    <- end(sv_gr) + flank_snp
+  starts_en <- pmax(end(sv_gr) - flank_snp, 1)
   sv_end_win <- GRanges(
     seqnames = seqnames(sv_gr),
     ranges   = IRanges(start=starts_en, end=ends),

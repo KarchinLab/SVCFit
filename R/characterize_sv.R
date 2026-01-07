@@ -11,12 +11,12 @@
 #' @export
 #'
 
-characterize_sv <- function(sv_phase, sv_info, cnv){
-  assign_id <- assign_svids(sv_phase, sv_info, flank=500)
+characterize_sv <- function(sv_phase, sv_info, cnv, flank_snp=500, flank_cnv = 1000){
+  assign_id <- assign_svids(sv_phase, sv_info, flank_snp)
   sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
   sv_cnv    <- assign_cnv(sv_sum, cnv)
   anno_sv_cnv     <- annotate_cnv(sv_cnv)
-  sv_background <- assign_background_cnv(sv_sum, cnv, flank = 1000)
+  sv_background <- assign_background_cnv(sv_sum, cnv, flank_cnv)
   sv_all <- left_join(anno_sv_cnv, sv_background)
   return(sv_all)
 }
