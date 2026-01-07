@@ -2,25 +2,47 @@
 % Please edit documentation in R/extract_info.R
 \name{extract_info}
 \alias{extract_info}
-\title{extract_info is used to get the information from vcf files to calculate structural variant cellular fraction}
+\title{extract information}
 \usage{
-extract_info(path, tumor_only = FALSE, length_threshold = 0)
+extract_info(
+  p_het,
+  p_onsv,
+  p_sv,
+  p_cnv,
+  chr_lst = NULL,
+  flank_del = 50,
+  QUAL_tresh = 100,
+  min_alt = 2,
+  tum_only
+)
 }
 \arguments{
-\item{path}{an object of class "Character". This variable is the path to vcf files}
+\item{p_het}{object of class 'character'. This object stores the file path
+to vcf file for heterozygous SNPs.}
 
-\item{tumor_only}{an object of class "Boolean". This variable indicates whether
-the vcf files were created under tumor-only mode}
+\item{p_onsv}{object of class 'character'. This object stores the file path
+to vcf files for heterozygous SNPs that are on SV supporting reads.}
 
-\item{length_threshold}{an object of class "integer". This variable set lowest
-threshold on the size of a structural variants}
+\item{p_sv}{object of class 'character'. This object stores the file path
+to vcf files for SVs.}
+
+\item{p_cnv}{object of class 'character'. This object stores the file path
+to CNV file.}
+
+\item{flank_del}{object of class 'numeric'. This object describes the maximum allowed
+differences in genomic locations for a deletion to be considered as overlapping to a translocation.}
+
+\item{QUAL_tresh}{object of class 'numeric'. This object describes the minimum quality score
+allowed to include an SV.}
+
+\item{min_alt}{object of class 'numeric'. This object describes the minimum
+amount of SV supporting read counts to include an SV.}
+
+\item{tumor_only}{object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM}
 }
 \value{
-a dataframe with read information for each structural variant
+sth
 }
 \description{
-extract_info is used to get the information from vcf files to calculate structural variant cellular fraction
-}
-\examples{
-example
+extract information
 }

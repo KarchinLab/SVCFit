@@ -98,3 +98,26 @@ p2=dat_end%>%
 ```
 
 
+
+#tmp supplementary figure
+```{r, message=FALSE}
+tmp_stat=all_dat %>%
+  filter(expmt=='exp5')%>%
+  mutate(deviation=abs(svcf-true_svcf))%>%
+  group_by(purity,clone, new_class)%>%
+  wilcox_test(deviation~tool, paired = TRUE)%>%
+  add_significance()%>%
+  add_xy_position(x = "new_class")
+
+tmp <- all_dat %>%
+  filter(expmt=='exp5')%>%
+  ggplot()+
+  geom_boxplot(aes(x=new_class, y = abs(svcf-true_svcf), fill = tool))+
+  facet_grid(purity ~ clone)+
+  stat_pvalue_manual(tmp_stat, hide.ns = TRUE)+
+  ylab("estimation error from true svcf")+
+  xlab("")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+  theme(text = element_text(size = 15))
+```

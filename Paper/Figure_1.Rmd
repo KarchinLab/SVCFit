@@ -1,315 +1,423 @@
 ---
 title: "Figure_1"
 author: "Yunzhou Liu"
-date: "2024-12-13"
+date: "2025-11-21"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-library(SVCFit)
-library(tidyverse)
+```{r setup, include=FALSE, message=FALSE}
+#library(SVCFit)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(stringr)
+library(GenomicRanges)
+library(ggplot2)
 library(ggpubr) #for stat
 library(rstatix) #for stat
 library(ggsignif) #for plot significance
+mendeley_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data'
 ```
 
-## load data for F1AB
-```{r}
-## all data can be found from mendeley.com, following the instructions from Github
-## all data path used here should be in your/pathway/Figure_1/...
-
-ground_truth="~/Downloads/Figure_1/input/"
-p <- list.files(ground_truth, pattern = "^c.*.bed", full.names = T)
-truth = read_clone(p, mode="inherited")
-
-## get SVCFit data
-svmp <- list.files("~/Downloads/Figure_1/multiple_vcfs",pattern = ".*.vcf", full.names = T)
-svsp <- list.files("~/Downloads/Figure_1/single_vcfs",pattern = ".*.vcf", full.names = T)
-
-svs=lapply(svsp, function(x) SVCF(x, overlap=TRUE, truth_path = ground_truth))%>%
-  do.call(rbind,.)%>%
-  mutate(method="SVCFit")
-
-svm=lapply(svmp, function(x) SVCF(x, overlap=TRUE, multiple=TRUE, truth_path = ground_truth))%>%
-  do.call(rbind,.)%>%
-  mutate(method="SVCFit")
-
-svm=attach_clone(svm,truth)
-
-## get SVclone data
-### create function to gather SVclone output
-get_svclone <- function(rdata_path, sv_dat, tolerance=6){
-  load(rdata_path)
-  s=gsub(".*(c.*)_cc.*","\\1",rdata_path)
-  p=as.numeric(gsub("c\\d+p","",s))/100
-  subset <- sv_dat %>% filter(sample==s)
-  x=doubleBreakPtsRes[[3]]%>%
-  mutate(first=gsub("^(.*)_.*","\\1",mutation_id),
-         second=gsub("^.*_(.*)","\\1",mutation_id),
-         CHROM=gsub("(.*):\\d+.*","\\1",first),
-         POS=as.numeric(gsub(".*:(\\d+).*","\\1",first)),
-         chr2=gsub("(.*):\\d+.*","\\1",second),
-         pos2=as.numeric(gsub(".*:(\\d+).*","\\1",second)),
-         ## here, try to select the same mutation present in SVCFit
-         type = any(which(abs(POS-subset$POS)<tolerance & abs(pos2-subset$pos2)<tolerance)),
-         row=ifelse(type == TRUE,which(abs(POS-subset$POS)<tolerance & abs(pos2-subset$pos2)<tolerance),0),
-         classification=ifelse(row==0,"None",subset$classification[row]),
-         svcf=(ccube_ccf1+ccube_ccf2)/2*p,
-         sample=s)%>%
-    filter(classification!="None")%>%   ## here, force the svclone SV to match SVCFit
-    select(sample, classification, svcf, CHROM, POS, pos2)
+# Fig 1 VISOR benchmark
+```{r, message=FALSE}
+## can directly load data from /int/extdata/VISOR_bench_data.bed
+analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
+  data <- info[[1]]
+  sv_info <- info[[2]]
+  snp_df <- info[[3]]
+  sv_phase <- info[[4]]
+  anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data[[4]])
+  final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
+  overlap=ifelse(exper=='exp1', FALSE, TRUE)
+  truth <- load_truth(p_truth, overlap)
+  final_truth <- attach_truth(final, truth)
+  svc <- analyze_svclone(samp,exper, final_truth, sv_info)
+  common_dat <- final_truth %>%
+    filter(ID %in% svc$ID)
+  return(list(final_truth, svc, common_dat))
 }
 
-svcmp <- list.files("~/Downloads/Figure_1/svc_m_rdata/", full.names = T)
-svcsp <- list.files("~/Downloads/Figure_1/svc_s_rdata/", full.names = T)
+condition_list=c(
+  "c50p20m10", "c50p20m30", "c50p20m50",
+  "c50p40m10", "c50p40m30", "c50p40m50",
+  "c50p60m10", "c50p60m30", "c50p60m50",
+  "c50p80m10", "c50p80m30", "c50p80m50"
+)
+base_dir = paste0(mendeley_dir, '/VISOR_benchmark')
 
-svcs <- lapply(svcsp, function(x) get_svclone(x,svs))%>%
-  do.call(rbind,.)%>%
-  mutate(method = "SVclone")
+e1 = lapply(condition_list, 
+             function(x) analyze(x,'exp1',
+                                 file.path(base_dir, 'SNP', 'exp1', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp1', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp1', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp1', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e2 = lapply(condition_list, 
+             function(x) analyze(x,'exp2',
+                                 file.path(base_dir, 'SNP', 'exp2', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp2', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp2', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp2', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e3 = lapply(condition_list, 
+             function(x) analyze(x,'exp3',
+                                 file.path(base_dir, 'SNP', 'exp3', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp3', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp3', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp3', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e4 = lapply(condition_list, 
+             function(x) analyze(x,'exp4',
+                                 file.path(base_dir, 'SNP', 'exp4', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp4', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp4', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp4', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
+e5 = lapply(condition_list, 
+             function(x) analyze(x,'exp5',
+                                 file.path(base_dir, 'SNP', 'exp5', paste0("het_near_sv_",x, ".vcf")),
+                                 file.path(base_dir, 'SNP', 'exp5', paste0("het_on_sv_",x,".vcf")),
+                                 file.path(base_dir, 'SV_vcfs', 'exp5', paste0('svt_', x, '.vcf')),
+                                 file.path(base_dir, 'facet', 'exp5', paste0(x, '.bed')),
+                                 file.path(base_dir, 'truth')))
 
-svcm <- lapply(svcmp, function(x) get_svclone(x,svm))%>%
+gather_data=function(lst, idx){
+  test=lst[[idx]]
+  svclone=as.data.frame(map_dfr(test, 2))
+  com_svcf=as.data.frame(map_dfr(test, 3))
+  tsvf=com_svcf %>% mutate(tool="svcfit", svcf=final_svcf) %>% select(tool,svcf, expmt, zygosity, classification, sample, clone)
+  tsvc=svclone %>% mutate(tool="svclone")%>% select(tool,svcf, expmt, zygosity, classification, sample,clone)
+  output=rbind(tsvf, tsvc)
+  return(output)
+}
+
+ll=list(e1,e2,e3,e4,e5)
+all_dat=lapply(1:5, function(x) gather_data(ll,x)) %>% 
   do.call(rbind,.)%>%
-  mutate(method = "SVclone")
-svcm=attach_clone(svcm,truth)
+  mutate(pur=as.integer(gsub(".*p(\\d+).*","\\1",sample))/100,
+         purity=paste0('purity ', pur*100,"%"),
+         mixture=as.integer(gsub(".*m","",sample))/100,
+         true_svcf=pur,
+         true_svcf=case_when(
+           clone=='clonal' ~ pur,
+           clone=='2' ~ pur*mixture,
+           clone=='sub' ~ pur*(1-mixture)
+         ),
+         new_class=paste0(zygosity, "_", classification),
+         clone=case_when(
+           clone=='2' ~ 'subclone1',
+           clone=='sub' ~ 'subclone2',
+           clone=='clonal' ~ 'clonal'
+         ),
+         error=abs(svcf-true_svcf))
+
+all_dat$tool <- factor(all_dat$tool, levels = c("svcfit", "svclone"))
+
+plot_dat <- all_dat %>%
+  mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
+         purity = factor(purity, levels = c("purity 80%", "purity 40%"))) %>%
+  filter(purity %in% c("purity 80%", "purity 40%")) %>%
+  group_by(classification, clonality, tool, purity) %>%
+  summarise(mean_err = mean(abs(true_svcf - svcf), na.rm = TRUE),
+            .groups  = "drop") %>%
+  mutate(sv = paste0(clonality, " ", classification),
+         sv = factor(sv, levels = c(
+        "subclonal INV",    "clonal INV",
+        "subclonal DUP",    "clonal DUP",
+        "subclonal DEL",    "clonal DEL",
+        "subclonal BND",    "clonal BND")),
+        classification = case_when(
+          classification == 'INV' ~ 'inversion',
+          classification == 'DUP' ~ 'tandem duplication',
+          classification == 'DEL' ~ 'deletion',
+          classification == 'BND' ~ 'translocation'
+        ),
+        classification = factor(classification,
+                            levels = c("translocation","tandem duplication","inversion","deletion")),
+        y = as.numeric(classification) + if_else(clonality == "clonal",  0.2, -0.2))
 ```
 
-## process data for F1AB
-```{r pressure, echo=FALSE}
-## merged SVCFit and SVclone
-combined_svs <- svs %>%
-  select(sample, classification, svcf, CHROM, POS, pos2, method)%>%
-  rbind(svcs) %>%
-  mutate(true_svcf = as.integer(gsub(".*p","",sample))/100,
-         deviation=svcf-true_svcf)
-
-
-combined_svm <- svm %>%
-  select(sample, classification, svcf, CHROM, POS, pos2, clone_num, method)%>%
-  rbind(svcm)%>%
-  mutate(clone_por = case_when(clone_num == "clone1" ~ 0.6, ##mannually assigned clone purity
-                               clone_num == "clone2" ~ 0.3,
-                               clone_num == "clone3" ~ 1),
-         true_svcf = as.integer(gsub(".*p","",sample))/100*clone_por,
-         deviation=svcf-true_svcf)
-
-comb_stat=combined_svs %>%
-  mutate(clone_num="single",
-         clone_por=100)%>%
-  rbind(combined_svm)%>%
-  mutate(purity = paste0(gsub(".*p","",sample), "% purity"),
-         clone_prop = case_when(clone_num == "clone1" ~ "Child 1 (60% tumor cell)",
-                                clone_num == "clone2" ~ "Child 2 (30% tumor cell)",
-                                clone_num == "clone3" ~ "Parent (100% tumor cell)",
-                                clone_num == "single" ~ "Single clone"))%>%
-  group_by(purity,clone_prop, classification)%>%
-  wilcox_test(deviation~method)%>%
-  add_significance()%>%
-  add_xy_position(x = "classification")
-```
-
-
-## plot F1AB
-```{r}
-# Figure 1A, 1B
-
-p_levels <- c('100% purity', '80% purity', '60% purity', '40% purity', '20% purity')
-c_levels <- c("Single clone","Parent (100% tumor cell)","Child 1 (60% tumor cell)","Child 2 (30% tumor cell)")
-
-
-f1a=combined_svs%>%
-  mutate(clone_num="single",
-         clone_por=100)%>%
-  rbind(combined_svm)%>%
-  mutate(purity = paste0(gsub(".*p","",sample), "% purity"),
-         clone_prop = case_when(clone_num == "clone1" ~ "Child 1 (60% tumor cell)",
-                                clone_num == "clone2" ~ "Child 2 (30% tumor cell)",
-                                clone_num == "clone3" ~ "Parent (100% tumor cell)",
-                                clone_num == "single" ~ "Single clone"))%>%
-  ggplot(aes(x=classification, y=deviation))+
-  geom_boxplot(aes(color = method, fill=method),alpha = 0.5)+
-  facet_grid(factor(purity, level = p_levels)~ factor(clone_prop, level = c_levels),scale = "free")+
-  stat_pvalue_manual(comb_stat, hide.ns = TRUE)+
-  ylab("Error")+
-  xlab("Structural variant types")+
+## plot F1A,B
+```{r pressure, echo=FALSE, message=FALSE}
+f1a=ggplot(plot_dat, aes(x = mean_err, y = y)) +
+  geom_line(aes(group = sv, linetype = clonality)) +
+  geom_point(aes(color = tool), size = 3) +
+  facet_grid(purity ~ .) +
+  scale_y_continuous(
+    breaks = seq_len(nlevels(plot_dat$classification)),
+    labels = levels(plot_dat$classification),
+    limits = c(0.5, nlevels(plot_dat$classification) + 0.5)
+  ) +
   theme_bw()+
-  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
-        legend.position = "none",
-        strip.text = element_text(size = 7))
+  theme(text = element_text(size = 15))+
+  ylab('')+
+  xlab('mean SVCF estimation error')
 
 
-```
-
-
-## load data for F1C
-```{r}
-path= "~/Downloads/Figure_1/"
-tp <- list.files(paste0(path, "in_silico_true"), full.names = T)
-mp <- list.files(paste0(path, "in_silico_vcfs"), full.names = T)
-
-## filter applied: pass, no support reads from normal sample, at least 2 support reads
-## to inplement: sv size > insert size (317)
-## within 6bp is considered same event
-
-########## load ground truth of the mixture #########
-true <- lapply(tp, function(x) SVCF(x,overlap=TRUE, tumor_only = FALSE, length_threshold = 317))%>%
-  do.call(rbind,.)%>%
-  mutate(sample=gsub("co_true/","",sample),
-         id=paste0(CHROM,"_",POS,"_",pos2))%>%
-  #filter(classification != "BND")%>%
-  group_by(id)%>%
-  mutate(n=n(),
-         svcf=mean(svcf))%>%
-  ungroup() %>%
-  mutate(clone = ifelse(n == 2, "clonal", sample))%>%
-  distinct(id, .keep_all = T)%>%
-  arrange(CHROM, POS)
-
-## below assign mixture proportion based on even or odd chromosome
-## detailed information can be found in SVclone paper
-t45 = true %>%
-  filter(!(grepl('hs', CHROM) | grepl("GL", CHROM)))%>%
-  mutate(CHROM = ifelse(CHROM == "X", 23,
-                       ifelse(CHROM == "Y", 24, CHROM)),
-         CHROM = as.numeric(CHROM),
-         t4 = ifelse(sample == "bM" & CHROM%%2 == 0, 0.6,
-                     ifelse(sample == "bM" & CHROM%%2 == 1, 0.2,
-                            ifelse(sample == "gM" & CHROM%%2 == 1, 0.6, 10))),
-         t5 = ifelse(sample == "bM" & CHROM%%2 == 0, 0.6,
-                     ifelse(sample == "bM" & CHROM%%2 == 1, 0.2,
-                            ifelse(sample == "gM" & CHROM%%2 == 1, 0.6,
-                                   ifelse(sample == "gM" & CHROM%%2 == 0, 0.8, 10)))),
-         t4 = ifelse(clone == "clonal", 1, t4),
-         t5 = ifelse(clone == "clonal", 1, t5))
-
-
-############# load svcfit and svclone estimates ###########
-mix <- lapply(mp, function(x) SVCF(x,overlap=TRUE, tumor_only = FALSE, length_threshold = 317))%>%
-  do.call(rbind,.)%>%
-  mutate(sample=gsub("cfs/","",sample))
-
-mix3 <- mix %>%
-  filter(!sample %in% c("4m","5m"))%>%
-  rowwise()%>%
-  mutate(bmr = as.integer(gsub("3m(\\d)(\\d)", "\\1", sample))/10,
-         gmr = as.integer(gsub("3m(\\d)(\\d)", "\\2", sample))/10,
-         purity = 0.49*bmr+0.46*gmr,
-         true_row = ifelse(any(abs(POS-true$POS)<6),which(abs(POS-true$POS)<6), NA),
-         clone= true$clone[true_row],
-         ccf = ifelse(clone == "bM", bmr,
-                      ifelse(clone == "gM", gmr, 1)),
-         my_ccf = svcf/purity,
-         my_ccf = ifelse(my_ccf > 1, 1, my_ccf),
-         error = ccf-my_ccf)%>%
-  ungroup()%>%
-  distinct(ID, .keep_all = T)%>%
-  filter(!is.na(clone))%>%
-  select(sample, ccf, svcf, my_ccf, error, clone)
-
-mix45 <- mix %>%
-  filter(sample %in% c("4m","5m"))%>%
-  rowwise()%>%
-  mutate(true_row = ifelse(any(abs(POS-true$POS)<6),which(abs(POS-true$POS)<6), NA),
-         clone= true$clone[true_row],
-         ccf = ifelse(sample == "4m", t45$t4[true_row], t45$t5[true_row]),
-         purity = 0.475,
-         my_ccf = svcf/purity,
-         my_ccf = ifelse(my_ccf > 1, 1, my_ccf),
-         error = ccf-my_ccf)%>%
-  ungroup()%>%
-  distinct(ID, .keep_all = T)%>%
-  filter(!is.na(true_row))%>%
-  select(sample, ccf, svcf, my_ccf, error, clone)
-
-
-#########merging two data for plotting############
-final_dat = rbind(mix3, mix45) %>%
-  mutate(sample=case_when(
-    sample == "3m19" ~ "3clus 10-90",
-    sample == "3m28" ~ "3clus 20-80",
-    sample == "3m37" ~ "3clus 30-70",
-    sample == "3m46" ~ "3clus 40-60",
-    sample == "3m55" ~ "3clus 50-50",
-    sample == "3m64" ~ "3clus 60-40",
-    sample == "3m73" ~ "3clus 70-30",
-    sample == "3m82" ~ "3clus 80-20",
-    sample == "3m91" ~ "3clus 90-10",
-    sample == "4m" ~ "4clus",
-    sample == "5m" ~ "5clus"))
-svclone <- c(0.11, 0.11, 0.105, 0.118, 0.12, 0.122, 0.108, 0.124, 0.12, 0.09, 0.105)-0.015
-```
-
-# F1C
-```{r}
-error_summ= final_dat %>%
-  group_by(sample)%>%
-  summarise(SVCFit = abs(mean(error)))%>%
-  mutate(SVclone = svclone)%>%
-  gather(key = method, value = error, 2:3)%>%
-  ungroup()%>%
-  group_by(method)%>%
-  summarize(sum_err=sum(error))
-
-F1C=final_dat %>%
-  group_by(sample)%>%
-  summarise(SVCFit = abs(mean(error)))%>%
-  mutate(SVclone = svclone)%>%
-  gather(key = method, value = error, 2:3)%>%
-  ungroup()%>%
+f1b=all_dat %>%
+  mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
+         purity = factor(purity, levels = c("purity 80%", "purity 40%")),
+         zygosity=ifelse(zygosity=='het', 'heterozygous', 'homozygous')) %>%
+  filter(purity %in% c("purity 80%", "purity 40%")) %>%
   ggplot()+
-  geom_point(aes(x=sample, y = error, color=method))+
-  geom_line(aes(x=sample, y = error, group = method, color= method))+
-  scale_y_continuous(limits = c(-0.1, 0.2))+
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        legend.title = element_blank(),
-        legend.position = "none")+
-  guides(color = guide_legend(override.aes = list(shape = 15, size = 6)))+
-  ylab("Mean error")+
-  xlab("")
+  geom_violin(aes(x=zygosity, y=(abs(svcf-true_svcf)), fill = tool))+
+  ylim(c(0,1.2))+
+  ylab('SVCF estimation error')+
+  xlab('')+
+  theme_minimal()+
+  theme(text = element_text(size = 15))
+
 ```
 
 
-## F1D
+## define functions for F1C
 ```{r}
-svclone_in <- read.delim("~/Downloads/Figure_1/svclone_time.txt", header=FALSE)
-colnames(svclone_in) = c("sample","start","end")
+load_data <- function(samp, exper, base_dir) {
+  dir <- file.path(base_dir)
 
-svc = svclone_in %>%
-  filter(end !="")%>%
-  mutate(num_sv=as.integer(gsub("speed_(.*)","\\1",sample)),
-         start = gsub("EST ","",start),
-         start = gsub(" (.*) ","\\1", start),
-         end = gsub("EST","",end),
-         end = gsub(" (.*) ","\\1", end),
-         start = as.POSIXct(start, format = "%a %b %d %I:%M:%S %p %Y"),
-         end = as.POSIXct(end, format = "%a %b %d %I:%M:%S %p %Y"),
-         time = as.numeric(difftime(end, start, units = "secs")),
-         method = "svclone")%>%
-  arrange(num_sv)
+  het_snp <- read.table(file.path(dir, paste0("SNP/het_near_sv_",exper, ".vcf")), quote="\"")
+  colnames(het_snp) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','bulk')
+  het_snp=het_snp %>% 
+    filter(CHROM %in% c(1:22)) %>% 
+    mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  
+  het_on_sv <- read.table(file.path(dir, paste0("SNP/het_on_sv_",exper,".vcf")), quote = "\"")
+  colnames(het_on_sv) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','bm','gm')
+  het_on_sv=het_on_sv %>% 
+    filter(CHROM %in% c(1:22)) %>% 
+    mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  
+  sv <- read.table(file.path(dir, paste0('prostate_vcfs/svt_', exper,'.vcf')), quote = '"')
+  colnames(sv) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
+  sv=sv %>% 
+    filter(CHROM %in% c(1:22)) %>% 
+    mutate(CHROM = ifelse(grepl('chr', CHROM), CHROM, paste0('chr',CHROM)))
+  
+  cnv <- read.delim(file.path(dir, paste0("facet/", exper, '.bed')), header = TRUE) %>%
+    mutate(lcn.em=ifelse(is.na(lcn.em), 1, lcn.em),
+           chrom=paste0("chr",chrom))%>%
+    filter(chrom %in% paste0('chr',c(1:22)))
+
+  return(list(het_snp = het_snp,
+              het_on_sv = het_on_sv,
+              sv = sv,
+              cnv = cnv))
+}
+
+extract_info <- function(samp, exper, dir, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
+  data      <- load_data(samp, exper, dir)
+  bnd_info   <- proc_bnd(data$sv, flank_del=50)
+  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=100, min_alt=2)
+  snp_df    <- parse_het_snps(data$het_snp)
+  sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
+  return(list(data, sv_info, snp_df, sv_phase))
+}
+
+parse_snp_on_sv <- function(het_on_sv, snp_df) {
+
+  ########## new part ############
+  sum_like_strings <- function(a, b) {
+    # extract numbers
+    nums_a <- as.numeric(str_extract_all(a, "\\d+")[[1]])
+    nums_b <- as.numeric(str_extract_all(b, "\\d+")[[1]])
+
+    # sum numbers
+    summed <- nums_a + nums_b
+
+    # extract non-numeric delimiters
+    delims <- str_extract_all(a, "[^0-9]+")[[1]]
+
+    # rebuild the string by interleaving
+    out <- paste0(
+      paste(mapply(paste0, summed, c(delims, "")), collapse = "")
+    )
+    out
+  }
+
+  het_on_sv$bulk <- mapply(sum_like_strings, het_on_sv$bm, het_on_sv$gm)
+  #########################
+
+  sv_phase <- het_on_sv %>%
+    select(-ALT)%>%
+    # get allele count for SNPs
+    mutate(snp_id=row_number(),
+           AD=gsub(".*:","",bulk),
+           len=nchar(gsub("\\d","",AD)),
+           DEP=gsub("DP=(\\d+);.*","\\1", INFO),
+           onsv_ref=as.integer(gsub(",.*","", AD)),
+           onsv_alt=as.integer(ifelse(len==2, gsub(".*,(\\d+),.*","\\1", AD),0)),
+           onsv_alt2=as.integer(ifelse(len==2, gsub(".*,","\\1", AD), 0)), # check if this SNP has three alleles, which is filtered out
+           a_count=(onsv_ref!=0) + (onsv_alt!=0),
+           allele=ifelse(a_count==1 & onsv_ref!=0, REF, "other"))%>% # other means the allele is not reference allele (used to tell mat or pat origin)
+    filter(DEP > 0,
+           onsv_alt2==0)%>%
+    # join in all het SNP
+    left_join(snp_df, by = c("CHROM", "POS", "REF"))%>%
+    select(-ID)
+
+  return(sv_phase)
+}
 
 
-svcfit_in <- read.delim("~/Downloads/Figure_1/svcfit_time.txt", header=FALSE)
-colnames(svcfit_in) = c("sample","start","end")
-svcf = svcfit_in %>%
-  mutate(num_sv=as.integer(gsub("speed_(.*).vcf","\\1",sample)),
-         start = as.POSIXct(start, format="%a %b %d %H:%M:%S %Y",units = "secs"),
-         end = as.POSIXct(end, format="%a %b %d %H:%M:%S %Y",units = "secs"),
-         time = as.integer(end - start),
-         method = "svcfit") %>%
-  filter(num_sv %in% svc$num_sv)%>%
-  arrange(num_sv)
+analyze <- function(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+  info <- extract_info(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
+  data <- info[[1]]
+  sv_info <- info[[2]]
+  snp_df <- info[[3]]
+  sv_phase <- info[[4]]
+  anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
+  final <- calc_svcf(anno_sv_cnv, sv_info, thresh=0.1, samp, exper)
+  return(final)
+}
+```
 
 
-F1D=rbind(svc, svcf)%>%
-  ggplot(aes(x=num_sv, y = time, color = method, group=method))+
-  geom_point()+
-  geom_smooth(method = "glm", aes(color=method),show.legend = FALSE)+
-  scale_y_log10()+
-  ylab("time (sec)")+
-  xlab("number of structural variants")+
-  theme_bw()+
-  theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
-        legend.title = element_blank(),
-        legend.position = "none")+
-  guides(color = guide_legend(override.aes = list(shape = 15, size = 6)))
+# process for F1 prostate mixture
+```{r}
+### load the truth
+base_dir = paste0(mendeley_dir, '/Prostate_mixture')
+tbm = read.table(paste0(base_dir, "/in_silico_true/bM.vcf"), quote="\"")
+tgm = read.table(paste0(base_dir, "/in_silico_true/gM.vcf"), quote="\"")
+colnames(tbm) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
+colnames(tgm) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','normal','tumor')
+bm = tbm %>%
+  filter(FILTER == "PASS",
+         !grepl('X', ALT),
+         !grepl('Y', ALT),
+         !grepl('hs37d5', ALT),
+         !grepl('GL', ALT),
+         CHROM %in% c(1:22))%>%
+  mutate(samp='bm',
+         chr2=ifelse(grepl('BND', ID), 
+                     gsub('\\D+(\\d+):(\\d+).*','\\1', ALT), 
+                     CHROM),
+         pos2=ifelse(grepl('BND', ID), 
+                     gsub('\\D+(\\d+):(\\d+).*','\\2', ALT), 
+                     gsub('.*END=(\\d+);.*','\\1',INFO)),
+         pos2=as.integer(pos2),
+         SVID=ifelse(grepl('INV', ID), gsub("((:[^:\\D:]){5}$)","", ID), gsub("((:[^:\\D:]){4}$)","", ID)))%>%
+  distinct(SVID, .keep_all = T)
+
+gm = tgm %>%
+  filter(FILTER == "PASS",
+         !grepl('X', ALT),
+         !grepl('Y', ALT),
+         !grepl('hs37d5', ALT),
+         !grepl('GL', ALT),
+         CHROM %in% c(1:22))%>%
+  mutate(samp='gm',
+         chr2=ifelse(grepl('BND', ID), 
+                     gsub('\\D+(\\d+):(\\d+).*','\\1', ALT), 
+                     CHROM),
+         pos2=ifelse(grepl('BND', ID), 
+                     gsub('\\D+(\\d+):(\\d+).*','\\2', ALT), 
+                     gsub('.*END=(\\d+);.*','\\1',INFO)),
+         pos2=as.integer(pos2),
+         SVID=ifelse(grepl('INV', ID), gsub("((:[^:\\D:]){5}$)","", ID), gsub("((:[^:\\D:]){4}$)","", ID)))%>%
+  distinct(SVID, .keep_all = T)
+
+clonal = bm %>%
+  rowwise()%>%
+  mutate(type=any(CHROM==gm$CHROM & chr2==gm$chr2 & abs(POS-gm$POS)<50 & abs(pos2-gm$pos2)<50))%>%
+  filter(type)%>%
+  mutate(clone='clonal')
+subb = bm %>%
+  rowwise()%>%
+  mutate(type=any(CHROM==gm$CHROM & chr2==gm$chr2 & abs(POS-gm$POS)<50 & abs(pos2-gm$pos2)<50))%>%
+  filter(!type)%>%
+  mutate(clone='bm')
+subg = gm %>%
+  rowwise()%>%
+  mutate(type=any(CHROM==bm$CHROM & chr2==bm$chr2 & abs(POS-bm$POS)<50 & abs(pos2-bm$pos2)<50))%>%
+  filter(!type)%>%
+  mutate(clone='gm')
+
+all=rbind(clonal, subb, subg) %>% ungroup() %>% mutate(CHROM = paste0('chr',CHROM))
+
+rm(bm, gm, subb, subg, clonal, tbm, tgm)
+
+############## now load svcfit data
+exp_list=c("3m19","3m28","3m37","3m46","3m55","3m64","3m73","3m82","3m91")
+prost = lapply(exp_list, function(x) analyze('prostate', x,base_dir, 0.1))
+
+svcfit=prost %>%
+  do.call(rbind,.)%>%
+  mutate(bmp=as.integer(gsub("3m(\\d)(\\d)","\\1", expmt))/10,
+         gmp=as.integer(gsub("3m(\\d)(\\d)","\\2", expmt))/10)%>%
+  rowwise()%>%
+  mutate(type=any(CHROM==all$CHROM & abs(POS-all$POS)<50))%>%
+  filter(type)%>%
+  mutate(row=which(CHROM==all$CHROM & abs(POS-all$POS)<50)[1],
+         clone=all$clone[row],
+         ccf=final_svcf/0.475,
+         ccf=ifelse(ccf>1, 1, ccf))%>%
+  ungroup()%>%
+  mutate(truth=case_when(
+    clone=='clonal' ~ 1,
+    clone=='bm' ~ bmp,
+    clone=='gm' ~ gmp),
+    error=truth-ccf)%>%
+  #filter(!is.na(tascn))%>%
+  group_by(expmt)%>%
+  summarize(mean_error=abs(mean(error)))%>%
+  mutate(method="svcfit")
+
+
+# 4 and 5 clusters---------
+exp_list=c('4m','5m')
+prost45 = lapply(exp_list, function(x) analyze('prostate', x, base_dir, 0.1))
+
+svcfit45=prost45 %>%
+  do.call(rbind,.)%>%
+  mutate(chr=as.integer(gsub('chr','',CHROM)),
+         method="svcfit")%>%
+  rowwise()%>%
+  mutate(type=any(CHROM==all$CHROM & abs(POS-all$POS)<50))%>%
+  filter(type)%>%
+  mutate(row=which(CHROM==all$CHROM & abs(POS-all$POS)<50)[1],
+         clone=all$clone[row])%>%
+  ungroup() %>%
+  mutate(truth=case_when(
+    expmt=='4m' & chr%%2==0 & clone=='bm' ~ 0.6,
+    expmt=='4m' & chr%%2==1 & clone=='bm' ~ 0.2,
+    expmt=='4m' & chr%%2==1 & clone=='gm' ~ 0.8,
+    expmt=='4m' & clone=='clonal' ~ 1,
+    expmt=='5m' & chr%%2==0 & clone=='bm' ~ 0.6,
+    expmt=='5m' & chr%%2==1 & clone=='bm' ~ 0.8,
+    expmt=='5m' & chr%%2==1 & clone=='gm' ~ 0.2,
+    expmt=='5m' & chr%%2==0 & clone=='gm' ~ 0.4,
+    expmt=='5m' & clone=='clonal' ~ 1,
+  ),
+  ccf=final_svcf/0.475,
+  ccf=ifelse(ccf>1, 1, ccf),
+  error=truth-ccf)%>%
+  filter(!is.na(truth))%>%
+  #filter(!is.na(tascn))%>%
+  group_by(expmt)%>%
+  summarize(mean_error=abs(mean(error)))%>%
+  mutate(method="svcfit")
+
+svclone <- c(0.095, 0.095, 0.090, 0.103, 0.105, 0.107, 0.093, 0.109, 0.105, 0.075, 0.090)
+name <- c('3m19','3m28','3m37','3m46','3m55','3m64','3m73','3m82','3m91','4m','5m')
+paper_dat=data.frame(expmt=name, mean_error=svclone) %>%
+  mutate(method="svclone")
+
+x_lab <- c('10-90','20-80','30-70','40-60','50-50','60-40','70-30','80-20','90-10','4 clust','5 clust')
+
+final=rbind(svcfit, svcfit45, paper_dat)
+
+f1c=final %>%
+  ggplot()+
+  geom_point(aes(x=expmt, y = mean_error, color=method))+
+  geom_line(aes(x=expmt, y = mean_error, group = method, color= method))+
+  ylim(c(-0.5, 0.5))+
+  ylab("Mean of CCF estimation error")+
+  xlab("")+
+  scale_x_discrete(labels = x_lab)+
+  theme_minimal()+
+  theme(text = element_text(size = 15),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
 ```

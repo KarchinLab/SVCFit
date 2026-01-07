@@ -1,109 +1,30 @@
-#' extract_info is used to get the information from vcf files to calculate structural variant cellular fraction
+#' extract information
 #'
-#' @param path an object of class "Character". This variable is the path to vcf files
-#' @param tumor_only an object of class "Boolean". This variable indicates whether
-#' the vcf files were created under tumor-only mode
-#' @param length_threshold an object of class "integer". This variable set lowest
-#' threshold on the size of a structural variants
+#' @param p_het object of class 'character'. This object stores the file path 
+#' to vcf file for heterozygous SNPs.
+#' @param p_onsv object of class 'character'. This object stores the file path 
+#' to vcf files for heterozygous SNPs that are on SV supporting reads.
+#' @param p_sv object of class 'character'. This object stores the file path 
+#' to vcf files for SVs.
+#' @param p_cnv object of class 'character'. This object stores the file path 
+#' to CNV file. 
+#' @param flank_del object of class 'numeric'. This object describes the maximum allowed
+#' differences in genomic locations for a deletion to be considered as overlapping to a translocation.  
+#' @param QUAL_tresh object of class 'numeric'. This object describes the minimum quality score 
+#'  allowed to include an SV.
+#' @param min_alt object of class 'numeric'. This object describes the minimum 
+#' amount of SV supporting read counts to include an SV.
+#' @param tumor_only object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM
 #'
-#' @return a dataframe with read information for each structural variant
+#' @returns sth
 #' @export
-#' @import tidyverse
-#' @importFrom utils read.table
-#' @examples example
-extract_info <- function(path, tumor_only=FALSE, length_threshold=0){
-  svt <- read.table(path, quote="\"")
-  sample_id <- gsub(".*(c.*).vcf","\\1",path)
+#'
 
-  if(tumor_only){
-    value=ncol(svt)!=length(c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","tumor"))
-    if(value){
-      stop("Number of vcf input column doesn't match the column name length, consider change tumor_only option.\n")
-    }
-    colnames(svt) <- c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","tumor")
-  }else{
-    value=ncol(svt)!=length(c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","normal","tumor"))
-    if(value){
-      stop("Number of vcf input column doesn't match the column name length, consider change tumor_only option.\n")
-    }
-    colnames(svt) <- c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","normal","tumor")
-  }
-
-
-  if(tumor_only){
-    out <- svt %>%
-      mutate(chr2 = gsub(".*(chr.).*","\\1", ALT),
-             chr2 = ifelse(grepl("chr", chr2), chr2, CHROM),
-             pos2 = gsub(".*:(\\d+).*","\\1", ALT),
-             pos2 = ifelse(grepl("\\d+", pos2), pos2, gsub("END=(\\d+).*","\\1",INFO)),
-             pos2 = as.integer(pos2),
-             classification = gsub(".*SVTYPE=(\\w+).*","\\1", INFO),
-             length = abs(POS-pos2),
-             ID = gsub(":\\d$","",ID),
-             ## here, sum the spanning and split read
-             PR = gsub(":.*$", "", tumor),
-             SR = ifelse(FORMAT == "PR", "0,0", gsub("^.*:", "", tumor)),
-             rpr = gsub(",\\d+","", PR),
-             apr = gsub("\\d+,","", PR),
-             rsr = gsub(",\\d+","", SR),
-             asr = gsub("\\d+,","", SR),
-             sample = sample_id,
-             row = as.integer(row_number()),
-             iid=paste0(CHROM,"_",POS),
-             tmp_id=gsub(":\\d:\\d$","",ID))%>%
-      group_by(tmp_id)%>%
-      mutate(apr=sum(as.integer(apr)),
-             asr=sum(as.integer(asr)),
-             rpr=round(mean(as.integer(rpr))),
-             rsr=round(mean(as.integer(rsr))))%>%
-      distinct(tmp_id, .keep_all = T)%>%
-      ungroup()%>%
-      mutate(ref = as.numeric(rpr)+as.numeric(rsr),
-             alt = as.numeric(apr)+as.numeric(asr))%>%
-      filter(FILTER == "PASS",
-                    alt > 2,
-                    length>length_threshold)%>%
-      select(-tmp_id)
-  }else{
-  out <- svt %>%
-    mutate(chr2 = gsub(".*(chr.).*","\\1", ALT),
-           chr2 = ifelse(grepl("chr", chr2), chr2, CHROM),
-           pos2 = gsub(".*:(\\d+).*","\\1", ALT),
-           pos2 = ifelse(grepl("\\d+", pos2), pos2, gsub("END=(\\d+).*","\\1",INFO)),
-           pos2 = as.integer(pos2),
-           length = abs(POS-pos2),
-           classification = gsub(".*SVTYPE=(\\w+).*","\\1", INFO),
-           ID = gsub(":\\d$","",ID),
-           ## here, sum the spanning and split read
-           PR = gsub(":.*$", "", tumor),
-           SR = ifelse(FORMAT == "PR", "0,0", gsub("^.*:", "", tumor)),
-           NPR = gsub(":.*$", "", normal),
-           NSR = ifelse(FORMAT == "PR", "0,0", gsub("^.*:", "", normal)),
-           anpr = gsub("\\d+,","", NPR),
-           ansr = gsub("\\d+,","", NSR),
-           rpr = gsub(",\\d+","", PR),
-           apr = gsub("\\d+,","", PR),
-           rsr = gsub(",\\d+","", SR),
-           asr = gsub("\\d+,","", SR),
-           sample = sample_id,
-           row = as.integer(row_number()),
-           iid=paste0(CHROM,"_",POS),
-           tmp_id=gsub(":\\d:\\d$","",ID))%>%
-    group_by(tmp_id)%>%
-    mutate(apr=sum(as.integer(apr)),
-           asr=sum(as.integer(asr)),
-           rpr=round(mean(as.integer(rpr))),
-           rsr=round(mean(as.integer(rsr))))%>%
-    distinct(tmp_id,.keep_all = T)%>%
-    ungroup()%>%
-    mutate(ref = as.numeric(rpr)+as.numeric(rsr),
-           alt = as.numeric(apr)+as.numeric(asr))%>%
-    filter(FILTER == "PASS",
-                  alt > 2,
-                  ansr == 0,
-                  anpr == 0,
-                  length>length_threshold)%>%
-    select(-tmp_id)
-  }
-  return(out)
+extract_info <- function(p_het, p_onsv, p_sv, p_cnv, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tum_only){
+  data      <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=chr_lst, tumor_only=tum_only)
+  bnd_info   <- proc_bnd(data$sv, flank_del=50)
+  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=100, min_alt=2)
+  snp_df    <- parse_het_snps(data$het_snp)
+  sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
+  return(list(data, sv_info, snp_df, sv_phase))
 }
