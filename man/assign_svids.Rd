@@ -4,14 +4,14 @@
 \alias{assign_svids}
 \title{assign each SNP to an SV}
 \usage{
-assign_svids(sv_phase, sv_info, flank = 500)
+assign_svids(sv_phase, sv_info, flank_snp = 500)
 }
 \arguments{
 \item{sv_phase}{an object of class 'data frame'. This object stores the output from \code{parse_snp_on_sv}.}
 
 \item{sv_info}{an object of class 'data frame'. This object stores the output from \code{parse_sv_info}.}
 
-\item{flank}{an object of class 'integer'. This object describes the upper limit of location difference
+\item{flank_snp}{an object of class 'integer'. This object describes the upper limit of location difference
 for an SNP to be assigned to an SV}
 }
 \value{

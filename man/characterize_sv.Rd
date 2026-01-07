@@ -4,7 +4,7 @@
 \alias{characterize_sv}
 \title{Characterize SV}
 \usage{
-characterize_sv(sv_phase, sv_info, cnv)
+characterize_sv(sv_phase, sv_info, cnv, flank_snp = 500, flank_cnv = 1000)
 }
 \arguments{
 \item{sv_phase}{object of class 'dataframe'. This object stores the SV phasing

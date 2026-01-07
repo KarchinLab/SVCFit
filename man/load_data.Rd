@@ -4,7 +4,7 @@
 \alias{load_data}
 \title{load input data}
 \usage{
-load_data(p_het, p_onsv, p_sv, p_cnv, chr = NULL, tumor_only = FALSE)
+load_data(p_het, p_onsv, p_sv, p_cnv, chr = NULL, tumor_only)
 }
 \arguments{
 \item{p_het}{object of class 'character'. This object stores the file path

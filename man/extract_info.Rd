@@ -9,10 +9,11 @@ extract_info(
   p_onsv,
   p_sv,
   p_cnv,
+  chr_lst = NULL,
   flank_del = 50,
   QUAL_tresh = 100,
   min_alt = 2,
-  tumor_only = FALSE
+  tum_only
 )
 }
 \arguments{

@@ -4,10 +4,10 @@
 \alias{attach_truth}
 \title{attach truth of simulation to the output of SVCFit}
 \usage{
-attach_truth(final, truth)
+attach_truth(svcf_out, truth)
 }
 \arguments{
-\item{final}{an object of class 'data frame'. This object stores the output from \code{analyze}.}
+\item{svcf_out}{an object of class 'data frame'. This object stores the output from \code{calc_svcf}.}
 
 \item{truth}{an object of class 'data frame'. This object stores the output from \code{load_truth}.}
 }

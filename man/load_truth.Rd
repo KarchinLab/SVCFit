@@ -4,7 +4,7 @@
 \alias{load_truth}
 \title{load simulation truth data}
 \usage{
-load_truth(exper)
+load_truth(truth_path, overlap = FALSE)
 }
 \arguments{
 \item{exper}{an object of class 'character'. This object describes the experiment number.}

@@ -85,29 +85,22 @@ Load and preprocess input VCF and CNV files. This step parses metadata, processe
 4.  **Parse heterozygous SNPs** — `parse_het_snp()`, `parse_snp_on_sv()`
 
 ``` r
-# all in one
 info <- extract_info(
-  p_het      = "path/to/het_snps.vcf",
-  p_onsv     = "path/to/snps_on_sv.vcf",
-  p_sv       = "path/to/structural_variants.vcf",
-  p_cnv      = "path/to/cnv_file.txt",
-  flank_del  = 50, 
+  p_het = "path/to/het_snps.vcf",
+  p_onsv = "path/to/snps_on_sv.vcf",
+  p_sv = "path/to/structural_variants.vcf",
+  p_cnv = "path/to/cnv_file.txt",
+  chr_lst = NULL
+  flank_del = 50, 
   QUAL_tresh = 100, 
-  min_alt    = 2, 
+  min_alt = 2, 
   tumor_only = FALSE
 )
-
-# step by step
-data      <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only)
-bnd_info   <- proc_bnd(data$sv, flank_del=50)
-sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_tresh=100, min_alt=2)
-snp_df    <- parse_het_snps(data$het_snp)
-sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 ```
 
 #### Function Arguments
 
-#### `load_data()`
+#### `extract_info()`
 
 | Argument | Type | Default | Description |
 |----|----|----|----|
@@ -115,38 +108,11 @@ sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
 | `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
 | `p_sv` | Character | — | Path to SV VCF. |
 | `p_cnv` | Character | — | Path to CNV file. |
-| `chr` | Character | — | Chromosomes to include. |
-| `tumor_only` | Logical | FALSE | Whether SVs come from tumor-only calling. |
-
-#### `proc_bnd()`
-
-| Argument | Type | Default | Description |
-|----|----|----|----|
-| `sv` | data.frame | — | SV VCF data. |
+| `chr_lst` | Character | NULL | Chromosomes to include. |
 | `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
-
-#### `parse_sv_info()`
-
-| Argument     | Type       | Default | Description                 |
-|--------------|------------|---------|-----------------------------|
-| `sv`         | data.frame | —       | SV VCF data.                |
-| `bnd`        | data.frame | —       | Translocations (BNDs).      |
-| `del`        | data.frame | —       | Deletions overlapping BNDs. |
-| `QUAL_tresh` | numeric    | —       | Minimum QUAL score.         |
-| `min_alt`    | numeric    | —       | Minimum alternative reads.  |
-
-#### `parse_het_snp()`
-
-| Argument  | Type       | Default | Description        |
-|-----------|------------|---------|--------------------|
-| `het_snp` | data.frame | —       | Heterozygous SNPs. |
-
-#### `parse_snp_on_sv()`
-
-| Argument    | Type       | Default | Description                  |
-|-------------|------------|---------|------------------------------|
-| `het_on_sv` | data.frame | —       | SNPs on SV-supporting reads. |
-| `snp_df`    | data.frame | —       | Parsed heterozygous SNPs.    |
+| `QUAL_tresh` | numeric | 100 | Minimum QUAL score. |
+| `min_alt` | numeric | 2 | Minimum alternative reads. |
+| `tumor_only` | Logical | FALSE | Whether SVs come from tumor-only calling. |
 
 **Output:** A list of data frames containing parsed SV + SNP information.
 
@@ -160,50 +126,26 @@ This step integrates CNV and heterozygous SNPs to infer phasing, zygosity, and o
 4.  **Annotate overlapping CNV** — `annotate_cnv()`, `parse_snp_on_sv()`
 
 ``` r
-# all in one
 sv_char <- characterize_sv(
   sv_phase = info$sv_phase, 
-  sv_info  = info$sv_info, 
-  cnv      = info$cnv
+  sv_info = info$sv_info, 
+  cnv = info$cnv,
+  flank_snp = 500,
+  flank_cnv = 1000
 )
-
-# step by step 
-assign_id <- assign_svids(sv_phase, sv_info, flank=500)
-sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
-sv_cnv    <- assign_cnv(sv_sum, cnv)
-anno_sv_cnv     <- annotate_cnv(sv_cnv)
 ```
 
 #### Function Arguments
 
-#### `assign_svids()`
+#### `characterize_sv()`
 
-| Argument   | Type       | Default | Description                 |
-|------------|------------|---------|-----------------------------|
-| `sv_phase` | data.frame | —       | Phasing/zygosity from SNPs. |
-| `sv_info`  | data.frame | —       | Parsed SV metadata.         |
-| `flank`    | numeric    | —       | Max assignment distance.    |
-
-#### `sum_sv_info()`
-
-| Argument    | Type       | Default | Description          |
-|-------------|------------|---------|----------------------|
-| `sv_phase`  | data.frame | —       | Phasing information. |
-| `assign_id` | data.frame | —       | SNP→SV assignment.   |
-| `sv_info`   | data.frame | —       | Parsed SV metadata.  |
-
-#### `assign_cnv()`
-
-| Argument | Type       | Default | Description     |
-|----------|------------|---------|-----------------|
-| `sv_sum` | data.frame | —       | Summarized SVs. |
-| `cnv`    | data.frame | —       | CNV data.       |
-
-#### `annotate_cnv()`
-
-| Argument | Type       | Default | Description              |
-|----------|------------|---------|--------------------------|
-| `sv_cnv` | data.frame | —       | SVs annotated with CNVs. |
+| Argument    | Type       | Default | Description                       |
+|-------------|------------|---------|-----------------------------------|
+| `sv_phase`  | data.frame | —       | Phasing/zygosity from SNPs.       |
+| `sv_info`   | data.frame | —       | Parsed SV metadata.               |
+| `cnv`       | data.frame | —       | CNV data.                         |
+| `flank_snp` | numeric    | 500     | Max assignment distance for SNPs. |
+| `flank_cnv` | numeric    | 1000    | Max assignment distance for CNVs. |
 
 ### 3. Calculate SVCF for Structural Variants — `calculate_svcf()`
 
