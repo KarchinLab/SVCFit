@@ -1,6 +1,6 @@
 Package: SVCFit
 Title: SVCFit: calculate structural variant cellular fraction 
-Version: 0.0.1
+Version: 1.0
 Authors@R: 
     person("Yunzhou", "Liu", , "yliu498@jh.edu", role = c("aut", "cre"))
 Maintainer: Yunzhou Liu <yliu498@jh.edu>
