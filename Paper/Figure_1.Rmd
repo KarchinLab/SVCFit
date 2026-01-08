@@ -137,6 +137,17 @@ plot_dat <- all_dat %>%
         classification = factor(classification,
                             levels = c("translocation","tandem duplication","inversion","deletion")),
         y = as.numeric(classification) + if_else(clonality == "clonal",  0.2, -0.2))
+
+f1b_stat=all_dat %>%
+  mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
+         purity = factor(purity, levels = c("purity 80%", "purity 40%")),
+         zygosity=ifelse(zygosity=='het', 'heterozygous', 'homozygous'),
+         error=(abs(svcf-true_svcf))) %>%
+  filter(purity %in% c("purity 80%", "purity 40%")) %>%
+  group_by(zygosity)%>%
+  wilcox_test(error~tool, paired = TRUE)%>%
+  add_significance()%>%
+  add_xy_position(x = "zygosity")
 ```
 
 ## plot F1A,B
@@ -151,9 +162,10 @@ f1a=ggplot(plot_dat, aes(x = mean_err, y = y)) +
     limits = c(0.5, nlevels(plot_dat$classification) + 0.5)
   ) +
   theme_bw()+
-  theme(text = element_text(size = 15))+
+  theme(text = element_text(size = 15),
+        strip.background = element_rect(fill = "white", color = "black", size = 0.3))+
   ylab('')+
-  xlab('mean SVCF estimation error')
+  xlab('Mean absolute SVCF estimation error')
 
 
 f1b=all_dat %>%
@@ -163,8 +175,9 @@ f1b=all_dat %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
   ggplot()+
   geom_violin(aes(x=zygosity, y=(abs(svcf-true_svcf)), fill = tool))+
+  stat_pvalue_manual(f1b_stat, hide.ns = TRUE)+
   ylim(c(0,1.2))+
-  ylab('SVCF estimation error')+
+  ylab('Absolute SVCF estimation error')+
   xlab('')+
   theme_minimal()+
   theme(text = element_text(size = 15))
@@ -413,7 +426,7 @@ f1c=final %>%
   geom_point(aes(x=expmt, y = mean_error, color=method))+
   geom_line(aes(x=expmt, y = mean_error, group = method, color= method))+
   ylim(c(-0.5, 0.5))+
-  ylab("Mean of CCF estimation error")+
+  ylab("Mean absolute CCF estimation error")+
   xlab("")+
   scale_x_discrete(labels = x_lab)+
   theme_minimal()+

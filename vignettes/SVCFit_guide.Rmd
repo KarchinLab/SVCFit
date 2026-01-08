@@ -17,10 +17,10 @@ knitr::opts_chunk$set(
 
 ```{r setup, echo=TRUE, message=FALSE}
 library(SVCFit)
-library(tidyverse)
+library(dplyr)
 library(ggplot2)
-library(gridExtra)
-library(igraph)
+library(stringr)
+library(readr)
 library(GenomicRanges)
 
 #data path
@@ -97,7 +97,7 @@ Both `extract_info()` and `characterize_sv()` mentioned above contain functions 
 -   `load_data()` load all input data given the path of where the files were saved. This function uses arguments:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|--------------|--------------|--------------|-------------------------------|
 | `p_het` | Character | — | Path to VCF of heterozygous SNPs. |
 | `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
 | `p_sv` | Character | — | Path to SV VCF. |
@@ -112,7 +112,7 @@ data <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only)
 -   `proc_bnd()` extracts translocations from SV input and annotate the them into 1) copy-paste translocation; 2) cut-paste translocation; 3) reciprocal translocation. This function uses arguments:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|--------------|--------------|--------------|-------------------------------|
 | `sv` | data.frame | NULL | Input data for SV obatined from `load_data()`. |
 | `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
 
@@ -123,7 +123,7 @@ bnd_info <- proc_bnd(sv=data$sv, flank_del=50)
 -   `parse_sv_info()` extracts information for SVs including: 1) genomic locations; 2) SV type; 3) SV supporting read count. Afterwards, this function filters the SV based on thier QUAL score and SV supporting read counts. This function uses arguments:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|--------------|--------------|--------------|-------------------------------|
 | `sv` | data.frame | — | Input data for SVs obatined from `load_data()`. |
 | `bnd` | data.frame | — | Output from `proc_bnd()` that contains annotated translocations. |
 | `del` | data.frame | — | Output from `proc_bnd()` that contains deletion created by cut-paste translocation. |
@@ -137,7 +137,7 @@ sv_info <- parse_sv_info(sv=data$sv, bnd=bnd_info$bnd, del=bnd_info$del, QUAL_tr
 -   `parse_het_snps()` extracts information for heterozygous SNPs detected near SVs. The information includes: 1) genomic locations; 2) allele type; 3) SNP supporting read counts. This function uses one argument:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|--------------|--------------|--------------|-------------------------------|
 | `sv` | data.frame | — | Input data for heterozygous SNPs obatined from `load_data()`. |
 
 ```{r}
@@ -147,7 +147,7 @@ snp_df <- parse_het_snps(data$het_snp)
 -   `parse_snp_on_sv()` extracts information for heterozygous SNPs detected on SV supporting reads. The information includes: 1) genomic locations; 2) allele type; 3) SNP supporting read counts. This function uses arguments:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|--------------|--------------|--------------|-------------------------------|
 | `het_on_sv` | data.frame | — | Input data for heterozygous SNPs on SV suuporting reads obatined from `load_data()`. |
 | `snp_df` | data.frame | — | Parsed SNP information from `parse_het_snps()`. |
 
@@ -188,11 +188,15 @@ sv_sum <- sum_sv_info(sv_phase, assign_id, sv_info)
 | `sv_sum` | data.frame | —       | SVs annotated with zygosity and phasing. |
 | `cnv`    | data.frame | —       | CNV data from `load_data()`.             |
 
-``` r
+``` {r}
 sv_cnv <- assign_cnv(sv_sum, cnv)
 ```
 
--   `2.4 annotate_cnv()`
+-   `2.4 annotate_cnv()`uses copy number data to decide if a CNV is a deletion or a duplication. This function uses arguments:
+
+| Argument | Type       | Default | Description                              |
+|----------|------------|---------|------------------------------------------|
+| `sv_cnv` | data.frame | —       | SVs annotated with overlapping CNV. |
 
 ```{r}
 anno_sv_cnv <- annotate_cnv(sv_cnv)
@@ -207,7 +211,4 @@ exper='exp1'
 overlap=ifelse(exper=='exp1', FALSE, TRUE)
 truth <- load_truth(p_truth, overlap)
 svcfit_truth <- attach_truth(svcfit_out, truth)
-
 ```
-
-## 
