@@ -29,6 +29,7 @@ filterEdgesBasedOnCCFs <- function(graph_G, mcf, thresh = 0.1) {
   return(filtered_graph_G)
 }
 
+#' @export
 prune <- function(graph, mcf_mat){
   roots <- graph %>% dplyr::filter(parent=='root')
   
@@ -60,7 +61,7 @@ prune <- function(graph, mcf_mat){
 
 #' Enumerate all spanning trees using modified Gabow-Myers
 #' @export
-enumerateSpanningTreesModified <- function(graph_G, mcf, purity, sum_filter_thresh=0.2) {
+enumerateSpanningTreesModified <- function(graph_G, mcf, sum_filter_thresh=0.2) {
   # Initialize globals required for recursion
   all_spanning_trees <- assign("all_spanning_trees", list(), envir = .GlobalEnv)
   F_tb <- assign("F_tb", dplyr::filter(graph_G, parent == "root"), envir = .GlobalEnv)
@@ -68,9 +69,10 @@ enumerateSpanningTreesModified <- function(graph_G, mcf, purity, sum_filter_thre
   all_vertices <- verticesInGraph(graph_G)
   tree_T <- dplyr::tibble(parent = character(), child = character())
   
-  growModified(tree_T, all_vertices, mcf, purity, sum_filter_thresh)
+  growModified(tree_T, all_vertices, mcf, sum_filter_thresh)
 }
 
+#' @export
 growModified <- function(tree_T, all_vertices, w, sum_thresh=0.2) {
   
   if (length(verticesInGraph(tree_T)) == length(all_vertices) & nrow(tree_T) == (length(all_vertices)-1)) {

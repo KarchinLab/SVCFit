@@ -5,11 +5,11 @@ library(viridis)
 # -------------------------------------------------------------------------
 # VISUALIZATION
 # -------------------------------------------------------------------------
-
+#' @export
 plotTree <- function(edges, palette=viridis::viridis) {
   plotGraph(edgesToAmLong(edges), colorScheme(edges, palette))
 }
-
+#' @export
 colorScheme <- function(edges, palette=viridis::viridis) {
   v_sorted = sort(unique(c(edges$parent, edges$child)))
   v_sorted = c(sort(as.integer(v_sorted[!v_sorted=='G'])), "G")
@@ -17,7 +17,7 @@ colorScheme <- function(edges, palette=viridis::viridis) {
   v_color <- dplyr::tibble(v_sorted, colors)
   return(v_color)
 }
-
+#' @export
 plotGraph <- function(am.long, v_color){
   am.long <- dplyr::mutate(am.long, child = as.numeric(am.long$child)) %>%
     dplyr::arrange(parent, child)

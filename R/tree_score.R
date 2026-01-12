@@ -3,7 +3,7 @@ library(parallel)
 # -------------------------------------------------------------------------
 # TREE SCORING
 # -------------------------------------------------------------------------
-
+#' @export
 calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1) {
   cpov <- create.cpov_n(mcf_matrix)
   schism_scores <- unlist(parallel::mclapply(trees, 
@@ -11,7 +11,7 @@ calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1) {
                                              mc.cores = mc.cores))
   return(schism_scores)
 }
-
+#' @export
 calcTreeFitness <- function(admat, cpov, mcf_matrix, am_format = "long", weight_mass = 1, weight_topology = 1, scaling_coeff=5) {
   if (am_format == "edges") {
     admat <- edgesToAmLong(admat)
@@ -24,7 +24,7 @@ calcTreeFitness <- function(admat, cpov, mcf_matrix, am_format = "long", weight_
   fitness <- exp(-scaling_coeff * Z)
   fitness
 }
-
+#' @export
 create.cpov_n <- function(mcf_matrix, zero.thresh = 0.001, restriction.val = 1, tol = 1e-6) {
   if (is.null(mcf_matrix) || !is.matrix(mcf_matrix) && !is.data.frame(mcf_matrix)) {
     stop("mcf_matrix must be a numeric matrix/data.frame with rows=clusters and cols=samples.")
@@ -57,7 +57,7 @@ create.cpov_n <- function(mcf_matrix, zero.thresh = 0.001, restriction.val = 1, 
   }
   cpov
 }
-
+#' @export
 calcTopologyCost <- function(am, cpov, am_format = "long") {
   TC <- 0
   if (am_format == "long") {
@@ -69,7 +69,7 @@ calcTopologyCost <- function(am, cpov, am_format = "long") {
   }
   TC
 }
-
+#' @export
 calcMassCost <- function(am, mcf_matrix, am_format="long") {
   if (am_format == "long") {
     edges <- getEdges(am)
