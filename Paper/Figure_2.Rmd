@@ -546,7 +546,7 @@ sv2cluster = new_plot%>%
 #F2: build phylogeny
 ```{r}
 #get cluster info
-cluster_result <- read.csv(paste0(mendeley_dir, "COMBAT/cluster_result.csv"))
+cluster_result <- read.csv(paste0(mendeley_dir, "/COMBAT/cluster_result.csv"))
 clones = cluster_result %>%
   select(pair, cluster_num, pre_center, post_center)%>%
   group_by(pair, cluster_num)%>%
@@ -563,21 +563,7 @@ clones = cluster_result %>%
   arrange(cluster_num)
 
 #build trees
-mcf_mat=clones[,3:4]
-mcf_mat <- as.matrix(mcf_mat)
-rownames(mcf_mat) <- clones$cluster_num
-lineage_precedence_thresh=0.2;sum_filter_thresh=0.2
-graph_G_pre <- prepareGraph(mcf_mat, lineage_precedence_thresh)
-graph_G <- filterEdgesBasedOnCCFs(graph_G_pre, mcf_mat, thresh = lineage_precedence_thresh)
-graph_G <- prune(graph_G, mcf_mat) %>% arrange(child)
-graph_G <- assign("graph_G", graph_G, envir = .GlobalEnv)
-enumerateSpanningTreesModified(graph_G, mcf_mat, purity, sum_filter_thresh = sum_filter_thresh)
-scores <- calcTreeScores_n(mcf_mat, all_spanning_trees, purity=purity)
-scores
-
-# highest scoring tree
-best_tree <- all_spanning_trees[[which.max(scores)]]
-plotTree(best_tree)
+build_tree(clones, lineage_precedence_thresh=0.2, sum_filter_thresh=0.2)
 
 #clone proportion
 subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
