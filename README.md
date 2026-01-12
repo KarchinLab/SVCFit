@@ -180,13 +180,38 @@ and SVCF. VAF=variant allele frequency; Rbar=average break interval
 count in a sample; r = inferred integer copy number of break intervals;
 SVCF=structural variant cellular fraction.
 
-### 4. Simulation & Benchmarking
+### 4. Build tumor evolution tree — `build_tree()`
+
+This step build the tumor evolutionary tree based on SV clustering
+results.
+
+``` r
+build_tree(
+  mcf_mat, 
+  clones,
+  lineage_precedence_thresh=0.2, 
+  sum_filter_thresh=0.2)
+```
+
+#### Function Arguments
+
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `clones` | data.frame | — | SV clustering result. |
+| `lineage_precedence_thresh` | numeric | 0.2 | Maximum violation of lineage precedence rule. |
+| `sum_filter_thresh` | numeric | 0.2 | Maximum violation of sum condition rule |
+
+The output is tumor evolutionary tree rooted at germline (G) and the
+node number corresponds to the SV cluster number. The branching of the
+nodes depicts the chronic occurence of clusters of SVs.
+
+### 5. Simulation & Benchmarking
 
 SVCFit includes utility functions for processing simulation data from
 VISOR and attaching “ground truth” labels to structural variants for
 benchmarking.
 
-4.1 read clonal assignment
+5.1 read clonal assignment
 
 ``` r
 truth <- load_truth(
@@ -219,7 +244,7 @@ conatins its ancesters mutations.
 
 <img src="inst/extdata/tree.png" width="487" />
 
-4.2 attach clonal assignment to output
+5.2 attach clonal assignment to output
 
 ``` r
 svcf_truth <- attach_truth(svcf_out, truth)

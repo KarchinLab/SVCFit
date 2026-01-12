@@ -60,7 +60,7 @@ SVCFit accepts Variant Call Format (VCF) files. By default, it is optimized for 
 If using a different caller (e.g., Manta), ensure your VCF aligns with the following specification:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
-|----|----|----|----|----|----|----|----|----|----|----|
+|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | 100 | PASS | END=1500;SVTYPE=INV;SVLEN=500;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 | chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | 100 | PASS | END=5300;SVTYPE=DEL;SVLEN=300;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 
@@ -103,7 +103,7 @@ info <- extract_info(
 #### `extract_info()`
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `p_het` | Character | — | Path to VCF of heterozygous SNPs. |
 | `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
 | `p_sv` | Character | — | Path to SV VCF. |
@@ -165,7 +165,7 @@ svcf_out <- calculate_svcf(
 #### Function Arguments
 
 | Argument      | Type       | Default | Description                            |
-|---------------|------------|---------|----------------------------------------|
+|--------------|--------------|--------------|--------------------------------|
 | `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
 | `sv_info`     | data.frame | —       | Parsed SV info.                        |
 | `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
@@ -174,11 +174,34 @@ svcf_out <- calculate_svcf(
 
 The output is an annotated VCF with additional fields for VAF, Rbar, r and SVCF. VAF=variant allele frequency; Rbar=average break interval count in a sample; r = inferred integer copy number of break intervals; SVCF=structural variant cellular fraction.
 
-### 4. Simulation & Benchmarking
+
+### 4. Build tumor evolution tree — `build_tree()`
+
+This step build the tumor evolutionary tree based on SV clustering results.
+
+``` r
+build_tree(
+  mcf_mat, 
+  clones,
+  lineage_precedence_thresh=0.2, 
+  sum_filter_thresh=0.2)
+```
+
+#### Function Arguments
+
+| Argument      | Type       | Default | Description                            |
+|--------------|--------------|--------------|--------------------------------|
+| `clones` | data.frame | —       | SV clustering result.                     |
+| `lineage_precedence_thresh`      | numeric    | 0.2     | Maximum violation of lineage precedence rule. |
+| `sum_filter_thresh`        | numeric  | 0.2       | Maximum violation of sum condition rule                           |
+
+The output is tumor evolutionary tree rooted at germline (G) and the node number corresponds to the SV cluster number. The branching of the nodes depicts the chronic occurence of clusters of SVs.
+
+### 5. Simulation & Benchmarking
 
 SVCFit includes utility functions for processing simulation data from VISOR and attaching "ground truth" labels to structural variants for benchmarking.
 
-4.1 read clonal assignment
+5.1 read clonal assignment
 
 ``` r
 truth <- load_truth(
@@ -190,7 +213,7 @@ truth <- load_truth(
 This function has 1 arguments:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc for non-overlapping simulations and `"c11.bed, c22.bed"`, etc for overlapping simulations. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
 | `overlap` | Logical | FALSE | Whether the simulation has SV-CNV overlap. |
 
@@ -209,7 +232,7 @@ Parent nodes should always have higher rank in name than its children (i.e. c3.b
 
 ![](inst/extdata/tree.png){width="487"}
 
-4.2 attach clonal assignment to output
+5.2 attach clonal assignment to output
 
 ``` r
 svcf_truth <- attach_truth(svcf_out, truth)
@@ -218,7 +241,7 @@ svcf_truth <- attach_truth(svcf_out, truth)
 This function has 3 arguments:
 
 | Variable | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `svcf_out` | DataFrame | N/A | The output from `calc_svcf` |
 | `truth` | DataFrame | N/A | Stores the clone assignment for each structural variant designed in a simulation. |
 
