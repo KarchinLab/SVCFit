@@ -1,0 +1,225 @@
+---
+title: "Figure_2"
+output: html_document
+---
+
+```{r}
+# --- Libraries ---
+# Data Manipulation
+library(dplyr)
+library(tidyr)
+library(readr)
+# Visualization
+library(ggplot2)
+library(ggpubr)
+library(viridis)
+library(circlize)
+# Stats & Python Integration
+library(rstatix)
+library(reticulate)
+# Network/Phylogeny
+library(igraph)
+library(ggalluvial)
+library(RColorBrewer)
+
+# --- Global Parameters ---
+mendeley_dir = '/Users/lyz928/Documents/mendeley_data'
+PYTHON_ENV  <- "py3" # Name of your Conda env
+
+# Initialize Python
+use_condaenv(PYTHON_ENV, required = TRUE)
+sk <- import("sklearn", delay_load = TRUE)
+```
+
+# define function for circos plot
+```{r}
+plot_circos <- function(samp, sv_path, cnv_path, svcfit_path, cyto_path) {
+  
+  # 1. Setup Cytoband
+  cyto <- read.delim(cyto_path, header=FALSE)
+  colnames(cyto) <- c("chrom", "start", "end", "name", "gieStain")
+  chr_lst <- paste0("chr", c(1:22, 'X', 'Y'))
+  cyto <- cyto %>% filter(chrom %in% chr_lst)
+  
+  # 2. Prepare SV Info
+  # Read sub-selection BED if exists
+  svcfit_dat <- read.delim(svcfit_path)
+  
+  sv <- read.table(sv_path, quote="\"")
+  colnames(sv) <- c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','tumor')
+  
+  sv_info <- sv %>%
+    mutate(
+      chr2 = case_when(
+        grepl('BND', ID) ~ gsub('.*(chr.*):.*','\\1',ALT),
+        !grepl('BND', ID) ~ CHROM
+      ),
+      END = case_when(
+        grepl('BND', ID) ~ gsub('.*chr\\w+:(\\d+).*','\\1',ALT),
+        !grepl('BND', ID) ~ gsub('.*;END=(\\d+);.*','\\1', INFO)
+      ),
+      svtype = gsub('.*;SVTYPE=(\\w+);.*','\\1', INFO),
+      POS = as.integer(POS),
+      END = as.integer(END)
+    ) %>%
+    filter(CHROM %in% chr_lst,
+           chr2 %in% chr_lst,
+           FILTER == 'PASS',
+           ID %in% svcfit_dat$ID) # Filter by the BED file IDs
+  
+  # 3. Prepare CNV Info
+  cnv <- read.delim(cnv_path)
+  cnv_info <- cnv %>%
+    mutate(tcn.em = ifelse(tcn.em == 0, 0.001, tcn.em),
+           log2 = round(log2(tcn.em/2), digits = 3),
+           start = as.integer(start),
+           end = as.integer(end),
+           chrom = paste0('chr', chrom)) %>%
+    select(chrom, start, end, log2) %>%
+    filter(chrom %in% chr_lst)
+  
+  # 4. Plotting
+  par(cex = 1.4)
+  circos.clear()
+  circos.par(gap.after = c(rep(1, length(chr_lst)-1), 6), start.degree = 90, track.margin = c(0.01, 0.01))
+  
+  # Initialize
+  circos.initializeWithIdeogram(cyto, plotType = c("ideogram", "labels"))
+  
+  # Track: CNV segments
+  col_fun <- colorRamp2(c(-2, 0, 2), c("#4575b4", "grey90", "#d73027"))
+  circos.genomicTrack(
+    cnv_info, ylim = c(-2, 2), track.height = 0.12, bg.border = NA,
+    panel.fun = function(region, value, ...) {
+      circos.genomicRect(region, value, col = col_fun(value$log2), border = NA, ...)
+      circos.lines(CELL_META$xlim, c(0, 0), col = "#555555", lwd = 0.5)
+    }
+  )
+  
+  # Links: SVs
+  sv_cols <- c(DEL = "#1f78b4", DUP = "#33a02c", INV = "#ff7f00", BND = "#6a3d9a")
+  sv_cols_mapped <- sv_cols[sv_info$svtype]
+  sv_cols_mapped[is.na(sv_cols_mapped)] <- "#e31a1c"
+  
+  links1 <- data.frame(chr = sv_info$CHROM, start = sv_info$POS, end = sv_info$POS, stringsAsFactors = FALSE)
+  links2 <- data.frame(chr = sv_info$chr2, start = sv_info$END, end = sv_info$END, stringsAsFactors = FALSE)
+  
+  circos.genomicLink(
+    links1, links2,
+    col = adjustcolor(sv_cols_mapped, alpha.f = 0.7),
+    border = NA
+  )
+  
+  legend("topleft", legend = names(sv_cols), col = sv_cols, pch = 15, bty = "n")
+}
+
+```
+
+# F2: circus plot 
+```{r}
+samp = "86921"
+sv_path=paste0(mendeley_dir, '/COMBAT/SVs/svcfit_', samp, '.vcf')
+cnv_path=grep(list.files(paste0(mendeley_dir, '/COMBAT/facets')), samp)
+svcfit_path=paste0(mendeley_dir, '/COMBAT/SVCFit_output/', samp, '.bed')
+cyto_path=paste0(mendeley_dir, '/COMBAT/cytoBand.txt')
+
+plot_circus(samp, sv_path, cnv_path, svcfit_path, cyto_path)
+```
+
+# cluster
+```{r, message=FALSE}
+pair_path=paste0(mendeley_dir, '/COMBAT/pair.bed')
+pur_path=paste0(mendeley_dir, '/COMBAT/samp_pur.csv')
+output <- cluster_data(pair_path, pur_path, pair_num=10)
+cluster_result=output[[1]]
+sv2cluster=output[[2]]
+clones=output[[3]]
+```
+
+#F2: build phylogeny
+```{r}
+#get cluster info
+# cluster_result <- read.csv(paste0(mendeley_dir, "/COMBAT/cluster_result.csv"))
+# clones = cluster_result %>%
+#   select(pair, cluster_num, pre_center, post_center)%>%
+#   group_by(pair, cluster_num)%>%
+#   distinct(.keep_all = T)%>%
+#   ungroup()%>%
+#   mutate(f_pre=pre_center, f_day85=post_center,
+#          se_pre=0.1, se_day85=0.1,
+#          var_pre = se_pre^2,
+#          var_day85 = se_day85^2,
+#          w_pre = 1/var_pre,
+#          w_day85 = 1/var_day85)%>%
+#   select(pair, cluster_num, f_pre, f_day85, se_pre, se_day85, var_pre, var_day85, w_pre, w_day85)%>%
+#   filter(pair==4)%>%
+#   arrange(cluster_num)
+
+#build trees
+trees <- build_tree(clones, lineage_precedence_thresh=0.2, sum_filter_thresh=0.2)
+
+#clone proportion
+mcf_mat <- trees[[2]]
+best_tree <- trees[[1]]
+subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
+x = plotSubclonePie(subclone_props, sample_names = c('before-BAT','on-BAT'))
+```
+
+
+#F2: alluvial
+```{r}
+sv2cluster <- read.csv(paste0(mendeley_dir, "/COMBAT/sv2cluster.csv"))
+
+dat_alluv <- sv2cluster %>% 
+  filter(pair==10)%>%
+  mutate(
+    pre_BAT_cat = cut(pre_BAT,
+                      breaks = c(0, 0.15, 0.7, 1),
+                      include.lowest = TRUE),
+    on_BAT_cat  = cut(on_BAT,
+                      breaks = c(0,0.15, 0.7, 1),
+                      include.lowest = TRUE)
+  )
+
+# 2. (optional but common) aggregate to counts/frequencies
+tab <- as.data.frame(
+  table(dat_alluv$cluster_num,
+        dat_alluv$pre_BAT_cat,
+        dat_alluv$on_BAT_cat)
+)
+
+
+names(tab) <- c("cluster", "pre_BAT_cat", "on_BAT_cat", "Freq")
+
+# Drop zero-count combinations
+tab <- tab[tab$Freq > 0, ]
+tab$cluster <- factor(tab$cluster, levels = levels(tab$cluster))
+tab$pre_BAT_cat <- factor(tab$pre_BAT_cat, levels = rev(levels(tab$pre_BAT_cat)))
+tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
+
+
+# 1. Create the color generator function (using 8 to capture the full Accent range)
+accent_gen <- colorRampPalette(brewer.pal(1, "Accent"))
+
+# 2. Count how many colors you need based on your data
+# (Ensure 'tab$cluster' is a factor or character vector)
+n_colors <- length(unique(tab$cluster))
+
+# 3. Generate the exact list of hex codes
+my_accent_colors <- accent_gen(n_colors)
+
+# 3. Make the alluvial plot
+f2=ggplot(data = tab,
+       aes(axis1 = pre_BAT_cat, axis2 = on_BAT_cat,
+           y = Freq)) +
+  scale_x_discrete(limits = c("pre_BAT", "on_BAT"), expand = c(.15, .03)) +
+  geom_alluvium(aes(fill = cluster), alpha=0.7) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size=5) +
+  theme_minimal()+
+  labs(fill = "SV cluster")+
+  theme(text = element_text(size = 20))+
+  scale_fill_manual(values = my_accent_colors) +
+  scale_color_manual(values = my_accent_colors)
+
+```
