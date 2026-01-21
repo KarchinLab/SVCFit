@@ -4,9 +4,9 @@
 \alias{enumerateSpanningTreesModified}
 \title{Enumerate all spanning trees using modified Gabow-Myers}
 \usage{
-enumerateSpanningTreesModified(graph_G, mcf, purity, sum_filter_thresh = 0.2)
+enumerateSpanningTreesModified(graph_G, mcf, sum_filter_thresh = 0.2)
 
-enumerateSpanningTreesModified(graph_G, mcf, purity, sum_filter_thresh = 0.2)
+enumerateSpanningTreesModified(graph_G, mcf, sum_filter_thresh = 0.2)
 }
 \arguments{
 \item{graph_G}{tibble of possible edges with columns edge, parent, child}

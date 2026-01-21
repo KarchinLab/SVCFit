@@ -15,7 +15,14 @@ Imports:
     stringr,
     GenomicRanges,
     knitr,
-    markdown
+    markdown,
+    tidyr,
+    ggplot2,
+    reticulate,
+    stats,
+    utils,
+    RColorBrewer,
+    igraph
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

@@ -182,18 +182,33 @@ SVCF=structural variant cellular fraction.
 
 ### 4. Build tumor evolution tree — `build_tree()`
 
-This step build the tumor evolutionary tree based on SV clustering
-results.
+This step build the tumor evolutionary tree based on SV clusters
+obtained from Dirichlet process Gaussian Mixture Model (DP-GMM).
 
 ``` r
+output <- cluster_data(
+  pair_path, 
+  pur_path, 
+  pair=1)
+clone2=output[[3]]
+
 build_tree(
-  mcf_mat, 
   clones,
   lineage_precedence_thresh=0.2, 
   sum_filter_thresh=0.2)
 ```
 
 #### Function Arguments
+
+cluster_data()
+
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `pair_path` | character | — | path to file with paired sample ID for each patient. |
+| `pur_path` | character | \- | path to file with purity for each sample. |
+| `pair` | numeric | 1 | The identifier for the specific sample pair (patient) being analyzed. |
+
+build_tree()
 
 | Argument | Type | Default | Description |
 |----|----|----|----|
@@ -238,9 +253,9 @@ root/
 │   └── .../
 ```
 
-Parent nodes should always have higher rank in name than its children
-(i.e. c3.bed instead of c1.bed) and all child node bed file should
-conatins its ancesters mutations.
+Parent nodes should always have lower number in name than its children
+(i.e. c1.bed instead of c3.bed) and all child node bed file should
+conatin its ancestors mutations.
 
 <img src="inst/extdata/tree.png" width="487" />
 
