@@ -6,12 +6,8 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-SVCFit is a fast and scalable computational tool designed to estimate
-the Structural Variant Cellular Fraction (SVCF) of inversions,
-deletions, tandem duplications, and translocations. Developed for the R
-environment, SVCFit integrates structural variant (SV) calls with Copy
-Number Variation (CNV) and Single Nucleotide Polymorphism (SNP) data to
-provide accurate cellular fraction estimates.
+SVCFit is a computational framework for reconstructing longitudinal structural variant–based clonal phylogenies from bulk DNA sequencing data. The method estimates the structural variant cellular fraction (SVCF) for somatic structural variants, including inversions, deletions, tandem duplications, and inter-chromosomal translocations. SVCF is an analogue of the cancer cell fraction (CCF) tailored to structural variants and quantifies the proportion of cells in a tumor sample that harbor a given structural variant, accounting for admixture of tumor and normal cells.
+Estimated SVCF values are used to cluster structural variants, and the resulting SV clusters are ordered onto a phylogenetic tree. The inferred trees represent directional clonal evolution constrained by longitudinal sampling rather than time-calibrated phylogenies with rate-scaled branch lengths.
 
 **Resources**
 
