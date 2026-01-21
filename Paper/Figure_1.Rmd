@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
-#library(SVCFit)
+library(SVCFit)
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -16,7 +16,7 @@ library(ggplot2)
 library(ggpubr) #for stat
 library(rstatix) #for stat
 library(ggsignif) #for plot significance
-mendeley_dir = '~/Karchin Lab Dropbox/YunZhou Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/mendeley_data'
+mendeley_dir = '/Users/lyz928/Documents/mendeley_data'
 ```
 
 # Fig 1 VISOR benchmark

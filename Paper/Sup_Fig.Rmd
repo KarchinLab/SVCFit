@@ -14,6 +14,7 @@ library(ggplot2)
 library(ggsci)
 library(stringr)
 library(ggh4x)
+mendeley_dir = '/Users/lyz928/Documents/mendeley_data'
 ```
 
 ## sequencing depth
@@ -21,7 +22,7 @@ library(ggh4x)
 ## all data can be found from mendeley.com, following the instructions from Github
 ## all data path used here should be in your/pathway/Figure_S
 
-hack <- read.delim("~/Downloads/Figure_S/HACk.random.bed", header=FALSE)
+hack <- read.delim(paste0(mendeley_dir, "/VISOR_benchmark/depth/HACk.random.bed"), header=FALSE)
 colnames(hack) <- c("chr","left","right","sv","info","flank")
 base <- hack %>%
   mutate(id=paste0(chr,"_",left,"_",sv))%>%
@@ -33,7 +34,7 @@ base <- hack %>%
 tmp <- lapply(-2:2, function(x) base %>% mutate(loc=loc+x)) %>%
   do.call(rbind,.)
 
-vfp <- list.files("~/Downloads/Figure_S/depth/", full.names = T)
+vfp <- list.files(paste0(mendeley_dir, "/VISOR_benchmark/depth"), full.names = T)[1:1001]
 
 read_dep <- function(path){
   test <- read.delim(path, header=FALSE)
@@ -103,6 +104,7 @@ p2=dat_end%>%
 
 ## Fig. S4
 ```{r}
+### all_dat is produced in paper/Figure_1.Rmd
 # --- STEP 1: PREPARE DATA & CLEAN NAMES ---
 clean_dat <- all_dat %>%
   filter(expmt == 'exp5') %>%
