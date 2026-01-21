@@ -11,5 +11,6 @@ build_tree <- function(clones, lineage_precedence_thresh=0.2, sum_filter_thresh=
   enumerateSpanningTreesModified(graph_G, mcf_mat, sum_filter_thresh = sum_filter_thresh)
   scores <- calcTreeScores_n(mcf_mat, all_spanning_trees)
   best_tree <- all_spanning_trees[[which.max(scores)]]
-  plotTree(best_tree)
+  tree <- plotTree(best_tree)
+  return(list(best_tree, mcf_mat, tree))
 }

@@ -1,16 +1,16 @@
 library(igraph)
 library(dplyr)
-library(viridis)
+library(RColorBrewer)
 
 # -------------------------------------------------------------------------
 # VISUALIZATION
 # -------------------------------------------------------------------------
 #' @export
-plotTree <- function(edges, palette=viridis::viridis) {
+plotTree <- function(edges, palette=colorRampPalette(brewer.pal(1, "Accent"))) {
   plotGraph(edgesToAmLong(edges), colorScheme(edges, palette))
 }
 #' @export
-colorScheme <- function(edges, palette=viridis::viridis) {
+colorScheme <- function(edges, palette=colorRampPalette(brewer.pal(1, "Accent"))) {
   v_sorted = sort(unique(c(edges$parent, edges$child)))
   v_sorted = c(sort(as.integer(v_sorted[!v_sorted=='G'])), "G")
   colors <- c(palette(length(v_sorted)-1), "white")
@@ -80,7 +80,7 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' @param subclone_props matrix of subclone proportions (returned from \code{calcSubcloneProportions})
 #' @param sample_names (Optional) Vector of sample names. Should be in the order of columns of subclone_props
 #' @export
-plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_names = NULL, title_size=16, legend_size=10) {
+plotSubclonePie <- function(subclone_props, palette=colorRampPalette(brewer.pal(1, "Accent")), sample_names = NULL, title_size=16, legend_size=10) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
   props_tb <- subclone_props %>%
     magrittr::set_colnames(sample_names) %>%
@@ -91,16 +91,20 @@ plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_nam
                  names_to = "Sample",
                  values_to = "Proportion")
   
-  clone_colors <- palette(nrow(subclone_props))
+  n_clones <- nrow(subclone_props)
+  if (is.function(palette)) {
+    clone_colors <- palette(n_clones)
+  } else {
+    clone_colors <- palette
+  }
   ggplot(props_tb, aes(x="", y=Proportion, fill = Subclone)) +
     geom_bar(stat="identity", width=1, color="white") +
     coord_polar("y", start=0) +
-    scale_fill_manual(values = clone_colors, drop = F) +
+    scale_fill_manual(values = clone_colors, drop = FALSE) +
     theme_void() +
     theme(legend.position = "bottom") +
     theme(legend.text = element_text(size=legend_size), legend.title = element_text(size=legend_size)) + 
     facet_wrap(~Sample) +
     theme(strip.text.x = element_text(size=title_size))
-  
 }
 
