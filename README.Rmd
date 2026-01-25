@@ -23,7 +23,7 @@ SVCFit is a fast and scalable computational tool designed to estimate the Struct
 
 **Resources**
 
--   Open access data: Download here.
+-   Open access data: It is available on mendeley (doi: 10.17632/2nhhdjx225.3)
 
 -   Protected Data: Available via European Genome-phenome Archive (EGAD00001001343).
 
@@ -60,7 +60,7 @@ SVCFit accepts Variant Call Format (VCF) files. By default, it is optimized for 
 If using a different caller (e.g., Manta), ensure your VCF aligns with the following specification:
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
-|----|----|----|----|----|----|----|----|----|----|----|
+|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | chr1 | 1000 | INV:6:0:1:0:0:0 | T | <INV> | 100 | PASS | END=1500;SVTYPE=INV;SVLEN=500;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 | chr2 | 5000 | DEL:7:0:1:0:0:0 | G | <DEL> | 100 | PASS | END=5300;SVTYPE=DEL;SVLEN=300;... | GT:PR:SR:... | 0/1:76,0:70,0:... | 0/1:76,0:70,0:... |
 
@@ -103,7 +103,7 @@ info <- extract_info(
 #### `extract_info()`
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `p_het` | Character | — | Path to VCF of heterozygous SNPs. |
 | `p_onsv` | Character | — | Path to VCF of SNPs overlapping SV-supporting reads. |
 | `p_sv` | Character | — | Path to SV VCF. |
@@ -165,7 +165,7 @@ svcf_out <- calculate_svcf(
 #### Function Arguments
 
 | Argument      | Type       | Default | Description                            |
-|---------------|------------|---------|----------------------------------------|
+|---------------|---------------|---------------|---------------------------|
 | `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
 | `sv_info`     | data.frame | —       | Parsed SV info.                        |
 | `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
@@ -196,7 +196,7 @@ build_tree(
 cluster_data()
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `pair_path` | character | — | path to file with paired sample ID for each patient. |
 | `pur_path` | character | \- | path to file with purity for each sample. |
 | `pair` | numeric | 1 | The identifier for the specific sample pair (patient) being analyzed. |
@@ -204,7 +204,7 @@ cluster_data()
 build_tree()
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `clones` | data.frame | — | SV clustering result. |
 | `lineage_precedence_thresh` | numeric | 0.2 | Maximum violation of lineage precedence rule. |
 | `sum_filter_thresh` | numeric | 0.2 | Maximum violation of sum condition rule |
@@ -227,7 +227,7 @@ truth <- load_truth(
 This function has 1 arguments:
 
 | Argument | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `truth_path` | Character | N/A | Path to BED files storing true structural variant information with clonal assignment. Each BED file should be named like `"c1.bed, c2.bed"`, etc for non-overlapping simulations and `"c11.bed, c22.bed"`, etc for overlapping simulations. Structural variants should be saved in separate BED files if they belong to different (sub)clones. |
 | `overlap` | Logical | FALSE | Whether the simulation has SV-CNV overlap. |
 
@@ -255,7 +255,7 @@ svcf_truth <- attach_truth(svcf_out, truth)
 This function has 3 arguments:
 
 | Variable | Type | Default | Description |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `svcf_out` | DataFrame | N/A | The output from `calc_svcf` |
 | `truth` | DataFrame | N/A | Stores the clone assignment for each structural variant designed in a simulation. |
 

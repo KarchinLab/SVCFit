@@ -51,7 +51,7 @@ trees <- build_tree(clones, lineage_precedence_thresh=0.2, sum_filter_thresh=0.2
 mcf_mat <- trees[[2]]
 best_tree <- trees[[1]]
 subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
-f3b=plotSubclonePie(subclone_props, sample_names = c('before-BAT','on-BAT'))
+f3b=plotSubclonePie(subclone_props, sample_names = c('pre-BAT','on-BAT'))
 ```
 
 
@@ -67,7 +67,8 @@ dat_alluv <- sv2cluster %>%
                       include.lowest = TRUE),
     on_BAT_cat  = cut(on_BAT,
                       breaks = c(0,0.15, 0.7, 1),
-                      include.lowest = TRUE)
+                      include.lowest = TRUE),
+    cluster_num = paste0('SV ', cluster_num)
   )
 
 # 2. (optional but common) aggregate to counts/frequencies
@@ -88,7 +89,7 @@ tab$on_BAT_cat <- factor(tab$on_BAT_cat, levels = rev(levels(tab$on_BAT_cat)))
 
 
 # 1. Create the color generator function (using 8 to capture the full Accent range)
-accent_gen <- colorRampPalette(brewer.pal(1, "Accent"))
+accent_gen <- colorRampPalette(brewer.pal(4, "Dark2"))
 
 # 2. Count how many colors you need based on your data
 # (Ensure 'tab$cluster' is a factor or character vector)
@@ -180,7 +181,7 @@ plot_circos <- function(samp, sv_path, cnv_path, svcfit_path, cyto_path) {
   )
   
   # Links: SVs
-  sv_cols <- c(DEL = "#1f78b4", DUP = "#33a02c", INV = "#ff7f00", BND = "#6a3d9a")
+  sv_cols <- c(DEL = "#1f78b4", INV = "#33a02c", DUP = "#ff7f00", BND = "#6a3d9a")
   sv_cols_mapped <- sv_cols[sv_info$svtype]
   sv_cols_mapped[is.na(sv_cols_mapped)] <- "#e31a1c"
   
@@ -193,7 +194,7 @@ plot_circos <- function(samp, sv_path, cnv_path, svcfit_path, cyto_path) {
     border = NA
   )
   
-  legend("topleft", legend = names(sv_cols), col = sv_cols, pch = 15, bty = "n")
+  legend("topleft", legend = c('deletion','inversion', 'tandem duplication', 'translocation'), col = sv_cols, pch = 15, bty = "n")
 }
 
 ```
