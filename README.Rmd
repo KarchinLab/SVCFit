@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# SVCFit <img src="inst/extdata/svcfit_logo.png" align="right" width="70"/>
+# SVCFit <img src="inst/extdata/svcfit_logo.png" align="left" width="70"/>
 
 SVCFit is a fast and scalable computational tool designed to estimate the Structural Variant Cellular Fraction (SVCF) of inversions, deletions, tandem duplications, and translocations. Developed for the R environment, SVCFit integrates structural variant (SV) calls with Copy Number Variation (CNV) and Single Nucleotide Polymorphism (SNP) data to provide accurate cellular fraction estimates.
 
