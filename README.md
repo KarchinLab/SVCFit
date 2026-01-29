@@ -1,10 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# SVCFit
-
-<!-- badges: start -->
-<!-- badges: end -->
+# SVCFit <img src="inst/extdata/svcfit_logo.png" align="right" width="70"/>
 
 SVCFit is a fast and scalable computational tool designed to estimate
 the Structural Variant Cellular Fraction (SVCF) of inversions,
