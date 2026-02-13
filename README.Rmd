@@ -51,9 +51,9 @@ remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencie
 
 ## Input Requirements
 
-SVCFit accepts Variant Call Format (VCF) files. By default, it is optimized for VCFs produced by the SVTyper package [2].
+### 1. Structural variants
 
-If using a different caller (e.g., Manta), ensure your VCF aligns with the following specification:
+SVCFit accepts standard Variant Call Format (VCF) files. By default, the parser is optimized for VCFs produced by the SVTyper package [2].
 
 | CHROM | POS | ID | REF | ALT | QUAL | FILTER | INFO | FORMAT | normal | tumor |
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
@@ -64,8 +64,48 @@ Required **INFO** fields:
 
 -   `SVTYPE` (e.g., INV, DEL, DUP, BND)
 -   `END`
--   `SVLEN`
--   supporting read counts (e.g., `PR`, `SR`)
+
+### 2. Copy number variants
+
+SVCFit currently utilizes copy number calls from the FACETS package [3]. The tool uses allele-specific copy number, total copy number, and the cellular fraction (cncf) to annotate SVs with overlapping CNVs. No modification is required for standard FACETS output.
+
+### 3. Heterozygous SNP near SV
+
+SVCFit requires heterozygous SNP calls to phase overlapping CNVs. These can be generated using GATK4 [4] HaplotypeCaller and filtered using bcftools [5].
+
+For computational efficiency, VCF can be filtered to include only heterozygous SNPs within 500bp of SV breakpoints.
+
+The following code is not included in SVCFit and should be run separately.
+
+```         
+# 1. Call SNPs using GATK
+gatk --java-options "-Xmx4g" HaplotypeCaller \
+    -R $ref \
+    -I $bam \
+    -O $snp_dir/SNP.vcf.gz
+
+# 2. Filter for heterozygous SNPs using bcftools
+bcftools view -v snps -g het -Oz -o $snp_dir/het_snp.vcf.gz $snp_dir/SNP.vcf.gz
+tabix -p vcf $snp_dir/het_snp.vcf.gz
+```
+
+### 4. Heterozygous SNP on SV supporting reads
+
+To infer SV phasing, SVCFit specifically examines heterozygous SNPs found on reads that support the structural variant. This is done following the steps: 1) Extract SV-supporting reads from the BAM file using samtools [6]. 2) Generate a read pileup using bcftools restricted to the heterozygous SNP positions identified in step 3.
+
+The following code is not included in SVCFit and should be run separately.
+
+```         
+# Extract SV supporting reads
+samtools view -f 1 -F 2 -b $tbam > $snp_dir/sup_$samp_name.bam
+samtools index $snp_dir/sup_$samp_name.bam
+
+# Generate pileup at known heterozygous sites
+# Note: pos_$samp_name.bed should contain the positions from het_snp.vcf.gz above
+bcftools mpileup -f $ref -a DP,AD -A \
+    -R $snp_dir/pos_$samp_name.bed \
+    $snp_dir/sup_$samp_name.bam -Ov > $snp_dir/het_on_sv_$samp_name.vcf
+```
 
 ## Usage Workflow
 
@@ -86,7 +126,7 @@ info <- extract_info(
   p_onsv = "path/to/snps_on_sv.vcf",
   p_sv = "path/to/structural_variants.vcf",
   p_cnv = "path/to/cnv_file.txt",
-  chr_lst = NULL
+  chr_lst = NULL,
   flank_del = 50, 
   QUAL_tresh = 100, 
   min_alt = 2, 
@@ -145,7 +185,7 @@ sv_char <- characterize_sv(
 
 ### 3. Calculate SVCF for Structural Variants — `calculate_svcf()`
 
-This step computes the **Structural Variant Cellular Fraction (SVCF)**.
+This step computes the **Structural Variant Cellular Fraction (SVCF)**. and returns an annotated VCF file in data.frame format.
 
 ``` r
 
@@ -161,18 +201,23 @@ svcf_out <- calculate_svcf(
 #### Function Arguments
 
 | Argument      | Type       | Default | Description                            |
-|----------------|----------------|----------------|------------------------|
+|-----------------|-----------------|-----------------|---------------------|
 | `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
 | `sv_info`     | data.frame | —       | Parsed SV info.                        |
 | `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
 | `samp`        | character  | —       | Sample name.                           |
 | `exper`       | character  | —       | Experiment name.                       |
 
-The output is an annotated VCF with additional fields for VAF, Rbar, r and SVCF. VAF=variant allele frequency; Rbar=average break interval count in a sample; r = inferred integer copy number of break intervals; SVCF=structural variant cellular fraction.
+**Output:** An annotated VCF-like data frame with additional fields for VAF, Rbar, r, and SVCF.
+
+1.  VAF: variant allele frequency
+2.  Rbar: average break interval count in a sample
+3.  r: inferred integer copy number of break intervals
+4.  SVCF: structural variant cellular fraction.
 
 ### 4. Build tumor evolution tree — `build_tree()`
 
-This step build the tumor evolutionary tree based on SV clusters obtained from Dirichlet process Gaussian Mixture Model (DP-GMM).
+This step build the tumor evolutionary tree based on SV clusters obtained from Dirichlet process Gaussian Mixture Model (DP-GMM).Currently, this step is optimized for two sample longitudinal data.
 
 ``` r
 output <- cluster_data(
@@ -193,9 +238,9 @@ cluster_data()
 
 | Argument | Type | Default | Description |
 |------------------|------------------|------------------|------------------|
-| `pair_path` | character | — | path to file with paired sample ID for each patient. |
-| `pur_path` | character | \- | path to file with purity for each sample. |
-| `pair` | numeric | 1 | The identifier for the specific sample pair (patient) being analyzed. |
+| `pair_path` | character | — | Path to a tab-separated file with columns for 'pre_BAT sample' and 'on_BAT sample'. |
+| `pur_path` | character | \- | Path to a tab-separated file with columns for 'sample' and 'purity'. |
+| `pair` | numeric | 1 | The identifier (index or ID) for the specific sample pair (patient) being analyzed. |
 
 build_tree()
 
@@ -205,7 +250,7 @@ build_tree()
 | `lineage_precedence_thresh` | numeric | 0.2 | Maximum violation of lineage precedence rule. |
 | `sum_filter_thresh` | numeric | 0.2 | Maximum violation of sum condition rule |
 
-The output is tumor evolutionary tree rooted at germline (G) and the node number corresponds to the SV cluster number. The branching of the nodes depicts the chronic occurence of clusters of SVs.
+**Output:** A tumor evolutionary tree rooted at the germline (G). Node numbers correspond to SV cluster numbers. The branching depicts the chronological occurrence of SV clusters.
 
 ### 5. Simulation & Benchmarking
 
@@ -268,3 +313,7 @@ vignette("SVCFit_guide", package = "SVCFit")
 
 1.  Cmero, Marek, Yuan, Ke, Ong, Cheng Soon, Schröder, Jan, Corcoran, Niall M., Papenfuss, Tony, et al., "Inferring Structural Variant Cancer Cell Fraction," Nature Communications, 11(1) (2020), 730.
 2.  Chen, X. et al. (2016) Manta: rapid detection of structural variants and indels for germline and cancer sequencing applications. Bioinformatics, 32, 1220-1222. <doi:10.1093/bioinformatics/btv710>
+3.  Shen R, Seshan VE. FACETS: allele-specific copy number and clonal heterogeneity analysis tool for high-throughput DNA sequencing. Nucleic Acids Res. 2016 Sep 19;44(16):e131. doi: 10.1093/nar/gkw520. Epub 2016 Jun 7. PMID: 27270079; PMCID: PMC5027494.
+4.  Auwera, Geraldine van der, and Brian D O’Connor. Genomics in the Cloud : Using Docker, GATK, and WDL in Terra. First edition. Sebastopol, CA: O’Reilly Media, 2020. Print.
+5.  Li H. A statistical framework for SNP calling, mutation discovery, association mapping and population genetical parameter estimation from sequencing data. Bioinformatics. 2011 Nov 1;27(21):2987-93. doi: 10.1093/bioinformatics/btr509. Epub 2011 Sep 8. PMID: 21903627; PMCID: PMC3198575.
+6.  Li, H., et al. (2009). The Sequence Alignment/Map format and SAMtools. *Bioinformatics*, Volume 25, Issue 16, August 2009, Pages 2078–2079, <https://doi.org/10.1093/bioinformatics/btp352>
