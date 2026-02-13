@@ -81,7 +81,7 @@ The following code is not included in SVCFit and should be run separately.
 # 1. Call SNPs using GATK
 gatk --java-options "-Xmx4g" HaplotypeCaller \
     -R $ref \
-    -I $bam \
+    -I $normal_bam \
     -O $snp_dir/SNP.vcf.gz
 
 # 2. Filter for heterozygous SNPs using bcftools
@@ -97,7 +97,7 @@ The following code is not included in SVCFit and should be run separately.
 
 ```         
 # Extract SV supporting reads
-samtools view -f 1 -F 2 -b $tbam > $snp_dir/sup_$samp_name.bam
+samtools view -f 1 -F 2 -b $tumor_bam > $snp_dir/sup_$samp_name.bam
 samtools index $snp_dir/sup_$samp_name.bam
 
 # Generate pileup at known heterozygous sites
