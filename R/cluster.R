@@ -430,7 +430,7 @@ cluster_data <- function(pair_path,
                          min_n = 5,
                          pair_num=1){
   new_dat <- pre_process_cluster(pair_path, pur_path)
-  use_condaenv("py3", required = TRUE)
+  #use_condaenv("py3", required = TRUE)
   py_config()
   sk <- import("sklearn", delay_load = TRUE)
   

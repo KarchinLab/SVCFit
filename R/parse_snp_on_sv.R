@@ -16,7 +16,7 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
            DEP=gsub("DP=(\\d+);.*","\\1", INFO),
            onsv_ref=as.integer(gsub(",.*","", AD)),
            onsv_alt=as.integer(ifelse(len==2, gsub(".*,(\\d+),.*","\\1", AD),0)),
-           onsv_alt2=as.integer(ifelse(len==2, gsub(".*,","\\1", AD), 0)), # check if this SNP has three alleles, which is filtered out
+           onsv_alt2=as.integer(ifelse(len==2, gsub(".*,","", AD), 0)), # check if this SNP has three alleles, which is filtered out
            a_count=(onsv_ref!=0) + (onsv_alt!=0),
            allele=ifelse(a_count==1 & onsv_ref!=0, REF, "other"))%>% # other means the allele is not reference allele (used to tell mat or pat origin)
     filter(DEP > 0,

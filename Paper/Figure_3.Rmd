@@ -1,5 +1,5 @@
 ---
-title: "Figure_2"
+title: "Figure_3"
 output: html_document
 ---
 
@@ -24,8 +24,8 @@ library(ggalluvial)
 library(RColorBrewer)
 
 # --- Global Parameters ---
-mendeley_dir = '/Users/lyz928/Documents/mendeley_data'
-PYTHON_ENV  <- "py3" # Name of your Conda env
+mendeley_dir = '/Users/lesterliu/Documents/mendeley_data'
+PYTHON_ENV  <- "/Users/lesterliu/miniforge3/envs/py3" # Name of your Conda env
 
 # Initialize Python
 use_condaenv(PYTHON_ENV, required = TRUE)
