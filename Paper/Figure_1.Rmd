@@ -22,7 +22,7 @@ mendeley_dir = '~/Documents/mendeley_data'
 # Fig 1 VISOR benchmark
 ```{r, message=FALSE}
 ## can directly load data from /int/extdata/VISOR_bench_data.bed
-analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, svclone_dir, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, p_svc, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
   info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr_lst=chr, flank_del=flank_del, QUAL_tresh=QUAL_tresh, min_alt=min_alt, tum_only=t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
@@ -33,7 +33,7 @@ analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, svclone_di
   overlap=ifelse(exper=='exp1', FALSE, TRUE)
   truth <- load_truth(p_truth, overlap)
   final_truth <- attach_truth(final, truth)
-  svc <- analyze_svclone(samp, exper, final_truth, sv_info, svclone_dir=svclone_dir)
+  svc <- analyze_svclone(samp, exper, final_truth, sv_info, svclone_dir=p_svc)
   common_dat <- final_truth %>%
     filter(ID %in% svc$ID)
   return(list(final_truth, svc, common_dat))
@@ -46,48 +46,47 @@ condition_list=c(
   "c50p80m10", "c50p80m30", "c50p80m50"
 )
 base_dir = paste0(mendeley_dir, '/VISOR_benchmark')
-svclone_dir = file.path(base_dir, 'svclone')  # adjust if svclone output lives elsewhere
 
 e1 = lapply(condition_list,
              function(x) analyze(x,'exp1',
-                                 file.path(base_dir, 'SNP', 'exp1', paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', 'exp1', paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'SV_vcfs', 'exp1', paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', 'exp1', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth'),
-                                 svclone_dir))
+                                 p_het=file.path(base_dir, 'SNP', 'exp1', paste0("het_near_sv_",x, ".vcf")),
+                                 p_onsv=file.path(base_dir, 'SNP', 'exp1', paste0("het_on_sv_",x,".vcf")),
+                                 p_sv=file.path(base_dir, 'SV_vcfs', 'exp1', paste0('svt_', x, '.vcf')),
+                                 p_cnv=file.path(base_dir, 'facet', 'exp1', paste0(x, '.bed')),
+                                 p_truth=file.path(base_dir, 'truth'),
+                                 p_svc=file.path(base_dir, 'svclone_rdata', 'exp1', paste0(x, '_ccube_sv_results.RData'))))
 e2 = lapply(condition_list,
              function(x) analyze(x,'exp2',
-                                 file.path(base_dir, 'SNP', 'exp2', paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', 'exp2', paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'SV_vcfs', 'exp2', paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', 'exp2', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth'),
-                                 svclone_dir))
+                                 p_het=file.path(base_dir, 'SNP', 'exp2', paste0("het_near_sv_",x, ".vcf")),
+                                 p_onsv=file.path(base_dir, 'SNP', 'exp2', paste0("het_on_sv_",x,".vcf")),
+                                 p_sv=file.path(base_dir, 'SV_vcfs', 'exp2', paste0('svt_', x, '.vcf')),
+                                 p_cnv=file.path(base_dir, 'facet', 'exp2', paste0(x, '.bed')),
+                                 p_truth=file.path(base_dir, 'truth'),
+                                 p_svc=file.path(base_dir, 'svclone_rdata', 'exp2', paste0(x, '_ccube_sv_results.RData'))))
 e3 = lapply(condition_list,
              function(x) analyze(x,'exp3',
-                                 file.path(base_dir, 'SNP', 'exp3', paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', 'exp3', paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'SV_vcfs', 'exp3', paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', 'exp3', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth'),
-                                 svclone_dir))
+                                 p_het=file.path(base_dir, 'SNP', 'exp3', paste0("het_near_sv_",x, ".vcf")),
+                                 p_onsv=file.path(base_dir, 'SNP', 'exp3', paste0("het_on_sv_",x,".vcf")),
+                                 p_sv=file.path(base_dir, 'SV_vcfs', 'exp3', paste0('svt_', x, '.vcf')),
+                                 p_cnv=file.path(base_dir, 'facet', 'exp3', paste0(x, '.bed')),
+                                 p_truth=file.path(base_dir, 'truth'),
+                                 p_svc=file.path(base_dir, 'svclone_rdata', 'exp3', paste0(x, '_ccube_sv_results.RData'))))
 e4 = lapply(condition_list,
              function(x) analyze(x,'exp4',
-                                 file.path(base_dir, 'SNP', 'exp4', paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', 'exp4', paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'SV_vcfs', 'exp4', paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', 'exp4', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth'),
-                                 svclone_dir))
+                                 p_het=file.path(base_dir, 'SNP', 'exp4', paste0("het_near_sv_",x, ".vcf")),
+                                 p_onsv=file.path(base_dir, 'SNP', 'exp4', paste0("het_on_sv_",x,".vcf")),
+                                 p_sv=file.path(base_dir, 'SV_vcfs', 'exp4', paste0('svt_', x, '.vcf')),
+                                 p_cnv=file.path(base_dir, 'facet', 'exp4', paste0(x, '.bed')),
+                                 p_truth=file.path(base_dir, 'truth'),
+                                 p_svc=file.path(base_dir, 'svclone_rdata', 'exp4', paste0(x, '_ccube_sv_results.RData'))))
 e5 = lapply(condition_list,
              function(x) analyze(x,'exp5',
-                                 file.path(base_dir, 'SNP', 'exp5', paste0("het_near_sv_",x, ".vcf")),
-                                 file.path(base_dir, 'SNP', 'exp5', paste0("het_on_sv_",x,".vcf")),
-                                 file.path(base_dir, 'SV_vcfs', 'exp5', paste0('svt_', x, '.vcf')),
-                                 file.path(base_dir, 'facet', 'exp5', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth'),
-                                 svclone_dir))
+                                 p_het=file.path(base_dir, 'SNP', 'exp5', paste0("het_near_sv_",x, ".vcf")),
+                                 p_onsv=file.path(base_dir, 'SNP', 'exp5', paste0("het_on_sv_",x,".vcf")),
+                                 p_sv=file.path(base_dir, 'SV_vcfs', 'exp5', paste0('svt_', x, '.vcf')),
+                                 p_cnv=file.path(base_dir, 'facet', 'exp5', paste0(x, '.bed')),
+                                 p_truth=file.path(base_dir, 'truth'),
+                                 p_svc=file.path(base_dir, 'svclone_rdata', 'exp5', paste0(x, '_ccube_sv_results.RData'))))
 
 gather_data=function(lst, idx){
   test=lst[[idx]]
@@ -117,7 +116,7 @@ all_dat=lapply(1:5, function(x) gather_data(ll,x)) %>%
            clone=='sub' ~ 'subclone2',
            clone=='clonal' ~ 'clonal'
          ),
-         error=abs(svcf-true_svcf))
+         error=true_svcf-svcf)
 
 all_dat$tool <- factor(all_dat$tool, levels = c("svcfit", "svclone"))
 
@@ -126,7 +125,7 @@ plot_dat <- all_dat %>%
          purity = factor(purity, levels = c("purity 80%", "purity 40%"))) %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
   group_by(classification, clonality, tool, purity) %>%
-  summarise(mean_err = mean(abs(true_svcf - svcf), na.rm = TRUE),
+  summarise(mean_err = mean(true_svcf - svcf, na.rm = TRUE),
             .groups  = "drop") %>%
   mutate(sv = paste0(clonality, " ", classification),
          sv = factor(sv, levels = c(
@@ -148,7 +147,7 @@ f1b_stat=all_dat %>%
   mutate(clonality  = if_else(clone == "clonal", "clonal", "subclonal"),
          purity = factor(purity, levels = c("purity 80%", "purity 40%")),
          zygosity=ifelse(zygosity=='het', 'heterozygous', 'homozygous'),
-         error=(abs(svcf-true_svcf))) %>%
+         error=(svcf-true_svcf)) %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
   group_by(zygosity)%>%
   wilcox_test(error~tool, paired = TRUE)%>%
@@ -171,7 +170,7 @@ f1a=ggplot(plot_dat, aes(x = mean_err, y = y)) +
   theme(text = element_text(size = 15),
         strip.background = element_rect(fill = "white", color = "black", size = 0.3))+
   ylab('')+
-  xlab('Mean absolute SVCF estimation error')
+  xlab('Mean SVCF estimation error')
 
 
 f1b=all_dat %>%
@@ -180,10 +179,10 @@ f1b=all_dat %>%
          zygosity=ifelse(zygosity=='het', 'heterozygous', 'homozygous')) %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
   ggplot()+
-  geom_violin(aes(x=zygosity, y=(abs(svcf-true_svcf)), fill = tool))+
+  geom_violin(aes(x=zygosity, y=(svcf-true_svcf), fill = tool))+
   stat_pvalue_manual(f1b_stat, hide.ns = TRUE)+
   ylim(c(0,1.2))+
-  ylab('Absolute SVCF estimation error')+
+  ylab('SVCF estimation error')+
   xlab('')+
   theme_minimal()+
   theme(text = element_text(size = 15))
@@ -380,7 +379,7 @@ svcfit=prost %>%
     error=truth-ccf)%>%
   #filter(!is.na(tascn))%>%
   group_by(expmt)%>%
-  summarize(mean_error=abs(mean(error)))%>%
+  summarize(mean_error=mean(error))%>%
   mutate(method="svcfit")
 
 
@@ -415,7 +414,7 @@ svcfit45=prost45 %>%
   filter(!is.na(truth))%>%
   #filter(!is.na(tascn))%>%
   group_by(expmt)%>%
-  summarize(mean_error=abs(mean(error)))%>%
+  summarize(mean_error=mean(error))%>%
   mutate(method="svcfit")
 
 svclone <- c(0.095, 0.095, 0.090, 0.103, 0.105, 0.107, 0.093, 0.109, 0.105, 0.075, 0.090)
@@ -432,7 +431,7 @@ f1c=final %>%
   geom_point(aes(x=expmt, y = mean_error, color=method))+
   geom_line(aes(x=expmt, y = mean_error, group = method, color= method))+
   ylim(c(-0.5, 0.5))+
-  ylab("Mean absolute CCF estimation error")+
+  ylab("Mean CCF estimation error")+
   xlab("")+
   scale_x_discrete(labels = x_lab)+
   theme_minimal()+
