@@ -6,15 +6,6 @@
 \usage{
 merge_cluster(input, pair_num)
 }
-\arguments{
-\item{input}{Data frame. A data frame containing \code{pre_center}, \code{post_center}, and \code{cluster} columns.}
-
-\item{pair_num}{Character or Numeric. The identifier for the specific sample pair being analyzed.}
-}
-\value{
-A data frame containing pairs of cluster IDs (\code{row}, \code{col}) that are close enough to be merged.
-}
 \description{
-Calculates the Euclidean distance between cluster centers. If the euclidean distance between the centers of two clusters
-is less than 0.2, they are flagged to be merged.
+Identify geometrically close clusters for merging
 }

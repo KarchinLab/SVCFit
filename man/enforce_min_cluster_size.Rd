@@ -6,15 +6,6 @@
 \usage{
 enforce_min_cluster_size(df, min_n = 5)
 }
-\arguments{
-\item{df}{Data frame. The output containing initial cluster assignments (usually from \code{run_dp_gmm_pair} or merged results).}
-
-\item{min_n}{Integer. The minimum number of mutations required to keep a cluster distinct. Default is 5.}
-}
-\value{
-A data frame with updated cluster assignments in a column named \code{ncluster}.
-}
 \description{
-Checks the size of generated clusters. If a cluster has fewer than \code{min_n} observations,
-it is merged into the nearest valid cluster based on the Euclidean distance of their centers.
+Enforce minimum size for clusters
 }

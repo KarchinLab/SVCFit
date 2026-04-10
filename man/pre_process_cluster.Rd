@@ -12,11 +12,23 @@ pre_process_cluster(pair_path, pur_path)
 \item{pur_path}{Character. Path to a file containing purity estimates for each sample.}
 }
 \value{
-A data frame containing processed CCF values for pre- and on-treatment samples
-(\code{pre_BAT}, \code{on_BAT}), ready for input into clustering functions.
+A list containing:
+\itemize{
+\item \code{cluster_input}: event-level table for clustering (same logic as original)
+\item \code{sv_raw}: original row-level SV table with raw coordinates
+}
 }
 \description{
 Reads paired sample IDs and purity files, calculates Cancer Cell Fraction (CCF)
 for Structural Variants (SVs), and reshapes the data (wide format) for longitudinal clustering.
 It handles shared and non-shared variants between pre- and on-treatment samples.
+}
+\details{
+Key fix with zero effect on clustering:
+\itemize{
+\item Keep the original clustering workflow unchanged
+\item Still overwrite POS/END with mean breakpoint for shared events in the clustering table
+\item Preserve original raw coordinates separately for mapping/AnnotSV
+\item Add event_id so cluster labels can be merged back to original SV rows
+}
 }
