@@ -2,10 +2,28 @@
 % Please edit documentation in R/cluster.R
 \name{merge_cluster}
 \alias{merge_cluster}
-\title{Identify geometrically close clusters for merging}
+\title{Identify geometrically close cluster centres for merging}
 \usage{
-merge_cluster(input, pair_num)
+merge_cluster(input, pair_num, min_dist = 0.2)
+}
+\arguments{
+\item{input}{data.frame / tibble. Cluster assignment table containing columns
+\code{pair}, \code{cluster}, \code{pre_center}, and \code{post_center}.}
+
+\item{pair_num}{Integer or character. Pair identifier to operate on.}
+
+\item{min_dist}{Numeric. Distance threshold below which two cluster centres
+are flagged for merging.  Default \code{0.2}.}
+}
+\value{
+A data.frame with columns \code{row} (first cluster index),
+\code{col} (second cluster index), and \code{pair}.  One row per
+unique close pair.  Returns an empty data.frame if fewer than two clusters
+exist or no pairs fall below the threshold.
 }
 \description{
-Identify geometrically close clusters for merging
+Computes pairwise Euclidean distances between cluster centres in
+(pre-treatment CCF, post-treatment CCF) space and returns all cluster pairs
+whose centre-to-centre distance is below \code{min_dist}.  These pairs are
+candidates for merging in the downstream clustering workflow.
 }

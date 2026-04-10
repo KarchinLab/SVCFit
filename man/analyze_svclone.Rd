@@ -4,7 +4,14 @@
 \alias{analyze_svclone}
 \title{Process output from SVclone}
 \usage{
-analyze_svclone(samp, exper, final_truth, sv_info, tolerance = 100)
+analyze_svclone(
+  samp,
+  exper,
+  final_truth,
+  sv_info,
+  tolerance = 100,
+  svclone_dir
+)
 }
 \arguments{
 \item{samp}{an object of class 'character'. This object describes sample name.}
@@ -17,6 +24,9 @@ analyze_svclone(samp, exper, final_truth, sv_info, tolerance = 100)
 
 \item{tolerance}{an object of class 'integer'. This object describes the limit of
 base pair difference between svclone and svcfit output to be considered the same event}
+
+\item{svclone_dir}{an object of class 'character'. Path to the root SVclone output directory.
+Expected structure: \verb{<svclone_dir>/<samp>/<exper>/ccube_out/<exper>_ccube_sv_results.RData}}
 }
 \value{
 sth

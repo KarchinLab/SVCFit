@@ -1,6 +1,3 @@
-library(dplyr)
-library(tidyr)
-
 # -------------------------------------------------------------------------
 # DATA STRUCTURE HELPERS
 # -------------------------------------------------------------------------
@@ -11,7 +8,11 @@ pop <- function(edges_tb, tb_name) {
   return(edges_tb[1, ])
 }
 
-#' Convert long format adjacency tibble to wide matrix
+#' Convert a long-format adjacency tibble to a wide matrix
+#' @param am.long tibble. Long adjacency table with columns \code{parent},
+#'   \code{child}, \code{connected}.
+#' @return Numeric matrix (parents as rows, children as columns).
+#' @keywords internal
 toWide <- function(am.long){
   am.long$child <- as.numeric(am.long$child)
   am.long %>% 
@@ -21,7 +22,11 @@ toWide <- function(am.long){
     as.matrix()
 }
 
-#' Convert wide matrix to long format tibble
+#' Convert a wide adjacency matrix to long-format tibble
+#' @param am Matrix. Wide adjacency matrix (rows and columns labelled by node).
+#' @return tibble with columns \code{edge}, \code{parent}, \code{child},
+#'   \code{connected}.
+#' @keywords internal
 toLong <- function(am) {
   am.long <- dplyr::as_tibble(am) %>%
     dplyr::mutate(parent=rownames(am)) %>%
@@ -32,7 +37,13 @@ toLong <- function(am) {
   return(am.long)
 }
 
-#' Convert edge list to long adjacency matrix with annotations
+#' Convert an edge-list data.frame to an annotated long adjacency matrix
+#' @param edges data.frame. Edge list with columns \code{parent} and
+#'   \code{child} (root edges have \code{parent == "root"}).
+#' @return Long adjacency tibble produced by \code{toLong} with additional
+#'   annotation columns (\code{reversed_connected}, \code{bi_directional},
+#'   \code{root_connected}).
+#' @keywords internal
 edgesToAmLong <- function(edges) {
   am_wide <- initEmptyAdmatFromK(length(unique(edges$child)))
   edges[edges$parent == "root", "parent"] <- "0"

@@ -2,10 +2,31 @@
 % Please edit documentation in R/cluster.R
 \name{enforce_min_cluster_size}
 \alias{enforce_min_cluster_size}
-\title{Enforce minimum size for clusters}
+\title{Enforce a minimum cluster size by merging small clusters}
 \usage{
 enforce_min_cluster_size(df, min_n = 5)
 }
+\arguments{
+\item{df}{data.frame / tibble. Cluster assignment table as returned by
+\code{\link{run_dp_gmm_pair}} (the \code{clusters} element), containing at
+minimum the columns \code{pair}, \code{cluster}, \code{pre_ccf},
+\code{post_ccf}, \code{pre_center}, and \code{post_center}.}
+
+\item{min_n}{Integer. Minimum number of events a cluster must contain.
+Default \code{5}.}
+}
+\value{
+The input data.frame with two additional columns:
+\describe{
+\item{\code{ncluster}}{factor. Merged cluster label.}
+\item{\code{n_after}}{integer. Number of events in each merged cluster.}
+}
+The \code{pre_center} and \code{post_center} columns are recomputed after
+merging.
+}
 \description{
-Enforce minimum size for clusters
+After DP-GMM fitting, any cluster whose size falls below \code{min_n} is
+reassigned to the geometrically nearest cluster that meets the size
+requirement.  If no cluster meets the threshold, the single largest cluster
+is kept as the fallback.
 }

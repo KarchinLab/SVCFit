@@ -2,10 +2,18 @@
 % Please edit documentation in R/tree_utils.R
 \name{toLong}
 \alias{toLong}
-\title{Convert wide matrix to long format tibble}
+\title{Convert a wide adjacency matrix to long-format tibble}
 \usage{
 toLong(am)
 }
-\description{
-Convert wide matrix to long format tibble
+\arguments{
+\item{am}{Matrix. Wide adjacency matrix (rows and columns labelled by node).}
 }
+\value{
+tibble with columns \code{edge}, \code{parent}, \code{child},
+\code{connected}.
+}
+\description{
+Convert a wide adjacency matrix to long-format tibble
+}
+\keyword{internal}

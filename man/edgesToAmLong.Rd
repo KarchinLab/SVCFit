@@ -2,10 +2,20 @@
 % Please edit documentation in R/tree_utils.R
 \name{edgesToAmLong}
 \alias{edgesToAmLong}
-\title{Convert edge list to long adjacency matrix with annotations}
+\title{Convert an edge-list data.frame to an annotated long adjacency matrix}
 \usage{
 edgesToAmLong(edges)
 }
-\description{
-Convert edge list to long adjacency matrix with annotations
+\arguments{
+\item{edges}{data.frame. Edge list with columns \code{parent} and
+\code{child} (root edges have \code{parent == "root"}).}
 }
+\value{
+Long adjacency tibble produced by \code{toLong} with additional
+annotation columns (\code{reversed_connected}, \code{bi_directional},
+\code{root_connected}).
+}
+\description{
+Convert an edge-list data.frame to an annotated long adjacency matrix
+}
+\keyword{internal}

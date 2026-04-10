@@ -2,10 +2,26 @@
 % Please edit documentation in R/tree_enumeration.R
 \name{filterEdgesBasedOnCCFs}
 \alias{filterEdgesBasedOnCCFs}
-\title{Filter possible edges based on lineage precedence}
+\title{Filter candidate edges based on lineage precedence constraints}
 \usage{
 filterEdgesBasedOnCCFs(graph_G, mcf, thresh = 0.1)
 }
+\arguments{
+\item{graph_G}{data.frame. Candidate edge table as produced by
+\code{\link{prepareGraph}} (columns: \code{edge}, \code{parent},
+\code{child}).}
+
+\item{mcf}{Numeric matrix. CCF matrix (rows = clones, columns = samples).}
+
+\item{thresh}{Numeric. Maximum allowed CCF excess of child over parent.
+Default \code{0.1}.}
+}
+\value{
+Filtered data.frame with the same columns as \code{graph_G}.
+}
 \description{
-Filter possible edges based on lineage precedence
+Removes edges from a candidate graph where the child clone's CCF exceeds the
+parent clone's CCF by more than \code{thresh} in any sample, enforcing the
+biological constraint that a child lineage cannot be more prevalent than its
+ancestor.
 }

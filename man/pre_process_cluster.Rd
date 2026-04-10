@@ -2,33 +2,38 @@
 % Please edit documentation in R/cluster.R
 \name{pre_process_cluster}
 \alias{pre_process_cluster}
-\title{Load and process data for clustering}
+\title{Pre-process paired SV data for DP-GMM clustering}
 \usage{
-pre_process_cluster(pair_path, pur_path)
+pre_process_cluster(pair_path, pur_path, data_dir, exclude_pairs = integer(0))
 }
 \arguments{
-\item{pair_path}{Character. Path to a file containing paired sample IDs (columns: pre_BAT, on_BAT).}
+\item{pair_path}{Character. Path to a tab-delimited file with paired sample
+IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).}
 
-\item{pur_path}{Character. Path to a file containing purity estimates for each sample.}
+\item{pur_path}{Character. Path to a tab-delimited purity file (must contain
+columns \code{sample} and \code{purity}).}
+
+\item{data_dir}{Character. Root directory containing SVCFit output BED files.
+Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.}
+
+\item{exclude_pairs}{Integer vector. Pair indices (1-based row numbers in
+\code{pair_path}) to drop before processing.  Default \code{integer(0)}.}
 }
 \value{
-A list containing:
-\itemize{
-\item \code{cluster_input}: event-level table for clustering (same logic as original)
-\item \code{sv_raw}: original row-level SV table with raw coordinates
+A named list with two elements:
+\describe{
+\item{\code{cluster_input}}{data.frame. Deduplicated event-level table in
+wide CCF format (\code{pre_BAT}, \code{on_BAT}) used as clustering input.}
+\item{\code{sv_raw}}{data.frame. Full row-level SV table retaining the
+original \code{POS} / \code{END} coordinates and an \code{event_id}
+column for joining cluster assignments back to individual rows.}
 }
 }
 \description{
-Reads paired sample IDs and purity files, calculates Cancer Cell Fraction (CCF)
-for Structural Variants (SVs), and reshapes the data (wide format) for longitudinal clustering.
-It handles shared and non-shared variants between pre- and on-treatment samples.
-}
-\details{
-Key fix with zero effect on clustering:
-\itemize{
-\item Keep the original clustering workflow unchanged
-\item Still overwrite POS/END with mean breakpoint for shared events in the clustering table
-\item Preserve original raw coordinates separately for mapping/AnnotSV
-\item Add event_id so cluster labels can be merged back to original SV rows
-}
+Reads paired sample IDs and purity files, computes Cancer Cell Fraction (CCF)
+for each SV, identifies variants shared between pre- and on-treatment samples
+by proximity matching, and reshapes the data into wide format (one row per
+genomic event, separate columns for pre/on CCF) ready for clustering.  Raw
+breakpoint coordinates are preserved in a parallel table so that cluster
+assignments can later be mapped back to individual SV rows.
 }

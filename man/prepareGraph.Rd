@@ -2,10 +2,24 @@
 % Please edit documentation in R/tree_enumeration.R
 \name{prepareGraph}
 \alias{prepareGraph}
-\title{Create tibble of possible edges from CCF values based on w_mat only}
+\title{Create the initial candidate edge set for the phylogenetic tree graph}
 \usage{
 prepareGraph(mcf_mat, thresh)
 }
+\arguments{
+\item{mcf_mat}{Numeric matrix. CCF matrix with rows = clones and
+columns = time-point samples.  Row names are used as node labels.}
+
+\item{thresh}{Numeric. Maximum allowed CCF excess of child over parent for
+an edge to be included.}
+}
+\value{
+data.frame with columns \code{edge} (e.g. \code{"root->1"}),
+\code{parent}, and \code{child}.
+}
 \description{
-Create tibble of possible edges from CCF values based on w_mat only
+Constructs a data.frame of directed edges (parent → child) representing all
+clone pairs where the child's CCF does not exceed the parent's CCF by more
+than \code{thresh} in any sample.  Every clone is also given an edge from a
+virtual \code{"root"} node.
 }

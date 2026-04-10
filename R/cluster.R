@@ -1,27 +1,31 @@
-#' Load and process data for clustering
+#' Pre-process paired SV data for DP-GMM clustering
 #'
-#' Reads paired sample IDs and purity files, calculates Cancer Cell Fraction (CCF) 
-#' for Structural Variants (SVs), and reshapes the data (wide format) for longitudinal clustering.
-#' It handles shared and non-shared variants between pre- and on-treatment samples.
+#' Reads paired sample IDs and purity files, computes Cancer Cell Fraction (CCF)
+#' for each SV, identifies variants shared between pre- and on-treatment samples
+#' by proximity matching, and reshapes the data into wide format (one row per
+#' genomic event, separate columns for pre/on CCF) ready for clustering.  Raw
+#' breakpoint coordinates are preserved in a parallel table so that cluster
+#' assignments can later be mapped back to individual SV rows.
 #'
-#' Key fix with zero effect on clustering:
-#' - Keep the original clustering workflow unchanged
-#' - Still overwrite POS/END with mean breakpoint for shared events in the clustering table
-#' - Preserve original raw coordinates separately for mapping/AnnotSV
-#' - Add event_id so cluster labels can be merged back to original SV rows
-#'
-#' @param pair_path Character. Path to a file containing paired sample IDs (columns: pre_BAT, on_BAT).
-#' @param pur_path Character. Path to a file containing purity estimates for each sample.
+#' @param pair_path Character. Path to a tab-delimited file with paired sample
+#'   IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).
+#' @param pur_path Character. Path to a tab-delimited purity file (must contain
+#'   columns \code{sample} and \code{purity}).
 #' @param data_dir Character. Root directory containing SVCFit output BED files.
-#' Expected structure: `<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed`
+#'   Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.
+#' @param exclude_pairs Integer vector. Pair indices (1-based row numbers in
+#'   \code{pair_path}) to drop before processing.  Default \code{integer(0)}.
 #'
-#' @return A list containing:
-#' \itemize{
-#'   \item \code{cluster_input}: event-level table for clustering (same logic as original)
-#'   \item \code{sv_raw}: original row-level SV table with raw coordinates
+#' @return A named list with two elements:
+#' \describe{
+#'   \item{\code{cluster_input}}{data.frame. Deduplicated event-level table in
+#'     wide CCF format (\code{pre_BAT}, \code{on_BAT}) used as clustering input.}
+#'   \item{\code{sv_raw}}{data.frame. Full row-level SV table retaining the
+#'     original \code{POS} / \code{END} coordinates and an \code{event_id}
+#'     column for joining cluster assignments back to individual rows.}
 #' }
 #' @export
-pre_process_cluster <- function(pair_path, pur_path, data_dir){
+pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = integer(0)){
   sample_pair <- read.delim(pair_path, header = FALSE)
   colnames(sample_pair) <- c("pre_BAT", "on_BAT")
   samp_pur <- read.delim(pur_path)
@@ -29,7 +33,7 @@ pre_process_cluster <- function(pair_path, pur_path, data_dir){
   combine_data <- lapply(1:nrow(sample_pair), function(x) read_data(sample_pair, x, samp_pur, data_dir)) %>%
     do.call(rbind, .) %>%
     ungroup() %>%
-    filter(pair != 9) %>%
+    filter(!pair %in% exclude_pairs) %>%
     mutate(
       ccf = final_svcf / purity,
       ccf = ifelse(ccf > 1, 1, ccf),
@@ -199,10 +203,42 @@ logit_eps <- function(p, n = 200) {
   log(q / (1 - q))
 }
 
-#' Run Dirichlet Process Gaussian Mixture Model (DP-GMM) clustering
+#' Run Dirichlet Process Gaussian Mixture Model (DP-GMM) clustering for one pair
 #'
-#' This function is intentionally kept as close as possible to the original,
-#' to preserve clustering behavior.
+#' Fits a Bayesian Gaussian Mixture Model with a Dirichlet process prior (via
+#' Python \pkg{sklearn}) to the CCF values of one sample pair, assigns each
+#' event to the most probable component, and returns diagnostic convergence
+#' plots and the cluster assignment table.  The function is intentionally kept
+#' close to the original implementation to preserve clustering behaviour.
+#'
+#' @param input data.frame. Cluster-input table produced by
+#'   \code{\link{pre_process_cluster}} (element \code{cluster_input}).  Must
+#'   contain columns \code{pair}, \code{pre_BAT}, and \code{on_BAT}.
+#' @param pair_num Integer or character. Pair identifier matching a value in
+#'   \code{input$pair}.
+#' @param Kmax Integer. Maximum number of mixture components.  Default \code{10}.
+#' @param n_steps Integer. Number of warm-start EM steps used for convergence
+#'   diagnostics.  Default \code{100}.
+#' @param thr_min_w Numeric. Minimum component weight below which a component
+#'   is considered inactive.  Default \code{0.01}.
+#' @param random_state Integer. Python random seed for reproducibility.
+#'   Default \code{0L}.
+#' @param concentration Numeric. Dirichlet process concentration parameter
+#'   (higher = more components allowed).  Default \code{1}.
+#'
+#' @return A named list:
+#' \describe{
+#'   \item{\code{clusters}}{tibble. Per-event cluster assignments with columns
+#'     \code{pre_ccf}, \code{post_ccf}, \code{cluster}, \code{prob},
+#'     \code{pre_center}, \code{post_center}, \code{pair}.}
+#'   \item{\code{conv_trace}}{tibble. Variational lower bound at each warm-start
+#'     iteration (\code{iter}, \code{lower_bound}).}
+#'   \item{\code{conv_delta}}{tibble. Per-iteration change in lower bound.}
+#'   \item{\code{model}}{Fitted \pkg{sklearn} \code{BayesianGaussianMixture} object.}
+#'   \item{\code{plot_conv}}{ggplot2 object. Lower-bound trace plot.}
+#'   \item{\code{plot_delta}}{ggplot2 object. Change-in-lower-bound plot.}
+#'   \item{\code{plot_clust}}{ggplot2 object. Scatter plot of cluster assignments.}
+#' }
 #'
 #' @export
 run_dp_gmm_pair <- function(input, pair_num,
@@ -329,7 +365,28 @@ run_dp_gmm_pair <- function(input, pair_num,
 
 ## post process util
 
-#' Enforce minimum size for clusters
+#' Enforce a minimum cluster size by merging small clusters
+#'
+#' After DP-GMM fitting, any cluster whose size falls below \code{min_n} is
+#' reassigned to the geometrically nearest cluster that meets the size
+#' requirement.  If no cluster meets the threshold, the single largest cluster
+#' is kept as the fallback.
+#'
+#' @param df data.frame / tibble. Cluster assignment table as returned by
+#'   \code{\link{run_dp_gmm_pair}} (the \code{clusters} element), containing at
+#'   minimum the columns \code{pair}, \code{cluster}, \code{pre_ccf},
+#'   \code{post_ccf}, \code{pre_center}, and \code{post_center}.
+#' @param min_n Integer. Minimum number of events a cluster must contain.
+#'   Default \code{5}.
+#'
+#' @return The input data.frame with two additional columns:
+#' \describe{
+#'   \item{\code{ncluster}}{factor. Merged cluster label.}
+#'   \item{\code{n_after}}{integer. Number of events in each merged cluster.}
+#' }
+#' The \code{pre_center} and \code{post_center} columns are recomputed after
+#' merging.
+#'
 #' @export
 enforce_min_cluster_size <- function(df, min_n = 5) {
   df %>%
@@ -390,7 +447,24 @@ enforce_min_cluster_size <- function(df, min_n = 5) {
     select(-n_in_clust, -cluster_merged)
 }
 
-#' Identify geometrically close clusters for merging
+#' Identify geometrically close cluster centres for merging
+#'
+#' Computes pairwise Euclidean distances between cluster centres in
+#' (pre-treatment CCF, post-treatment CCF) space and returns all cluster pairs
+#' whose centre-to-centre distance is below \code{min_dist}.  These pairs are
+#' candidates for merging in the downstream clustering workflow.
+#'
+#' @param input data.frame / tibble. Cluster assignment table containing columns
+#'   \code{pair}, \code{cluster}, \code{pre_center}, and \code{post_center}.
+#' @param pair_num Integer or character. Pair identifier to operate on.
+#' @param min_dist Numeric. Distance threshold below which two cluster centres
+#'   are flagged for merging.  Default \code{0.2}.
+#'
+#' @return A data.frame with columns \code{row} (first cluster index),
+#'   \code{col} (second cluster index), and \code{pair}.  One row per
+#'   unique close pair.  Returns an empty data.frame if fewer than two clusters
+#'   exist or no pairs fall below the threshold.
+#'
 #' @export
 merge_cluster <- function(input, pair_num, min_dist=0.2){
   tmp <- input %>%
@@ -423,14 +497,55 @@ merge_cluster <- function(input, pair_num, min_dist=0.2){
 
 ## cluster function
 
-#' Perform full clustering pipeline on paired data
+#' Perform the full DP-GMM clustering pipeline on paired SV data
 #'
-#' This preserves the original clustering path and only changes the
-#' final mapping back to original SV rows.
+#' Orchestrates the complete clustering workflow: pre-processing, DP-GMM
+#' fitting per pair, optional cluster merging, minimum-size enforcement, and
+#' mapping of cluster assignments back to individual SV rows.  The original
+#' clustering logic is preserved; only the final mapping to raw SV rows is
+#' changed to support \code{event_id}-based joins.
 #'
+#' @param pair_path Character. Path to a tab-delimited file with paired sample
+#'   IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).
+#' @param pur_path Character. Path to a tab-delimited purity file (columns
+#'   \code{sample} and \code{purity}).
 #' @param data_dir Character. Root directory containing SVCFit output BED files.
-#' @param pairs Integer vector of pair numbers to cluster. Defaults to NULL, which
-#' uses all pairs present in the preprocessed data.
+#'   Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.
+#' @param Kmax Integer. Maximum number of DP-GMM components.  Default \code{10}.
+#' @param n_steps Integer. Number of warm-start EM iterations for convergence
+#'   diagnostics.  Default \code{100}.
+#' @param thr_min_w Numeric. Minimum component weight threshold.  Default
+#'   \code{0.01}.
+#' @param random_state Integer. Python random seed.  Default \code{0L}.
+#' @param concentration Numeric. Dirichlet process concentration parameter.
+#'   Default \code{1}.
+#' @param min_n Integer. Minimum cluster size; smaller clusters are merged into
+#'   the nearest larger one.  Default \code{5}.
+#' @param min_dist Numeric. Distance threshold for merging geometrically close
+#'   cluster centres (passed to \code{\link{merge_cluster}}).  Default \code{0.2}.
+#' @param pair_num Integer. Pair index whose clone CCF table is returned as the
+#'   third list element (for use with \code{\link{build_tree}}).  Default \code{1}.
+#' @param pairs Integer vector or NULL. Subset of pair indices to cluster.
+#'   \code{NULL} (default) clusters all pairs present in the pre-processed data.
+#' @param exclude_pairs Integer vector. Pair indices to exclude before
+#'   clustering.  Default \code{integer(0)}.
+#'
+#' @return A list of length 3:
+#' \describe{
+#'   \item{\code{[[1]]}}{tibble. Full cluster-assignment table across all pairs
+#'     (columns include \code{pair}, \code{ncluster}, \code{pre_ccf},
+#'     \code{post_ccf}, \code{cluster_num}, \code{pre_center},
+#'     \code{post_center}).}
+#'   \item{\code{[[2]]}}{tibble. SV-to-cluster mapping at the original row level
+#'     (columns include \code{event_id}, \code{sample_ID}, \code{stage},
+#'     \code{CHROM}, \code{POS}, \code{END}, \code{cluster_num}).}
+#'   \item{\code{[[3]]}}{tibble. Clone CCF summary for \code{pair_num} (columns:
+#'     \code{pair}, \code{cluster_num}, \code{f_pre}, \code{f_day85},
+#'     \code{se_pre}, \code{se_day85}, \code{var_pre}, \code{var_day85},
+#'     \code{w_pre}, \code{w_day85}).  Used directly as input to
+#'     \code{\link{build_tree}}.}
+#' }
+#'
 #' @export
 cluster_data <- function(pair_path,
                          pur_path,
@@ -443,9 +558,10 @@ cluster_data <- function(pair_path,
                          min_n = 5,
                          min_dist = 0.2,
                          pair_num = 1,
-                         pairs = NULL){
+                         pairs = NULL,
+                         exclude_pairs = integer(0)){
 
-  prep <- pre_process_cluster(pair_path, pur_path, data_dir)
+  prep <- pre_process_cluster(pair_path, pur_path, data_dir, exclude_pairs)
   new_dat <- prep$cluster_input
   sv_raw <- prep$sv_raw
   

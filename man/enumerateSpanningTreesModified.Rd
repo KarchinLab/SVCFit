@@ -2,10 +2,27 @@
 % Please edit documentation in R/tree_enumeration.R
 \name{enumerateSpanningTreesModified}
 \alias{enumerateSpanningTreesModified}
-\title{Enumerate all spanning trees using modified Gabow-Myers}
+\title{Enumerate all valid spanning trees using the modified Gabow-Myers algorithm}
 \usage{
 enumerateSpanningTreesModified(graph_G, mcf, sum_filter_thresh = 0.2)
 }
+\arguments{
+\item{graph_G}{data.frame. Pruned edge table (columns: \code{edge},
+\code{parent}, \code{child}), typically produced by \code{\link{prune}}.}
+
+\item{mcf}{Numeric matrix. CCF matrix (rows = clones, columns = samples).}
+
+\item{sum_filter_thresh}{Numeric. Maximum allowed excess of summed children
+CCFs over the parent CCF.  Default \code{0.2}.}
+}
+\value{
+Invisibly \code{NULL}.  All valid spanning trees are stored in the
+global variable \code{all_spanning_trees} as a list of edge-list
+data.frames.
+}
 \description{
-Enumerate all spanning trees using modified Gabow-Myers
+Recursively enumerates all spanning trees of the candidate graph that
+satisfy the CCF sum condition (the sum of children CCFs does not exceed the
+parent CCF by more than \code{sum_filter_thresh}).  Results are written to
+the global variable \code{all_spanning_trees}.
 }

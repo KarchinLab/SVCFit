@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster.R
 \name{run_dp_gmm_pair}
 \alias{run_dp_gmm_pair}
-\title{Run Dirichlet Process Gaussian Mixture Model (DP-GMM) clustering}
+\title{Run Dirichlet Process Gaussian Mixture Model (DP-GMM) clustering for one pair}
 \usage{
 run_dp_gmm_pair(
   input,
@@ -14,7 +14,47 @@ run_dp_gmm_pair(
   concentration = 1
 )
 }
+\arguments{
+\item{input}{data.frame. Cluster-input table produced by
+\code{\link{pre_process_cluster}} (element \code{cluster_input}).  Must
+contain columns \code{pair}, \code{pre_BAT}, and \code{on_BAT}.}
+
+\item{pair_num}{Integer or character. Pair identifier matching a value in
+\code{input$pair}.}
+
+\item{Kmax}{Integer. Maximum number of mixture components.  Default \code{10}.}
+
+\item{n_steps}{Integer. Number of warm-start EM steps used for convergence
+diagnostics.  Default \code{100}.}
+
+\item{thr_min_w}{Numeric. Minimum component weight below which a component
+is considered inactive.  Default \code{0.01}.}
+
+\item{random_state}{Integer. Python random seed for reproducibility.
+Default \code{0L}.}
+
+\item{concentration}{Numeric. Dirichlet process concentration parameter
+(higher = more components allowed).  Default \code{1}.}
+}
+\value{
+A named list:
+\describe{
+\item{\code{clusters}}{tibble. Per-event cluster assignments with columns
+\code{pre_ccf}, \code{post_ccf}, \code{cluster}, \code{prob},
+\code{pre_center}, \code{post_center}, \code{pair}.}
+\item{\code{conv_trace}}{tibble. Variational lower bound at each warm-start
+iteration (\code{iter}, \code{lower_bound}).}
+\item{\code{conv_delta}}{tibble. Per-iteration change in lower bound.}
+\item{\code{model}}{Fitted \pkg{sklearn} \code{BayesianGaussianMixture} object.}
+\item{\code{plot_conv}}{ggplot2 object. Lower-bound trace plot.}
+\item{\code{plot_delta}}{ggplot2 object. Change-in-lower-bound plot.}
+\item{\code{plot_clust}}{ggplot2 object. Scatter plot of cluster assignments.}
+}
+}
 \description{
-This function is intentionally kept as close as possible to the original,
-to preserve clustering behavior.
+Fits a Bayesian Gaussian Mixture Model with a Dirichlet process prior (via
+Python \pkg{sklearn}) to the CCF values of one sample pair, assigns each
+event to the most probable component, and returns diagnostic convergence
+plots and the cluster assignment table.  The function is intentionally kept
+close to the original implementation to preserve clustering behaviour.
 }

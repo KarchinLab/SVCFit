@@ -2,21 +2,83 @@
 % Please edit documentation in R/cluster.R
 \name{cluster_data}
 \alias{cluster_data}
-\title{Perform full clustering pipeline on paired data}
+\title{Perform the full DP-GMM clustering pipeline on paired SV data}
 \usage{
 cluster_data(
   pair_path,
   pur_path,
+  data_dir,
   Kmax = 10,
   n_steps = 100,
   thr_min_w = 0.01,
   random_state = 0L,
   concentration = 1,
   min_n = 5,
-  pair_num = 1
+  min_dist = 0.2,
+  pair_num = 1,
+  pairs = NULL,
+  exclude_pairs = integer(0)
 )
 }
+\arguments{
+\item{pair_path}{Character. Path to a tab-delimited file with paired sample
+IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).}
+
+\item{pur_path}{Character. Path to a tab-delimited purity file (columns
+\code{sample} and \code{purity}).}
+
+\item{data_dir}{Character. Root directory containing SVCFit output BED files.
+Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.}
+
+\item{Kmax}{Integer. Maximum number of DP-GMM components.  Default \code{10}.}
+
+\item{n_steps}{Integer. Number of warm-start EM iterations for convergence
+diagnostics.  Default \code{100}.}
+
+\item{thr_min_w}{Numeric. Minimum component weight threshold.  Default
+\code{0.01}.}
+
+\item{random_state}{Integer. Python random seed.  Default \code{0L}.}
+
+\item{concentration}{Numeric. Dirichlet process concentration parameter.
+Default \code{1}.}
+
+\item{min_n}{Integer. Minimum cluster size; smaller clusters are merged into
+the nearest larger one.  Default \code{5}.}
+
+\item{min_dist}{Numeric. Distance threshold for merging geometrically close
+cluster centres (passed to \code{\link{merge_cluster}}).  Default \code{0.2}.}
+
+\item{pair_num}{Integer. Pair index whose clone CCF table is returned as the
+third list element (for use with \code{\link{build_tree}}).  Default \code{1}.}
+
+\item{pairs}{Integer vector or NULL. Subset of pair indices to cluster.
+\code{NULL} (default) clusters all pairs present in the pre-processed data.}
+
+\item{exclude_pairs}{Integer vector. Pair indices to exclude before
+clustering.  Default \code{integer(0)}.}
+}
+\value{
+A list of length 3:
+\describe{
+\item{\code{[[1]]}}{tibble. Full cluster-assignment table across all pairs
+(columns include \code{pair}, \code{ncluster}, \code{pre_ccf},
+\code{post_ccf}, \code{cluster_num}, \code{pre_center},
+\code{post_center}).}
+\item{\code{[[2]]}}{tibble. SV-to-cluster mapping at the original row level
+(columns include \code{event_id}, \code{sample_ID}, \code{stage},
+\code{CHROM}, \code{POS}, \code{END}, \code{cluster_num}).}
+\item{\code{[[3]]}}{tibble. Clone CCF summary for \code{pair_num} (columns:
+\code{pair}, \code{cluster_num}, \code{f_pre}, \code{f_day85},
+\code{se_pre}, \code{se_day85}, \code{var_pre}, \code{var_day85},
+\code{w_pre}, \code{w_day85}).  Used directly as input to
+\code{\link{build_tree}}.}
+}
+}
 \description{
-This preserves the original clustering path and only changes the
-final mapping back to original SV rows.
+Orchestrates the complete clustering workflow: pre-processing, DP-GMM
+fitting per pair, optional cluster merging, minimum-size enforcement, and
+mapping of cluster assignments back to individual SV rows.  The original
+clustering logic is preserved; only the final mapping to raw SV rows is
+changed to support \code{event_id}-based joins.
 }

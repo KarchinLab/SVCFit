@@ -1,10 +1,22 @@
-library(dplyr)
-
 # -------------------------------------------------------------------------
 # GRAPH PREPARATION
 # -------------------------------------------------------------------------
 
-#' Create tibble of possible edges from CCF values based on w_mat only
+#' Create the initial candidate edge set for the phylogenetic tree graph
+#'
+#' Constructs a data.frame of directed edges (parent → child) representing all
+#' clone pairs where the child's CCF does not exceed the parent's CCF by more
+#' than \code{thresh} in any sample.  Every clone is also given an edge from a
+#' virtual \code{"root"} node.
+#'
+#' @param mcf_mat Numeric matrix. CCF matrix with rows = clones and
+#'   columns = time-point samples.  Row names are used as node labels.
+#' @param thresh Numeric. Maximum allowed CCF excess of child over parent for
+#'   an edge to be included.
+#'
+#' @return data.frame with columns \code{edge} (e.g. \code{"root->1"}),
+#'   \code{parent}, and \code{child}.
+#'
 #' @export
 prepareGraph <- function(mcf_mat, thresh) {
   graph_pre <- data.frame(edge = character(), parent = character(), child = character())
@@ -21,7 +33,22 @@ prepareGraph <- function(mcf_mat, thresh) {
   return(graph_pre)
 }
 
-#' Filter possible edges based on lineage precedence 
+#' Filter candidate edges based on lineage precedence constraints
+#'
+#' Removes edges from a candidate graph where the child clone's CCF exceeds the
+#' parent clone's CCF by more than \code{thresh} in any sample, enforcing the
+#' biological constraint that a child lineage cannot be more prevalent than its
+#' ancestor.
+#'
+#' @param graph_G data.frame. Candidate edge table as produced by
+#'   \code{\link{prepareGraph}} (columns: \code{edge}, \code{parent},
+#'   \code{child}).
+#' @param mcf Numeric matrix. CCF matrix (rows = clones, columns = samples).
+#' @param thresh Numeric. Maximum allowed CCF excess of child over parent.
+#'   Default \code{0.1}.
+#'
+#' @return Filtered data.frame with the same columns as \code{graph_G}.
+#'
 #' @export
 filterEdgesBasedOnCCFs <- function(graph_G, mcf, thresh = 0.1) {
   check_edges_logical <- apply(graph_G, 1, function(edge) checkEdge(edge, mcf, thresh))
@@ -29,6 +56,19 @@ filterEdgesBasedOnCCFs <- function(graph_G, mcf, thresh = 0.1) {
   return(filtered_graph_G)
 }
 
+#' Prune biologically invalid edges from the phylogenetic graph
+#'
+#' Removes edges that violate birth-order or continuity constraints: a child
+#' clone cannot appear before its parent (birth violation), and neither clone
+#' should be absent for an interval and then reappear (continuity violation).
+#'
+#' @param graph data.frame. Edge table (columns: \code{edge}, \code{parent},
+#'   \code{child}).
+#' @param mcf_mat Numeric matrix. CCF matrix (rows = clones, columns = samples).
+#'
+#' @return Pruned data.frame with the same columns as \code{graph}, sorted by
+#'   \code{child}.
+#'
 #' @export
 prune <- function(graph, mcf_mat){
   roots <- graph %>% dplyr::filter(parent=='root')
@@ -59,7 +99,23 @@ prune <- function(graph, mcf_mat){
 # GABOW-MYERS ALGORITHM
 # -------------------------------------------------------------------------
 
-#' Enumerate all spanning trees using modified Gabow-Myers
+#' Enumerate all valid spanning trees using the modified Gabow-Myers algorithm
+#'
+#' Recursively enumerates all spanning trees of the candidate graph that
+#' satisfy the CCF sum condition (the sum of children CCFs does not exceed the
+#' parent CCF by more than \code{sum_filter_thresh}).  Results are written to
+#' the global variable \code{all_spanning_trees}.
+#'
+#' @param graph_G data.frame. Pruned edge table (columns: \code{edge},
+#'   \code{parent}, \code{child}), typically produced by \code{\link{prune}}.
+#' @param mcf Numeric matrix. CCF matrix (rows = clones, columns = samples).
+#' @param sum_filter_thresh Numeric. Maximum allowed excess of summed children
+#'   CCFs over the parent CCF.  Default \code{0.2}.
+#'
+#' @return Invisibly \code{NULL}.  All valid spanning trees are stored in the
+#'   global variable \code{all_spanning_trees} as a list of edge-list
+#'   data.frames.
+#'
 #' @export
 enumerateSpanningTreesModified <- function(graph_G, mcf, sum_filter_thresh=0.2) {
   # Initialize globals required for recursion
@@ -72,6 +128,22 @@ enumerateSpanningTreesModified <- function(graph_G, mcf, sum_filter_thresh=0.2) 
   growModified(tree_T, all_vertices, mcf, sum_filter_thresh)
 }
 
+#' Recursive worker for the modified Gabow-Myers tree enumeration
+#'
+#' Internal recursive function called by \code{\link{enumerateSpanningTreesModified}}.
+#' Grows a partial spanning tree one edge at a time, checking the CCF sum
+#' condition at each step, and stores each complete spanning tree in the global
+#' \code{all_spanning_trees} list.
+#'
+#' @param tree_T tibble. Current partial spanning tree (columns: \code{parent},
+#'   \code{child}).
+#' @param all_vertices Character vector. All vertex labels in the graph.
+#' @param w Numeric matrix. CCF matrix (rows = clones, columns = samples).
+#' @param sum_thresh Numeric. CCF sum-condition threshold.  Default \code{0.2}.
+#'
+#' @return Invisibly \code{NULL}; results are accumulated in the global
+#'   \code{all_spanning_trees}.
+#'
 #' @export
 growModified <- function(tree_T, all_vertices, w, sum_thresh=0.2) {
   

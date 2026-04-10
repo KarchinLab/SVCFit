@@ -4,13 +4,32 @@
 \alias{proc_bnd}
 \title{Process translocation}
 \usage{
-proc_bnd(sv, flank_del = 50)
+proc_bnd(
+  sv,
+  flank_del = 50,
+  bnd_window = 400,
+  mate_pos_window = 50,
+  len_dif_thresh = 50,
+  min_bnd_records = 4
+)
 }
 \arguments{
 \item{sv}{an object of class 'data frame' which stores the sv input from \code{load_data}.}
 
 \item{flank_del}{an object of class 'integer' which describes the maximum genomic location
 difference between a deletion and a translocation to be considered overlapping}
+
+\item{bnd_window}{an object of class 'integer'. Position window (bp) for grouping BND records
+by left/right breakpoint.}
+
+\item{mate_pos_window}{an object of class 'integer'. Position window (bp) for matching a BND
+pos2 to a candidate mate POS.}
+
+\item{len_dif_thresh}{an object of class 'integer'. Maximum len_dif (bp) below which a BND
+group is classified as reciprocal translocation ('rtl'); above is unbalanced ('utl').}
+
+\item{min_bnd_records}{an object of class 'integer'. Minimum number of BND records required
+in a mate group to be retained; groups with fewer records are filtered as incomplete.}
 }
 \value{
 sth
