@@ -179,9 +179,8 @@ f1b=all_dat %>%
          zygosity=ifelse(zygosity=='het', 'heterozygous', 'homozygous')) %>%
   filter(purity %in% c("purity 80%", "purity 40%")) %>%
   ggplot()+
-  geom_violin(aes(x=zygosity, y=(svcf-true_svcf), fill = tool))+
+  geom_violin(aes(x=zygosity, y=(true_svcf-svcf), fill = tool))+
   stat_pvalue_manual(f1b_stat, hide.ns = TRUE)+
-  ylim(c(0,1.2))+
   ylab('SVCF estimation error')+
   xlab('')+
   theme_minimal()+
