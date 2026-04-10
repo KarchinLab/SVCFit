@@ -16,13 +16,13 @@ library(ggplot2)
 library(ggpubr) #for stat
 library(rstatix) #for stat
 library(ggsignif) #for plot significance
-mendeley_dir = '/Users/lesterliu/Documents/mendeley_data'
+mendeley_dir = '~/Documents/mendeley_data'
 ```
 
 # Fig 1 VISOR benchmark
 ```{r, message=FALSE}
 ## can directly load data from /int/extdata/VISOR_bench_data.bed
-analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
+analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, svclone_dir, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
   info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr_lst=chr, flank_del=flank_del, QUAL_tresh=QUAL_tresh, min_alt=min_alt, tum_only=t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
@@ -33,7 +33,7 @@ analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, thresh=0.1
   overlap=ifelse(exper=='exp1', FALSE, TRUE)
   truth <- load_truth(p_truth, overlap)
   final_truth <- attach_truth(final, truth)
-  svc <- analyze_svclone(samp,exper, final_truth, sv_info)
+  svc <- analyze_svclone(samp, exper, final_truth, sv_info, svclone_dir=svclone_dir)
   common_dat <- final_truth %>%
     filter(ID %in% svc$ID)
   return(list(final_truth, svc, common_dat))
@@ -46,42 +46,48 @@ condition_list=c(
   "c50p80m10", "c50p80m30", "c50p80m50"
 )
 base_dir = paste0(mendeley_dir, '/VISOR_benchmark')
+svclone_dir = file.path(base_dir, 'svclone')  # adjust if svclone output lives elsewhere
 
-e1 = lapply(condition_list, 
+e1 = lapply(condition_list,
              function(x) analyze(x,'exp1',
                                  file.path(base_dir, 'SNP', 'exp1', paste0("het_near_sv_",x, ".vcf")),
                                  file.path(base_dir, 'SNP', 'exp1', paste0("het_on_sv_",x,".vcf")),
                                  file.path(base_dir, 'SV_vcfs', 'exp1', paste0('svt_', x, '.vcf')),
                                  file.path(base_dir, 'facet', 'exp1', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth')))
-e2 = lapply(condition_list, 
+                                 file.path(base_dir, 'truth'),
+                                 svclone_dir))
+e2 = lapply(condition_list,
              function(x) analyze(x,'exp2',
                                  file.path(base_dir, 'SNP', 'exp2', paste0("het_near_sv_",x, ".vcf")),
                                  file.path(base_dir, 'SNP', 'exp2', paste0("het_on_sv_",x,".vcf")),
                                  file.path(base_dir, 'SV_vcfs', 'exp2', paste0('svt_', x, '.vcf')),
                                  file.path(base_dir, 'facet', 'exp2', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth')))
-e3 = lapply(condition_list, 
+                                 file.path(base_dir, 'truth'),
+                                 svclone_dir))
+e3 = lapply(condition_list,
              function(x) analyze(x,'exp3',
                                  file.path(base_dir, 'SNP', 'exp3', paste0("het_near_sv_",x, ".vcf")),
                                  file.path(base_dir, 'SNP', 'exp3', paste0("het_on_sv_",x,".vcf")),
                                  file.path(base_dir, 'SV_vcfs', 'exp3', paste0('svt_', x, '.vcf')),
                                  file.path(base_dir, 'facet', 'exp3', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth')))
-e4 = lapply(condition_list, 
+                                 file.path(base_dir, 'truth'),
+                                 svclone_dir))
+e4 = lapply(condition_list,
              function(x) analyze(x,'exp4',
                                  file.path(base_dir, 'SNP', 'exp4', paste0("het_near_sv_",x, ".vcf")),
                                  file.path(base_dir, 'SNP', 'exp4', paste0("het_on_sv_",x,".vcf")),
                                  file.path(base_dir, 'SV_vcfs', 'exp4', paste0('svt_', x, '.vcf')),
                                  file.path(base_dir, 'facet', 'exp4', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth')))
-e5 = lapply(condition_list, 
+                                 file.path(base_dir, 'truth'),
+                                 svclone_dir))
+e5 = lapply(condition_list,
              function(x) analyze(x,'exp5',
                                  file.path(base_dir, 'SNP', 'exp5', paste0("het_near_sv_",x, ".vcf")),
                                  file.path(base_dir, 'SNP', 'exp5', paste0("het_on_sv_",x,".vcf")),
                                  file.path(base_dir, 'SV_vcfs', 'exp5', paste0('svt_', x, '.vcf')),
                                  file.path(base_dir, 'facet', 'exp5', paste0(x, '.bed')),
-                                 file.path(base_dir, 'truth')))
+                                 file.path(base_dir, 'truth'),
+                                 svclone_dir))
 
 gather_data=function(lst, idx){
   test=lst[[idx]]
@@ -222,7 +228,7 @@ load_data <- function(samp, exper, base_dir) {
 extract_info <- function(samp, exper, dir, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
   data      <- load_data(samp, exper, dir)
   bnd_info   <- proc_bnd(data$sv, flank_del=flank_del)
-  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=QUAL_tresh, min_alt=min_alt)
+  sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_tresh=QUAL_tresh, min_alt=min_alt)
   snp_df    <- parse_het_snps(data$het_snp)
   sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
   return(list(data, sv_info, snp_df, sv_phase))
@@ -261,7 +267,7 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
            DEP=gsub("DP=(\\d+);.*","\\1", INFO),
            onsv_ref=as.integer(gsub(",.*","", AD)),
            onsv_alt=as.integer(ifelse(len==2, gsub(".*,(\\d+),.*","\\1", AD),0)),
-           onsv_alt2=as.integer(ifelse(len==2, gsub(".*,","\\1", AD), 0)), # check if this SNP has three alleles, which is filtered out
+           onsv_alt2=as.integer(ifelse(len==2, gsub(".*,","", AD), 0)), # check if this SNP has three alleles, which is filtered out
            a_count=(onsv_ref!=0) + (onsv_alt!=0),
            allele=ifelse(a_count==1 & onsv_ref!=0, REF, "other"))%>% # other means the allele is not reference allele (used to tell mat or pat origin)
     filter(DEP > 0,
@@ -275,7 +281,7 @@ parse_snp_on_sv <- function(het_on_sv, snp_df) {
 
 
 analyze <- function(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
-  info <- extract_info(samp, exper, dir, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
+  info <- extract_info(samp, exper, dir, flank_del=flank_del, QUAL_tresh=QUAL_tresh, min_alt=min_alt, tumor_only=t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
