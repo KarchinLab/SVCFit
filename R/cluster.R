@@ -557,7 +557,8 @@ cluster_data <- function(pair_path,
       sv_len,
       shared,
       sid
-    )
+    ) %>%
+    filter(!is.na(cluster_num))
   
   clones <- cluster_result %>%
     select(pair, cluster_num, pre_center, post_center) %>%
