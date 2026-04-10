@@ -27,7 +27,8 @@ load_truth <- function(truth_path, overlap=FALSE){
     colnames(tmp)=c('CHROM','start','end','type','info','flank','samp')
   }
   truth=tmp %>%
-    mutate(exp=ifelse(samp %in% c('c1','c2','c3'), 'exp1','other'))%>%
+    mutate(CHROM = paste0("chr", sub("^chr", "", CHROM)),
+           exp=ifelse(samp %in% c('c1','c2','c3'), 'exp1','other'))%>%
     group_by(exp, start, end)%>%
     mutate(num=n(),
            clone=ifelse(num==1, 'sub','clonal'),
