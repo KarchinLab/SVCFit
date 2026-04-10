@@ -1,7 +1,3 @@
-library(igraph)
-library(dplyr)
-library(RColorBrewer)
-
 # -------------------------------------------------------------------------
 # VISUALIZATION
 # -------------------------------------------------------------------------
@@ -82,9 +78,9 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' @export
 plotSubclonePie <- function(subclone_props, palette=colorRampPalette(brewer.pal(1, "Accent")), sample_names = NULL, title_size=16, legend_size=10) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
+  colnames(subclone_props) <- sample_names
   props_tb <- subclone_props %>%
-    magrittr::set_colnames(sample_names) %>%
-    as_tibble() %>%
+    dplyr::as_tibble() %>%
     mutate(Subclone = factor(paste0("Clone ", 1:nrow(.)),
                              levels = paste0("Clone ", 1:nrow(.)))) %>%
     pivot_longer(cols = sample_names,

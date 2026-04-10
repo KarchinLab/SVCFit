@@ -27,7 +27,7 @@ colnames(hack) <- c("chr","left","right","sv","info","flank")
 base <- hack %>%
   mutate(id=paste0(chr,"_",left,"_",sv))%>%
   select(chr, left, right, id)%>%
-  gather(key="type", value="loc", 2:3)
+  pivot_longer(cols = c(left, right), names_to = "type", values_to = "loc")
 
 ## expand the locations 2bp to the left and right
 ## used later to join 
@@ -77,7 +77,7 @@ dat <- vf %>%
   pivot_wider(names_from = type, values_from = fin_dep)
 
 corl <- round(cor(x=dat_start$purity,y=dat_start$fin_dep, method = "pearson"), digits = 2)
-corr <- round(cor(x=dat_end$purity,y=dat_end$fin_dep, method = "pearson"), digit=2)
+corr <- round(cor(x=dat_end$purity,y=dat_end$fin_dep, method = "pearson"), digits=2)
 ```
 
 
@@ -331,7 +331,7 @@ plot_circos(samp, sv_path, cnv_path, svcfit_path, cyto_path, cluster_path, pair_
 #PRE-BAT
 pdf("/Users/lyz928/Karchin\ Lab\ Dropbox/YunZhou\ Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/figures/subject31_pre.pdf", width = 10, height = 10)
 plot_circos(samp, sv_path, cnv_path, svcfit_path, cyto_path, cluster_path, pair_num=pair, shared=F, pre_sample = T)
-
+dev.off()
 
 samp = "86921"
 pair=10
@@ -344,4 +344,5 @@ cluster_path=paste0(mendeley_dir, '/COMBAT/sv2cluster.csv')
 #ON-BAT
 pdf("/Users/lyz928/Karchin\ Lab\ Dropbox/YunZhou\ Liu/SVCFit-2024/NPJ_Precision_Oncology_submission/figures/subject31_on.pdf", width = 10, height = 10)
 plot_circos(samp, sv_path, cnv_path, svcfit_path, cyto_path, cluster_path, pair_num=pair, shared=F, pre_sample = F)
+dev.off()
 ```

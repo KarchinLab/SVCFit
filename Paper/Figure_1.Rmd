@@ -23,7 +23,7 @@ mendeley_dir = '/Users/lesterliu/Documents/mendeley_data'
 ```{r, message=FALSE}
 ## can directly load data from /int/extdata/VISOR_bench_data.bed
 analyze <- function(samp, exper, p_het, p_onsv, p_sv, p_cnv, p_truth, thresh=0.1, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only=FALSE) {
-  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, t_only)
+  info <- extract_info(p_het, p_onsv, p_sv, p_cnv, chr_lst=chr, flank_del=flank_del, QUAL_tresh=QUAL_tresh, min_alt=min_alt, tum_only=t_only)
   data <- info[[1]]
   sv_info <- info[[2]]
   snp_df <- info[[3]]
@@ -221,8 +221,8 @@ load_data <- function(samp, exper, base_dir) {
 
 extract_info <- function(samp, exper, dir, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tumor_only=FALSE){
   data      <- load_data(samp, exper, dir)
-  bnd_info   <- proc_bnd(data$sv, flank_del=50)
-  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=100, min_alt=2)
+  bnd_info   <- proc_bnd(data$sv, flank_del=flank_del)
+  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=QUAL_tresh, min_alt=min_alt)
   snp_df    <- parse_het_snps(data$het_snp)
   sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
   return(list(data, sv_info, snp_df, sv_phase))
