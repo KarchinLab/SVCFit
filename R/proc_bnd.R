@@ -20,8 +20,10 @@ proc_bnd <- function(sv, flank_del=50) {
   bnd_tmp=tmp %>%
     mutate(mateid=gsub(".*MATEID=([^;]+);.*", "\\1", INFO))%>%
     rowwise()%>%
-    mutate(left=which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<400 & chr2==tmp$chr2)[1]*2-1, # check left breakpoint to group
-           right=which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<400 & CHROM==tmp$CHROM)[1]*2-1) %>% # check right breakpoint to group
+    mutate(left  = { idx <- which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<400 & chr2==tmp$chr2); if(length(idx))  
+      idx[1L]*2L-1L else NA_integer_ },                                                                  
+      right = { idx <- which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<400 & CHROM==tmp$CHROM); if(length(idx))
+        idx[1L]*2L-1L else NA_integer_ }) %>% # check right breakpoint to group
     group_by(left)%>%
     mutate(grp_right=sum(right))%>% # group based on left breakpoint
     group_by(right)%>%
@@ -33,7 +35,7 @@ proc_bnd <- function(sv, flank_del=50) {
            receiver=unique(chr2[which.max(len2)]),
            len_dif=abs(len1-len2)) %>%
     rowwise()%>%
-    mutate(match_pos_id=which(abs(pos2-tmp$POS)<50)[1], 
+    mutate(match_pos_id = { idx <- which(abs(pos2-tmp$POS)<50); if(length(idx)) idx[1L] else NA_integer_ }, 
            match_chrom=(chr2==tmp$CHROM[match_pos_id])) %>% # find which two records are mates: if they are, pos2 should have a match in POS and same chromosome
     ungroup()%>%
     mutate(match_pos=ifelse(match_chrom==TRUE, grp_left[match_pos_id], NA),
