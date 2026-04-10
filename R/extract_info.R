@@ -23,7 +23,7 @@
 extract_info <- function(p_het, p_onsv, p_sv, p_cnv, chr_lst=NULL, flank_del=50, QUAL_tresh=100, min_alt=2, tum_only){
   data      <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=chr_lst, tumor_only=tum_only)
   bnd_info   <- proc_bnd(data$sv, flank_del=flank_del)
-  sv_info   <- parse_sv_info(data$sv, bnd_info[[1]], bnd_info[[2]], QUAL_tresh=QUAL_tresh, min_alt=min_alt)
+  sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_tresh=QUAL_tresh, min_alt=min_alt)
   snp_df    <- parse_het_snps(data$het_snp)
   sv_phase  <- parse_snp_on_sv(data$het_on_sv, snp_df)
   return(list(data, sv_info, snp_df, sv_phase))

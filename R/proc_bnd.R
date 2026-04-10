@@ -97,7 +97,7 @@ proc_bnd <- function(sv, flank_del=50, bnd_window=400, mate_pos_window=50, len_d
     filter(type=='stay')%>%
     ungroup()
 
-  return(list(bnd, del))
+  return(list(bnd = bnd, del = del))
 }
 
 # # 2b. Identify DEL overlapping BND
