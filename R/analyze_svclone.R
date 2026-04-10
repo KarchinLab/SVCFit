@@ -13,7 +13,7 @@
 #' @export
 #'
 analyze_svclone <- function(samp, exper, final_truth, sv_info, tolerance=100, svclone_dir){
-  load(paste0(svclone_dir, "/", samp, "/", exper, "/ccube_out/", exper, "_ccube_sv_results.RData"))
+  load(svclone_dir)
   pur=mean(doubleBreakPtsRes$ssm$purity)
   svc=doubleBreakPtsRes$ssm%>%
     rowwise()%>%
