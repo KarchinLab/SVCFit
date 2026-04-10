@@ -1,18 +1,26 @@
 #' Process translocation
 #'
 #' @param sv an object of class 'data frame' which stores the sv input from `load_data`.
-#' @param flank_del an object of class 'integer' which describes the maximum genomic location 
-#' difference between a deletion and a translocation to be considered overlapping 
+#' @param flank_del an object of class 'integer' which describes the maximum genomic location
+#' difference between a deletion and a translocation to be considered overlapping
+#' @param bnd_window an object of class 'integer'. Position window (bp) for grouping BND records
+#' by left/right breakpoint.
+#' @param mate_pos_window an object of class 'integer'. Position window (bp) for matching a BND
+#' pos2 to a candidate mate POS.
+#' @param len_dif_thresh an object of class 'integer'. Maximum len_dif (bp) below which a BND
+#' group is classified as reciprocal translocation ('rtl'); above is unbalanced ('utl').
+#' @param min_bnd_records an object of class 'integer'. Minimum number of BND records required
+#' in a mate group to be retained; groups with fewer records are filtered as incomplete.
 #'
 #' @returns sth
 #' @export
 #'
-proc_bnd <- function(sv, flank_del=50) {
+proc_bnd <- function(sv, flank_del=50, bnd_window=400, mate_pos_window=50, len_dif_thresh=50, min_bnd_records=4) {
   
   # only get BND records
   tmp=sv %>%
     filter(grepl("BND", INFO)) %>%
-    mutate(chr2=paste0('chr',gsub("\\D+(.*):(\\d+).*", "\\1", ALT)),
+    mutate(chr2=paste0("chr", sub("^chr", "", gsub("\\D+(.*):(\\d+).*", "\\1", ALT))),
            pos2=gsub("\\D+(.*):(\\d+).*",'\\2', ALT),
            pos2=as.integer(pos2))
   
@@ -20,9 +28,9 @@ proc_bnd <- function(sv, flank_del=50) {
   bnd_tmp=tmp %>%
     mutate(mateid=gsub(".*MATEID=([^;]+);.*", "\\1", INFO))%>%
     rowwise()%>%
-    mutate(left  = { idx <- which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<400 & chr2==tmp$chr2); if(length(idx))  
-      idx[1L]*2L-1L else NA_integer_ },                                                                  
-      right = { idx <- which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<400 & CHROM==tmp$CHROM); if(length(idx))
+    mutate(left  = { idx <- which(CHROM==tmp$CHROM & abs(POS-tmp$POS)<bnd_window & chr2==tmp$chr2); if(length(idx))
+      idx[1L]*2L-1L else NA_integer_ },
+      right = { idx <- which(chr2==tmp$chr2 & abs(pos2-tmp$pos2)<bnd_window & CHROM==tmp$CHROM); if(length(idx))
         idx[1L]*2L-1L else NA_integer_ }) %>% # check right breakpoint to group
     group_by(left)%>%
     mutate(grp_right=sum(right))%>% # group based on left breakpoint
@@ -35,13 +43,13 @@ proc_bnd <- function(sv, flank_del=50) {
            receiver=unique(chr2[which.max(len2)]),
            len_dif=abs(len1-len2)) %>%
     rowwise()%>%
-    mutate(match_pos_id = { idx <- which(abs(pos2-tmp$POS)<50); if(length(idx)) idx[1L] else NA_integer_ }, 
+    mutate(match_pos_id = { idx <- which(abs(pos2-tmp$POS)<mate_pos_window); if(length(idx)) idx[1L] else NA_integer_ },
            match_chrom=(chr2==tmp$CHROM[match_pos_id])) %>% # find which two records are mates: if they are, pos2 should have a match in POS and same chromosome
     ungroup()%>%
     mutate(match_pos=ifelse(match_chrom==TRUE, grp_left[match_pos_id], NA),
            mate=as.character(match_pos+grp_right))%>% #label mate recods
     group_by(len_dif)%>%
-    mutate(class=ifelse(max(len_dif)>50, 'utl','rtl')) %>%
+    mutate(class=ifelse(max(len_dif)>len_dif_thresh, 'utl','rtl')) %>%
     filter(!is.na(mate))
   
   # Identify DEL overlapping BND
@@ -85,10 +93,10 @@ proc_bnd <- function(sv, flank_del=50) {
     group_by(mate)%>%
     mutate(n=n())%>%
     filter(n>1)%>%
-    mutate(type=ifelse(class=='rtl' & n<4, 'out','stay'))%>%
+    mutate(type=ifelse(class=='rtl' & n<min_bnd_records, 'out','stay'))%>%
     filter(type=='stay')%>%
     ungroup()
-  
+
   return(list(bnd, del))
 }
 

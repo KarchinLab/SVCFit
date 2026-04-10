@@ -4,10 +4,15 @@ library(parallel)
 # TREE SCORING
 # -------------------------------------------------------------------------
 #' @export
-calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1) {
-  cpov <- create.cpov_n(mcf_matrix)
-  schism_scores <- unlist(parallel::mclapply(trees, 
-                                             function(x) calcTreeFitness(x, cpov, mcf_matrix, am_format = "edges"),
+calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1,
+                             weight_mass = 1, weight_topology = 1, scaling_coeff = 5,
+                             zero_thresh = 0.001, restriction_val = 1, tol = 1e-6) {
+  cpov <- create.cpov_n(mcf_matrix, zero.thresh = zero_thresh, restriction.val = restriction_val, tol = tol)
+  schism_scores <- unlist(parallel::mclapply(trees,
+                                             function(x) calcTreeFitness(x, cpov, mcf_matrix, am_format = "edges",
+                                                                         weight_mass = weight_mass,
+                                                                         weight_topology = weight_topology,
+                                                                         scaling_coeff = scaling_coeff),
                                              mc.cores = mc.cores))
   return(schism_scores)
 }

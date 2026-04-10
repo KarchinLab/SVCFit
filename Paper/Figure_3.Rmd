@@ -36,7 +36,7 @@ sk <- import("sklearn", delay_load = TRUE)
 ```{r, message=FALSE}
 pair_path=paste0(mendeley_dir, '/COMBAT/pair.bed')
 pur_path=paste0(mendeley_dir, '/COMBAT/samp_pur.csv')
-output <- cluster_data(pair_path, pur_path, pair_num=10)
+output <- cluster_data(pair_path, pur_path, pair_num=10, min_n=5, min_dist=0.2)
 cluster_result=output[[1]]
 sv2cluster=output[[2]]
 clones=output[[3]]

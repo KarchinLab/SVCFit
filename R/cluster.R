@@ -12,6 +12,8 @@
 #'
 #' @param pair_path Character. Path to a file containing paired sample IDs (columns: pre_BAT, on_BAT).
 #' @param pur_path Character. Path to a file containing purity estimates for each sample.
+#' @param data_dir Character. Root directory containing SVCFit output BED files.
+#' Expected structure: `<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed`
 #'
 #' @return A list containing:
 #' \itemize{
@@ -19,12 +21,12 @@
 #'   \item \code{sv_raw}: original row-level SV table with raw coordinates
 #' }
 #' @export
-pre_process_cluster <- function(pair_path, pur_path){
+pre_process_cluster <- function(pair_path, pur_path, data_dir){
   sample_pair <- read.delim(pair_path, header = FALSE)
   colnames(sample_pair) <- c("pre_BAT", "on_BAT")
   samp_pur <- read.delim(pur_path)
-  
-  combine_data <- lapply(1:nrow(sample_pair), function(x) read_data(sample_pair, x, samp_pur)) %>%
+
+  combine_data <- lapply(1:nrow(sample_pair), function(x) read_data(sample_pair, x, samp_pur, data_dir)) %>%
     do.call(rbind, .) %>%
     ungroup() %>%
     filter(pair != 9) %>%
@@ -105,13 +107,13 @@ pre_process_cluster <- function(pair_path, pur_path){
   ))
 }
 
-read_data <- function(pair, row, pur_file){
+read_data <- function(pair, row, pur_file, data_dir){
   pre_samp <- pair$pre_BAT[row]
   on_samp <- pair$on_BAT[row]
   pre_pur <- pur_file$purity[pur_file$sample == pre_samp]
   on_pur <- pur_file$purity[pur_file$sample == on_samp]
-  
-  pre <- read.delim(paste0(mendeley_dir, '/COMBAT/SVCFit_output/', pre_samp, '.bed')) %>%
+
+  pre <- read.delim(paste0(data_dir, '/COMBAT/SVCFit_output/', pre_samp, '.bed')) %>%
     mutate(
       sample_ID = pre_samp,
       pair = row,
@@ -119,7 +121,7 @@ read_data <- function(pair, row, pur_file){
       purity = as.numeric(pre_pur)
     )
   
-  on <- read.delim(paste0(mendeley_dir, '/COMBAT/SVCFit_output/', on_samp, '.bed')) %>%
+  on <- read.delim(paste0(data_dir, '/COMBAT/SVCFit_output/', on_samp, '.bed')) %>%
     mutate(
       sample_ID = on_samp,
       pair = row,
@@ -390,7 +392,7 @@ enforce_min_cluster_size <- function(df, min_n = 5) {
 
 #' Identify geometrically close clusters for merging
 #' @export
-merge_cluster <- function(input, pair_num){
+merge_cluster <- function(input, pair_num, min_dist=0.2){
   tmp <- input %>%
     filter(pair == pair_num) %>%
     select(pre_center, post_center, cluster) %>%
@@ -406,7 +408,7 @@ merge_cluster <- function(input, pair_num){
   
   d <- as.matrix(dist(tmp))
   
-  p <- which(d < 0.2 & d > 0, arr.ind = TRUE) %>%
+  p <- which(d < min_dist & d > 0, arr.ind = TRUE) %>%
     as.data.frame() %>%
     rowwise() %>%
     mutate(key = paste(sort(c_across(everything())), collapse = "_")) %>%
@@ -426,36 +428,43 @@ merge_cluster <- function(input, pair_num){
 #' This preserves the original clustering path and only changes the
 #' final mapping back to original SV rows.
 #'
+#' @param data_dir Character. Root directory containing SVCFit output BED files.
+#' @param pairs Integer vector of pair numbers to cluster. Defaults to NULL, which
+#' uses all pairs present in the preprocessed data.
 #' @export
-cluster_data <- function(pair_path, 
-                         pur_path, 
+cluster_data <- function(pair_path,
+                         pur_path,
+                         data_dir,
                          Kmax = 10,
                          n_steps = 100,
                          thr_min_w = 0.01,
                          random_state = 0L,
                          concentration = 1,
                          min_n = 5,
-                         pair_num = 1){
-  
-  prep <- pre_process_cluster(pair_path, pur_path)
+                         min_dist = 0.2,
+                         pair_num = 1,
+                         pairs = NULL){
+
+  prep <- pre_process_cluster(pair_path, pur_path, data_dir)
   new_dat <- prep$cluster_input
   sv_raw <- prep$sv_raw
   
   #use_condaenv("py3", required = TRUE)
   py_config()
   sk <<- import("sklearn", delay_load = TRUE)
-  
-  # keep original pair handling to preserve behavior
-  df_plot1 <- lapply(c(1:8, 10:12), function(x) run_dp_gmm_pair(new_dat, x)[[1]]) %>%
+
+  if (is.null(pairs)) pairs <- sort(unique(as.integer(new_dat$pair)))
+
+  df_plot1 <- lapply(pairs, function(x) run_dp_gmm_pair(new_dat, x)[[1]]) %>%
     do.call(rbind, .)
-  
+
   df_plot <- df_plot1 %>%
     mutate(
       cluster = as.integer(cluster),
       pair = as.character(pair)
     )
-  
-  cc_list <- lapply(c(1:8, 10:12), function(x) merge_cluster(df_plot, x))
+
+  cc_list <- lapply(pairs, function(x) merge_cluster(df_plot, x, min_dist))
   cc <- do.call(rbind, cc_list)
   
   if (nrow(cc) > 0) {

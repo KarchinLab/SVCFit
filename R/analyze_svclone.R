@@ -6,14 +6,17 @@
 #' @param sv_info an object of class 'data frame'. This object stores output from `parse_sv_info`
 #' @param tolerance an object of class 'integer'. This object describes the limit of
 #' base pair difference between svclone and svcfit output to be considered the same event
+#' @param svclone_dir an object of class 'character'. Path to the root SVclone output directory.
+#' Expected structure: `<svclone_dir>/<samp>/<exper>/ccube_out/<exper>_ccube_sv_results.RData`
 #'
 #' @returns sth
 #' @export
 #'
-analyze_svclone <- function(samp, exper, final_truth, sv_info, tolerance=100){
-  load(paste0("~/Documents/Karchin_lab/visor/m_benchmark/svclone/",samp,"/",exper,"/ccube_out/",exper,"_ccube_sv_results.RData"))
+analyze_svclone <- function(samp, exper, final_truth, sv_info, tolerance=100, svclone_dir){
+  load(paste0(svclone_dir, "/", samp, "/", exper, "/ccube_out/", exper, "_ccube_sv_results.RData"))
   pur=mean(doubleBreakPtsRes$ssm$purity)
   svc=doubleBreakPtsRes$ssm%>%
+    rowwise()%>%
     mutate(first=gsub("^(.*)_.*","\\1",mutation_id),
            second=gsub("^.*_(.*)","\\1",mutation_id),
            CHROM=gsub("(.*):\\d+.*","\\1",first),
