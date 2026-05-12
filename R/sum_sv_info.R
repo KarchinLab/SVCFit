@@ -4,7 +4,11 @@
 #' @param assign_id an object of class 'data frame'. This object stores the output from `assign_svids`.
 #' @param sv_info an object of class 'data frame'. This object stores the output from `parse_sv_info`.
 #'
-#' @returns sth
+#' @return A data.frame joining phasing and zygosity summaries with full SV
+#'   metadata.  Contains all \code{sv_info} columns plus \code{snp_alt},
+#'   \code{snp_ref}, \code{dep}, \code{onsv_alt}, \code{onsv_ref},
+#'   \code{zygosity_snp}, \code{sv_phase}, \code{no_snp} (1 if no SNPs were
+#'   available), and \code{zygosity}.
 #' @export
 #'
 sum_sv_info <- function(sv_phase, assign_id, sv_info){

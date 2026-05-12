@@ -32,7 +32,11 @@ group is classified as reciprocal translocation ('rtl'); above is unbalanced ('u
 in a mate group to be retained; groups with fewer records are filtered as incomplete.}
 }
 \value{
-sth
+A named list with two elements: \code{bnd} (data.frame of annotated
+BND records with translocation class in column \code{class}: \code{"rtl"}
+reciprocal, \code{"coptl"} copy-paste, or \code{"cuttl"} cut-paste) and
+\code{del} (data.frame of deletion records that overlap a BND breakpoint,
+used to identify cut-paste translocations).
 }
 \description{
 Process translocation

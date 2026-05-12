@@ -5,9 +5,17 @@
 #' @param sv_info object of class 'dataframe'. This object stores SV genomic locations
 #' and types obtained from *parse_sv_info()*. 
 #' @param cnv object of class 'dataframe'. This object stores CNV information
-#'  obtained from *load_data()*. 
+#'  obtained from *load_data()*.
+#' @param flank_snp Numeric. Flanking window (bp) used when mapping SNPs to SVs
+#'   in \code{\link{assign_svids}}. Default \code{500}.
+#' @param flank_cnv Numeric. Flanking window (bp) used when assigning background
+#'   CNV in \code{\link{assign_background_cnv}}. Default \code{1000}.
 #'
-#' @returns sth
+#' @return A data.frame combining CNV annotation from \code{\link{annotate_cnv}},
+#'   full SV metadata, and background CNV classification from
+#'   \code{\link{assign_background_cnv}}.  Key added columns: \code{cn_type},
+#'   \code{ASCN}, \code{bkg_cnv} (\code{"DUP"}, \code{"norm"}, or \code{"DEL"}
+#'   indicating the background copy number state flanking each SV breakpoint).
 #' @export
 #'
 

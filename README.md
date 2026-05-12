@@ -114,6 +114,94 @@ separately.
         -R $snp_dir/pos_$samp_name.bed \
         $snp_dir/sup_$samp_name.bam -Ov > $snp_dir/het_on_sv_$samp_name.vcf
 
+## Example Preprocessing Pipeline
+
+The commands below provide a complete worked example for generating SVCFit inputs from raw BAM files. Each tumor-versus-normal biopsy pair is processed as a separate sample. Tool versions used in the manuscript are listed in the [Tool Versions](#tool-versions) table.
+
+The expected input layout:
+
+    sample/
+    ├── tumor.bam        (+ .bai)
+    ├── normal.bam       (+ .bai)
+    ├── ref.fa           (+ .fai, .dict)
+    └── intervals.bed    (optional)
+
+### 1. Trim and align reads (if starting from FASTQ)
+
+    trim_galore --paired tumor_R1.fq.gz tumor_R2.fq.gz -o trimmed/
+    bwa mem -t 8 ref.fa trimmed/tumor_R1_val_1.fq.gz trimmed/tumor_R2_val_2.fq.gz \
+      | samtools sort -@ 4 -o tumor.bam -
+    samtools index tumor.bam
+    # repeat for the matched normal
+
+### 2. Mark duplicates and recalibrate (GATK4)
+
+    gatk MarkDuplicates -I tumor.bam -O tumor.md.bam -M tumor.metrics.txt
+    gatk BaseRecalibrator -I tumor.md.bam -R ref.fa --known-sites known.vcf.gz -O tumor.bqsr.table
+    gatk ApplyBQSR        -I tumor.md.bam -R ref.fa --bqsr-recal-file tumor.bqsr.table -O tumor.recal.bam
+    # repeat for the matched normal
+
+### 3. Somatic SV calling (Manta)
+
+    configManta.py --tumorBam tumor.recal.bam --normalBam normal.recal.bam \
+                   --referenceFasta ref.fa --runDir manta_run/
+    manta_run/runWorkflow.py
+    # output: manta_run/results/variants/somaticSV.vcf.gz
+
+For multi-caller consensus (recommended for clinical samples), run Delly and GRIDSS in parallel and merge with SURVIVOR:
+
+    SURVIVOR merge vcf_list.txt 500 1 1 1 0 30 consensus.vcf
+
+### 4. SV genotyping (SVtyper)
+
+    # Ensure CIPOS and CIEND INFO fields are present; SVtyper requires them.
+    # For VCFs from GRIDSS / Delly / merged consensus, run:
+    # python add_cipos_ciend.py consensus.vcf > consensus.cici.vcf
+
+    svtyper -B tumor.recal.bam -i consensus.cici.vcf -o tumor.gt.vcf
+
+The output VCF has `AO` (SV-supporting reads) and `RO` (reference reads) per
+breakpoint, read by SVCFit as `BPC` and `BEC` after scaling by mean read depth.
+
+### 5. Germline heterozygous SNP detection (GATK4 + bcftools)
+
+    gatk HaplotypeCaller -I normal.recal.bam -R ref.fa -O normal.germline.vcf.gz
+    bcftools view -i 'GT="0/1"' normal.germline.vcf.gz -Oz -o normal.het.vcf.gz
+    bcftools index -t normal.het.vcf.gz
+
+### 6. Allele-specific copy-number profile (FACETS)
+
+    snp-pileup -g -q15 -Q20 -P100 -r25,0 normal.het.vcf.gz tumor.snp.csv \
+               normal.recal.bam tumor.recal.bam
+
+``` r
+library(facets)
+rcmat <- readSnpMatrix("tumor.snp.csv")
+xx    <- preProcSample(rcmat)
+oo    <- procSample(xx, cval = 150)
+fit   <- emcncf(oo)
+write.table(fit$cncf, file = "tumor.facets.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+```
+
+### 7. Per-SV breakpoint pileups at proximal heterozygous SNPs
+
+    samtools view -b -f 1 -F 2 tumor.recal.bam --regions-file svs.bed > tumor.bp.bam
+    samtools index tumor.bp.bam
+    bcftools mpileup -f ref.fa -R svs_proximal_het.bed tumor.bp.bam > tumor.bp.pileup
+
+### Caller-specific quirks
+
+- **Manta**: writes `INFO/CIPOS` and `INFO/CIEND` natively — no reformatting
+  needed.
+- **Delly**: writes `INFO/CIPOS` but not `INFO/CIEND` — append `CIEND=-50,50`
+  (or the per-call confidence interval if available).
+- **GRIDSS**: uses paired-end / split-read counts in dedicated INFO fields;
+  convert to LUMPY-style `INFO/MATEID`, `INFO/CIPOS`, and `INFO/CIEND` before
+  SVtyper. A converter script `gridss_to_lumpy.py` is provided in `scripts/`.
+- **Manta + Delly + GRIDSS consensus via SURVIVOR**: SURVIVOR drops
+  `CIPOS`/`CIEND` from some merged records — run `add_cipos_ciend.py` to
+  backfill them.
+
 ## Usage Workflow
 
 The SVCFit pipeline consists of three main
@@ -138,7 +226,7 @@ info <- extract_info(
   p_cnv = "path/to/cnv_file.txt",
   chr_lst = NULL,
   flank_del = 50, 
-  QUAL_tresh = 100, 
+  QUAL_thresh = 100, 
   min_alt = 2, 
   tumor_only = FALSE
 )
@@ -156,7 +244,7 @@ info <- extract_info(
 | `p_cnv` | Character | — | Path to CNV file. |
 | `chr_lst` | Character | NULL | Chromosomes to include. |
 | `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
-| `QUAL_tresh` | numeric | 100 | Minimum QUAL score. |
+| `QUAL_thresh` | numeric | 100 | Minimum QUAL score. |
 | `min_alt` | numeric | 2 | Minimum alternative reads. |
 | `tumor_only` | Logical | FALSE | Whether SVs come from tumor-only calling. |
 
@@ -201,10 +289,9 @@ This step computes the **Structural Variant Cellular Fraction (SVCF)**.
 and returns an annotated VCF file in data.frame format.
 
 ``` r
-
-svcf_out <- calculate_svcf(
-  anno_sv_cnv = sv_char$anno_sv_cnv,
-  sv_info     = sv_char$sv_info,
+svcf_out <- calc_svcf(
+  anno_sv_cnv = anno_sv_cnv,
+  sv_info     = sv_info,
   thresh      = 0.1,
   samp        = "SampleID",
   exper       = "ExperimentID"
@@ -238,15 +325,16 @@ data.
 
 ``` r
 output <- cluster_data(
-  pair_path, 
-  pur_path, 
-  pair=1)
-clone2=output[[3]]
+  pair_path  = pair_path,
+  pur_path   = pur_path,
+  data_dir   = data_dir,
+  pair_num   = 1)
+clones <- output[[3]]
 
 build_tree(
-  clones,
-  lineage_precedence_thresh=0.2, 
-  sum_filter_thresh=0.2)
+  clones                    = clones,
+  lineage_precedence_thresh = 0.2,
+  sum_filter_thresh         = 0.2)
 ```
 
 #### Function Arguments
@@ -257,7 +345,8 @@ cluster_data()
 |----|----|----|----|
 | `pair_path` | character | — | Path to a tab-separated file with columns for ‘pre_BAT sample’ and ‘on_BAT sample’. |
 | `pur_path` | character | \- | Path to a tab-separated file with columns for ‘sample’ and ‘purity’. |
-| `pair` | numeric | 1 | The identifier (index or ID) for the specific sample pair (patient) being analyzed. |
+| `data_dir` | character | — | Root directory containing SVCFit output BED files. |
+| `pair_num` | numeric | 1 | The identifier (index or ID) for the specific sample pair (patient) being analyzed. |
 
 build_tree()
 
@@ -332,6 +421,53 @@ for performance evaluation.
 library(SVCFit)
 vignette("SVCFit_guide", package = "SVCFit")
 ```
+
+## Frequently Asked Questions
+
+**Can I use a different SV caller?**
+Yes. Any caller that produces a per-SV breakpoint VCF compatible with SVtyper
+will work. Differences across callers in breakpoint detection sensitivity,
+split-read versus discordant-pair definitions, and quality filtering may produce
+different REF/ALT counts and therefore different SVCF estimates from the same
+data — see Discussion in the manuscript.
+
+**Can I skip FACETS and use Battenberg / ASCAT instead?**
+Yes, as long as you provide per-segment total copy number and gain/loss
+classification in the same TSV format. A converter is in
+`scripts/cnv_converter.R`.
+
+**Do I need a matched normal?**
+For the COMBAT analysis we used matched normals throughout. SVCFit can run on
+tumor-only when a matched normal is unavailable, but tumor purity must be
+supplied externally and ASCN inference becomes less reliable without
+germline-heterozygous SNP calls; this is treated as an unsupported configuration
+in the current release.
+
+**What about complex SVs (chromothripsis, BFB, chromoplexy)?**
+The closed-form SVCF estimators cover deletions, tandem duplications, inversions,
+and the three classes of translocations. Multi-breakpoint complex SVs are not yet
+explicitly modeled — the per-breakpoint estimates are still produced, but their
+interpretation as a single cellular fraction is approximate. Future releases will
+add structure-aware handling.
+
+## Tool Versions
+
+Tool versions used in the manuscript:
+
+| Step | Tool | Version | Dataset |
+|------|------|---------|---------|
+| Read trimming | trim_galore | v0.6.1 | COMBAT |
+| Alignment | bwa mem | v0.7.19 | All datasets |
+| MarkDuplicates / BQSR | GATK4 | v4.6.2.0 | COMBAT |
+| Somatic SV (single-caller) | Manta | v1.6.0 | All datasets |
+| Somatic SV (multi-caller) | Manta + Delly v1.5.0 + GRIDSS v2.13.2 | — | COMBAT |
+| Multi-caller merge | SURVIVOR | v1.0.7 | COMBAT |
+| SV genotyping | SVtyper | v0.7.1 | All datasets |
+| Germline SNP calling | GATK4 HaplotypeCaller | v4.6.2.0 | All datasets |
+| Het-SNP filter | bcftools | v1.20 | All datasets |
+| ASCN | FACETS | v0.6.2 | All datasets |
+| Breakpoint read filter | samtools | v1.21 | All datasets |
+| SNP pileup | bcftools mpileup | v1.20 | All datasets |
 
 ## Reference
 

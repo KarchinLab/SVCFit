@@ -12,7 +12,10 @@ attach_truth(svcf_out, truth)
 \item{truth}{an object of class 'data frame'. This object stores the output from \code{load_truth}.}
 }
 \value{
-sth
+A subset of \code{svcf_out} (rows that match a simulated SV in
+\code{truth}) with two additional columns: \code{type} (logical, whether
+the SV matched any truth entry) and \code{clone} (character clone label
+from the truth table, e.g. \code{"clonal"}, \code{"sub"}, or \code{"2"}).
 }
 \description{
 attach truth of simulation to the output of SVCFit

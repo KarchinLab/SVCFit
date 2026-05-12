@@ -36,3 +36,4 @@ parent-child clone pair violates the CCF ordering constraint.  The root node
 occupies row 1; clone \eqn{i} occupies row \eqn{i+1}.  Self-edges
 (diagonal) are set to \code{restriction_val} to prevent self-loops.
 }
+\keyword{internal}

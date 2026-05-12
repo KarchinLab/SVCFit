@@ -12,7 +12,11 @@
 #' @param min_bnd_records an object of class 'integer'. Minimum number of BND records required
 #' in a mate group to be retained; groups with fewer records are filtered as incomplete.
 #'
-#' @returns sth
+#' @return A named list with two elements: \code{bnd} (data.frame of annotated
+#'   BND records with translocation class in column \code{class}: \code{"rtl"}
+#'   reciprocal, \code{"coptl"} copy-paste, or \code{"cuttl"} cut-paste) and
+#'   \code{del} (data.frame of deletion records that overlap a BND breakpoint,
+#'   used to identify cut-paste translocations).
 #' @export
 #'
 proc_bnd <- function(sv, flank_del=50, bnd_window=400, mate_pos_window=50, len_dif_thresh=50, min_bnd_records=4) {

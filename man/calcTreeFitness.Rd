@@ -11,7 +11,8 @@ calcTreeFitness(
   am_format = "long",
   weight_mass = 1,
   weight_topology = 1,
-  scaling_coeff = 5
+  scaling_coeff = 5,
+  linear_penalty = 0
 )
 }
 \arguments{
@@ -43,3 +44,4 @@ Scalar numeric fitness score in \code{(0, 1]}.
 Calculates the combined topology cost and mass cost for one tree and
 converts the total penalty to a fitness score via \code{exp(-scaling_coeff * Z)}.
 }
+\keyword{internal}

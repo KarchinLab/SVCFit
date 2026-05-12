@@ -2,10 +2,14 @@
 % Please edit documentation in R/tree_utils.R
 \name{pop}
 \alias{pop}
-\title{Pop the first row from a tibble and update the global variable}
+\title{Return the first row of an edge tibble}
 \usage{
-pop(edges_tb, tb_name)
+pop(edges_tb)
+}
+\arguments{
+\item{edges_tb}{data.frame or tibble. The edge table to pop from.}
 }
 \description{
-Pop the first row from a tibble and update the global variable
+Return the first row of an edge tibble
 }
+\keyword{internal}

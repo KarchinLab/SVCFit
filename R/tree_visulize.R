@@ -1,38 +1,49 @@
 # -------------------------------------------------------------------------
 # VISUALIZATION
 # -------------------------------------------------------------------------
-#' @export
-plotTree <- function(edges, palette=colorRampPalette(brewer.pal(1, "Accent"))) {
-  plotGraph(edgesToAmLong(edges), colorScheme(edges, palette))
-}
-#' @export
-colorScheme <- function(edges, palette=colorRampPalette(brewer.pal(1, "Accent"))) {
+#' @importFrom RColorBrewer brewer.pal
+#' @keywords internal
+colorScheme <- function(edges, palette=colorRampPalette(brewer.pal(8, "Accent"))) {
   v_sorted = sort(unique(c(edges$parent, edges$child)))
   v_sorted = c(sort(as.integer(v_sorted[!v_sorted=='G'])), "G")
   colors <- c(palette(length(v_sorted)-1), "white")
   v_color <- dplyr::tibble(v_sorted, colors)
   return(v_color)
 }
-#' @export
+#' @keywords internal
 plotGraph <- function(am.long, v_color){
   am.long <- dplyr::mutate(am.long, child = as.numeric(am.long$child)) %>%
     dplyr::arrange(parent, child)
   am.long <- dplyr::mutate(am.long, child = as.character(am.long$child))
-  
+
   am <- toWide(am.long)
   rownames(am) <- c("G", colnames(am))
-  am <- cbind(G=0, am) 
+  am <- cbind(G=0, am)
   colnames(am) <- rownames(am)
   am[is.na(am)] <- 0
-  
+
   ig <- igraph::graph_from_adjacency_matrix(am, mode = "directed", weighted = TRUE,
-                                            diag = FALSE, add.row = TRUE) 
+                                            diag = FALSE, add.row = TRUE)
   igraph::V(ig)$color <- as.list(v_color %>% dplyr::arrange(match(v_sorted, names(igraph::V(ig)))) %>% dplyr::select(colors))$colors
-  par(mar=c(0,0,0,0)+.1)
+  old_par <- par(mar = c(0, 0, 0, 0) + .1)
+  on.exit(par(old_par), add = TRUE)
   igraph::plot.igraph(ig, layout = igraph::layout_as_tree(ig),
                       vertex.size=24, vertex.frame.color = "#000000", vertex.label.cex = 1.5,
                       vertex.label.family = "Helvetica", vertex.label.color = "#000000",
                       edge.arrow.size = 0.5, edge.arrow.width = 2)
+}
+
+#' Plot the best-scoring phylogenetic tree
+#'
+#' @param edges data.frame. Edge list with columns \code{parent} and \code{child}.
+#' @param palette Function. A colour palette function; default uses
+#'   \code{RColorBrewer}'s Accent palette interpolated to the required number
+#'   of colours.
+#' @return Invisibly returns the igraph object; called for its side-effect of
+#'   drawing the tree.
+#' @export
+plotTree <- function(edges, palette=colorRampPalette(brewer.pal(8, "Accent"))) {
+  plotGraph(edgesToAmLong(edges), colorScheme(edges, palette))
 }
 
 
@@ -74,9 +85,13 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' Plot pie charts for subclone proportions in each sample
 #'
 #' @param subclone_props matrix of subclone proportions (returned from \code{calcSubcloneProportions})
+#' @param palette Function. A colour palette function; default uses an 8-colour
+#'   Accent palette via \code{colorRampPalette}.
 #' @param sample_names (Optional) Vector of sample names. Should be in the order of columns of subclone_props
+#' @param title_size Numeric. Font size for facet strip titles. Default \code{16}.
+#' @param legend_size Numeric. Font size for legend text. Default \code{10}.
 #' @export
-plotSubclonePie <- function(subclone_props, palette=colorRampPalette(brewer.pal(1, "Accent")), sample_names = NULL, title_size=16, legend_size=10) {
+plotSubclonePie <- function(subclone_props, palette=colorRampPalette(brewer.pal(8, "Accent")), sample_names = NULL, title_size=16, legend_size=10) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
   colnames(subclone_props) <- sample_names
   props_tb <- subclone_props %>%

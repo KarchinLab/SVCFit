@@ -2,16 +2,26 @@
 % Please edit documentation in R/load_truth.R
 \name{load_truth}
 \alias{load_truth}
-\title{load simulation truth data}
+\title{Load simulation truth data}
 \usage{
 load_truth(truth_path, overlap = FALSE)
 }
 \arguments{
-\item{exper}{an object of class 'character'. This object describes the experiment number.}
+\item{truth_path}{Character. Path to the directory containing BED files of
+true SV clone assignments.  For non-overlapping simulations the files must
+be named \code{c1.bed}, \code{c2.bed}, \code{c3.bed}; for overlapping
+simulations \code{c11.bed}, \code{c22.bed}, \code{c33.bed}.}
+
+\item{overlap}{Logical. Whether the simulation has SV-CNV overlap.
+Default \code{FALSE}.}
 }
 \value{
-sth
+A data.frame with columns \code{CHROM}, \code{start}, \code{end},
+\code{type}, \code{info}, \code{flank}, \code{samp} (clone label such as
+\code{"c1"}), \code{exp}, \code{clone} (\code{"clonal"}, \code{"sub"}, or
+\code{"2"}), \code{chr2}, and \code{pos2}.  One row per unique genomic
+start position across all simulated clones.
 }
 \description{
-load simulation truth data
+Load simulation truth data
 }

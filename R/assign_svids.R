@@ -5,7 +5,10 @@
 #' @param flank_snp an object of class 'integer'. This object describes the upper limit of location difference
 #' for an SNP to be assigned to an SV
 #'
-#' @returns sth
+#' @return A data.frame with columns \code{snp_id} (row index into
+#'   \code{sv_phase}), \code{ID} (SV identifier from \code{sv_info}), and
+#'   \code{region} (\code{"start"} or \code{"end"}, indicating which SV
+#'   breakpoint the SNP was assigned to).
 #' @export
 #'
 assign_svids <- function(sv_phase, sv_info, flank_snp = 500) {

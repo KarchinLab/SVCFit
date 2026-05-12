@@ -17,7 +17,9 @@ cluster_data(
   min_dist = 0.2,
   pair_num = 1,
   pairs = NULL,
-  exclude_pairs = integer(0)
+  exclude_pairs = integer(0),
+  deduplicate = TRUE,
+  ccf_floor = 0.1
 )
 }
 \arguments{
@@ -57,6 +59,12 @@ third list element (for use with \code{\link{build_tree}}).  Default \code{1}.}
 
 \item{exclude_pairs}{Integer vector. Pair indices to exclude before
 clustering.  Default \code{integer(0)}.}
+
+\item{deduplicate}{Logical. Remove duplicate (pre_BAT, on_BAT) rows before
+fitting the DP-GMM per pair. Default \code{TRUE}.}
+
+\item{ccf_floor}{Numeric. CCF values below this threshold are zeroed out
+before clustering. Default \code{0.1}.}
 }
 \value{
 A list of length 3:

@@ -4,7 +4,12 @@
 \alias{build_tree}
 \title{Build the best-scoring phylogenetic spanning tree from clone CCFs}
 \usage{
-build_tree(clones, lineage_precedence_thresh = 0.2, sum_filter_thresh = 0.2)
+build_tree(
+  clones,
+  lineage_precedence_thresh = 0.2,
+  sum_filter_thresh = 0.2,
+  linear_penalty = 0
+)
 }
 \arguments{
 \item{clones}{data.frame. Clone table (one row per clone) containing at
@@ -19,6 +24,9 @@ and filtering edges.  Default \code{0.2}.}
 \item{sum_filter_thresh}{Numeric. Maximum allowed excess of the summed
 children CCFs over the parent CCF when pruning spanning trees.
 Default \code{0.2}.}
+
+\item{linear_penalty}{Numeric. Penalty weight applied to linear-chain tree
+topologies during scoring.  Default \code{0} (no penalty).}
 }
 \value{
 A list of length 3:

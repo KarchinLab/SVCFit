@@ -6,7 +6,7 @@
 \usage{
 plotSubclonePie(
   subclone_props,
-  palette = colorRampPalette(brewer.pal(1, "Accent")),
+  palette = colorRampPalette(brewer.pal(8, "Accent")),
   sample_names = NULL,
   title_size = 16,
   legend_size = 10
@@ -15,7 +15,14 @@ plotSubclonePie(
 \arguments{
 \item{subclone_props}{matrix of subclone proportions (returned from \code{calcSubcloneProportions})}
 
+\item{palette}{Function. A colour palette function; default uses an 8-colour
+Accent palette via \code{colorRampPalette}.}
+
 \item{sample_names}{(Optional) Vector of sample names. Should be in the order of columns of subclone_props}
+
+\item{title_size}{Numeric. Font size for facet strip titles. Default \code{16}.}
+
+\item{legend_size}{Numeric. Font size for legend text. Default \code{10}.}
 }
 \description{
 Plot pie charts for subclone proportions in each sample

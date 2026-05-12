@@ -13,7 +13,8 @@ calcTreeScores_n(
   scaling_coeff = 5,
   zero_thresh = 0.001,
   restriction_val = 1,
-  tol = 1e-06
+  tol = 1e-06,
+  linear_penalty = 0
 )
 }
 \arguments{
@@ -44,6 +45,9 @@ parent-child pairs that violate the CCF ordering constraint.  Default
 
 \item{tol}{Numeric. Tolerance added to the parent CCF before checking for
 violations.  Default \code{1e-6}.}
+
+\item{linear_penalty}{Numeric. Per-edge penalty added to the tree fitness
+score to favour simpler topologies. Default \code{0} (no penalty).}
 }
 \value{
 Numeric vector of fitness scores, one per tree in \code{trees}.

@@ -1,3 +1,8 @@
+# Package-level variable for the reticulate sklearn module.
+# Assigned in cluster_data() on first use; <<- writes to the package
+# namespace (not .GlobalEnv) because sk is declared here at package scope.
+sk <- NULL
+
 #' Pre-process paired SV data for DP-GMM clustering
 #'
 #' Reads paired sample IDs and purity files, computes Cancer Cell Fraction (CCF)
@@ -15,6 +20,8 @@
 #'   Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.
 #' @param exclude_pairs Integer vector. Pair indices (1-based row numbers in
 #'   \code{pair_path}) to drop before processing.  Default \code{integer(0)}.
+#' @param ccf_floor Numeric. CCF values below this threshold are zeroed out
+#'   before clustering. Default \code{0.1}.
 #'
 #' @return A named list with two elements:
 #' \describe{
@@ -25,7 +32,7 @@
 #'     column for joining cluster assignments back to individual rows.}
 #' }
 #' @export
-pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = integer(0)){
+pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = integer(0), ccf_floor = 0.1){
   sample_pair <- read.delim(pair_path, header = FALSE)
   colnames(sample_pair) <- c("pre_BAT", "on_BAT")
   samp_pur <- read.delim(pur_path)
@@ -90,6 +97,8 @@ pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = i
     distinct(.keep_all = TRUE) %>%
     ungroup() %>%
     pivot_wider(names_from = stage, values_from = ccf) %>%
+    { if (!"pre_BAT" %in% names(.)) mutate(., pre_BAT = NA_real_) else . } %>%
+    { if (!"on_BAT" %in% names(.)) mutate(., on_BAT = NA_real_) else . } %>%
     rowwise() %>%
     mutate(
       pre_BAT = ifelse(is.na(pre_BAT), 0, pre_BAT),
@@ -100,8 +109,8 @@ pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = i
   new_dat <- rbind(shared, non_shared) %>%
     filter((pre_BAT + on_BAT) != 0) %>%
     mutate(
-      pre_BAT = ifelse(pre_BAT < 0.1, 0, pre_BAT),
-      on_BAT = ifelse(on_BAT < 0.1, 0, on_BAT),
+      pre_BAT = ifelse(pre_BAT < ccf_floor, 0, pre_BAT),
+      on_BAT = ifelse(on_BAT < ccf_floor, 0, on_BAT),
       pair = as.character(pair)
     )
   
@@ -177,7 +186,8 @@ dp_gmm_convergence <- function(Z, Kmax = 10, n_steps = 50, random_state = 0L, co
     covariance_type = "full",
     weight_concentration_prior_type = "dirichlet_process",
     weight_concentration_prior = concentration,
-    init_params = "random",
+    init_params = "k-means++",
+    #init_params = "random",
     n_init = as.integer(1),
     max_iter = as.integer(1),
     reg_covar = 1e-6,
@@ -186,11 +196,14 @@ dp_gmm_convergence <- function(Z, Kmax = 10, n_steps = 50, random_state = 0L, co
   )
   
   lower_bounds <- numeric(n_steps)
-  
+
+  py_warnings <- reticulate::import("warnings")
+  py_warnings$filterwarnings("ignore", message = "Best performing initialization")
   for (i in seq_len(n_steps)) {
     bgmm$fit(Z)
     lower_bounds[i] <- bgmm$lower_bound_
   }
+  py_warnings$resetwarnings()
   
   tibble(
     iter = seq_len(n_steps),
@@ -225,6 +238,8 @@ logit_eps <- function(p, n = 200) {
 #'   Default \code{0L}.
 #' @param concentration Numeric. Dirichlet process concentration parameter
 #'   (higher = more components allowed).  Default \code{1}.
+#' @param deduplicate Logical. Remove duplicate (pre_BAT, on_BAT) rows before
+#'   fitting the DP-GMM. Default \code{TRUE}.
 #'
 #' @return A named list:
 #' \describe{
@@ -246,11 +261,15 @@ run_dp_gmm_pair <- function(input, pair_num,
                             n_steps = 100,
                             thr_min_w = 0.01,
                             random_state = 0L,
-                            concentration = 1) {
+                            concentration = 1,
+                            deduplicate = TRUE) {
   X <- input %>%
-    filter(pair == pair_num) %>%
-    distinct(pre_BAT, on_BAT, .keep_all = TRUE)
-  
+    filter(pair == pair_num)
+
+  if (deduplicate) {
+    X <- distinct(X, pre_BAT, on_BAT, .keep_all = TRUE)
+  }
+
   if (nrow(X) == 0) {
     stop("No rows found for this pair_num.")
   }
@@ -298,16 +317,16 @@ run_dp_gmm_pair <- function(input, pair_num,
     covariance_type = "full",
     weight_concentration_prior_type = "dirichlet_process",
     weight_concentration_prior = concentration,
-    init_params = "random",
-    n_init = as.integer(5),
+    init_params = "k-means++",
+    n_init = as.integer(20),
     max_iter = as.integer(2000),
     reg_covar = 1e-6,
     random_state = as.integer(random_state)
   )$fit(Z)
   
-  cat("converged:", bgmm_final$converged_, "\n")
-  cat("n_iter:", bgmm_final$n_iter_, "\n")
-  cat("final lower_bound:", bgmm_final$lower_bound_, "\n")
+  message("converged: ", bgmm_final$converged_)
+  message("n_iter: ", bgmm_final$n_iter_)
+  message("final lower_bound: ", bgmm_final$lower_bound_)
   
   resp <- bgmm_final$predict_proba(Z)
   weights <- as.numeric(bgmm_final$weights_)
@@ -529,6 +548,10 @@ merge_cluster <- function(input, pair_num, min_dist=0.2){
 #'   \code{NULL} (default) clusters all pairs present in the pre-processed data.
 #' @param exclude_pairs Integer vector. Pair indices to exclude before
 #'   clustering.  Default \code{integer(0)}.
+#' @param deduplicate Logical. Remove duplicate (pre_BAT, on_BAT) rows before
+#'   fitting the DP-GMM per pair. Default \code{TRUE}.
+#' @param ccf_floor Numeric. CCF values below this threshold are zeroed out
+#'   before clustering. Default \code{0.1}.
 #'
 #' @return A list of length 3:
 #' \describe{
@@ -559,19 +582,24 @@ cluster_data <- function(pair_path,
                          min_dist = 0.2,
                          pair_num = 1,
                          pairs = NULL,
-                         exclude_pairs = integer(0)){
+                         exclude_pairs = integer(0),
+                         deduplicate = TRUE,
+                         ccf_floor = 0.1){
 
-  prep <- pre_process_cluster(pair_path, pur_path, data_dir, exclude_pairs)
+  prep <- pre_process_cluster(pair_path, pur_path, data_dir, exclude_pairs, ccf_floor)
   new_dat <- prep$cluster_input
   sv_raw <- prep$sv_raw
-  
+
   #use_condaenv("py3", required = TRUE)
   py_config()
   sk <<- import("sklearn", delay_load = TRUE)
 
   if (is.null(pairs)) pairs <- sort(unique(as.integer(new_dat$pair)))
 
-  df_plot1 <- lapply(pairs, function(x) run_dp_gmm_pair(new_dat, x)[[1]]) %>%
+  df_plot1 <- lapply(pairs, function(x) run_dp_gmm_pair(new_dat, x,
+    Kmax = Kmax, n_steps = n_steps, thr_min_w = thr_min_w,
+    random_state = random_state, concentration = concentration,
+    deduplicate = deduplicate)[[1]]) %>%
     do.call(rbind, .)
 
   df_plot <- df_plot1 %>%

@@ -2,7 +2,12 @@
 #'
 #' @param sv_cnv an object of class 'data frame'. This object stores the output from `assign_cnv`
 #'
-#' @returns sth
+#' @return A data.frame with columns \code{CHROM}, \code{POS}, \code{ID},
+#'   \code{zygosity}, \code{sv_phase}, \code{cnv_phase}, \code{cncf},
+#'   \code{major}, \code{minor}, \code{cna}, \code{ASCN} (allele-specific copy
+#'   number used in SVCF calculation), \code{cn_type} (\code{"DUP"},
+#'   \code{"norm"}, or \code{"DEL"}), \code{tascn}, \code{no_snp}, and
+#'   \code{mate}.
 #' @export
 #'
 annotate_cnv <- function(sv_cnv) {

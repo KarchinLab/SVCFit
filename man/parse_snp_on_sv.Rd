@@ -12,7 +12,11 @@ parse_snp_on_sv(het_on_sv, snp_df)
 \item{snp_df}{an object of class 'data frame'. This object stores the output from \code{parse_het_snps}.}
 }
 \value{
-sth
+A data.frame with one row per SNP on an SV-supporting read.  Columns
+include \code{CHROM}, \code{POS}, \code{REF}, allele read counts
+(\code{onsv_ref}, \code{onsv_alt}), depth (\code{DEP}), \code{a_count},
+\code{allele}, and all columns from \code{snp_df} joined by
+chromosome/position/reference allele.
 }
 \description{
 parse information for germline het snp that are close to SVs

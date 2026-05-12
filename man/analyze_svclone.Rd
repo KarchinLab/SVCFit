@@ -29,7 +29,11 @@ base pair difference between svclone and svcfit output to be considered the same
 Expected structure: \verb{<svclone_dir>/<samp>/<exper>/ccube_out/<exper>_ccube_sv_results.RData}}
 }
 \value{
-sth
+A tibble of SVclone-processed SVs with CCube cellular fraction
+estimates and matched SVCFit clone assignments.  Columns include
+\code{ID}, \code{svcf} (CCube-derived cellular fraction scaled by purity),
+\code{sample}, \code{expmt}, \code{zygosity}, \code{classification}, and
+\code{clone}.  One row per unique SV ID.
 }
 \description{
 Process output from SVclone

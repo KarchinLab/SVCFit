@@ -21,3 +21,4 @@ Scalar numeric topology cost (\eqn{\geq 0}).
 Sums the CPOV penalties for all edges present in the adjacency matrix.  A
 topology cost of zero means no parent-child CCF ordering is violated.
 }
+\keyword{internal}

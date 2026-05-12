@@ -9,7 +9,11 @@
 #' @param svclone_dir an object of class 'character'. Path to the root SVclone output directory.
 #' Expected structure: `<svclone_dir>/<samp>/<exper>/ccube_out/<exper>_ccube_sv_results.RData`
 #'
-#' @returns sth
+#' @return A tibble of SVclone-processed SVs with CCube cellular fraction
+#'   estimates and matched SVCFit clone assignments.  Columns include
+#'   \code{ID}, \code{svcf} (CCube-derived cellular fraction scaled by purity),
+#'   \code{sample}, \code{expmt}, \code{zygosity}, \code{classification}, and
+#'   \code{clone}.  One row per unique SV ID.
 #' @export
 #'
 analyze_svclone <- function(samp, exper, final_truth, sv_info, tolerance=100, svclone_dir){

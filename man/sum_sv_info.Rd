@@ -14,7 +14,11 @@ sum_sv_info(sv_phase, assign_id, sv_info)
 \item{sv_info}{an object of class 'data frame'. This object stores the output from \code{parse_sv_info}.}
 }
 \value{
-sth
+A data.frame joining phasing and zygosity summaries with full SV
+metadata.  Contains all \code{sv_info} columns plus \code{snp_alt},
+\code{snp_ref}, \code{dep}, \code{onsv_alt}, \code{onsv_ref},
+\code{zygosity_snp}, \code{sv_phase}, \code{no_snp} (1 if no SNPs were
+available), and \code{zygosity}.
 }
 \description{
 sumarise SV information (zygosity, phasing, reads)

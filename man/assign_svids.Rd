@@ -15,7 +15,10 @@ assign_svids(sv_phase, sv_info, flank_snp = 500)
 for an SNP to be assigned to an SV}
 }
 \value{
-sth
+A data.frame with columns \code{snp_id} (row index into
+\code{sv_phase}), \code{ID} (SV identifier from \code{sv_info}), and
+\code{region} (\code{"start"} or \code{"end"}, indicating which SV
+breakpoint the SNP was assigned to).
 }
 \description{
 assign each SNP to an SV

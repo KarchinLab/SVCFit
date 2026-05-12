@@ -1,21 +1,27 @@
 Package: SVCFit
-Title: SVCFit: calculate structural variant cellular fraction 
+Title: Calculate Structural Variant Cellular Fraction
 Version: 1.0.0
-Authors@R: 
+Authors@R:
     person("Yunzhou", "Liu", , "yliu498@jh.edu", role = c("aut", "cre"))
 Maintainer: Yunzhou Liu <yliu498@jh.edu>
-Description: This tool is designed to calculate Structural Variant Cellular Fraction (SVCF).
+Description: Estimates the Structural Variant Cellular Fraction (SVCF) for
+    inversions, deletions, tandem duplications, and translocations by
+    integrating structural variant calls with allele-specific copy number
+    variation and heterozygous SNP data.  Includes a Dirichlet-process
+    Gaussian mixture model clustering step and phylogenetic tree inference
+    for longitudinal paired samples.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-VignetteBuilder: knitr
+URL: https://github.com/KarchinLab/SVCFit
+BugReports: https://github.com/KarchinLab/SVCFit/issues
+VignetteBuilder: quarto
 Imports:
     dplyr,
     stringr,
     GenomicRanges,
-    knitr,
-    markdown,
+    IRanges,
     tidyr,
     ggplot2,
     reticulate,
@@ -24,6 +30,10 @@ Imports:
     RColorBrewer,
     igraph,
     parallel
-Suggests: 
+Suggests:
+    knitr,
+    markdown,
+    quarto,
+    readr,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

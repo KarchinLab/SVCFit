@@ -12,7 +12,11 @@ assign_cnv(sv_sum, cnv)
 \item{cnv}{an object of class 'data frame'. This object stores the cnv data loaded from \code{load_data}.}
 }
 \value{
-sth
+A data.frame combining \code{sv_sum} rows with their best-overlapping
+CNV segment.  Each row gains columns \code{cna} (total copy number),
+\code{minor} (minor-allele CN), \code{major} (major-allele CN), and
+\code{cncf} (clonal cell fraction from FACETS).  SVs with no overlapping
+CNV segment are dropped.
 }
 \description{
 assign an SV to a CNV based on genomic region overlap

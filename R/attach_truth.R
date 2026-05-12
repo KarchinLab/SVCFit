@@ -3,7 +3,10 @@
 #' @param svcf_out an object of class 'data frame'. This object stores the output from `calc_svcf`.
 #' @param truth an object of class 'data frame'. This object stores the output from `load_truth`.
 #'
-#' @returns sth
+#' @return A subset of \code{svcf_out} (rows that match a simulated SV in
+#'   \code{truth}) with two additional columns: \code{type} (logical, whether
+#'   the SV matched any truth entry) and \code{clone} (character clone label
+#'   from the truth table, e.g. \code{"clonal"}, \code{"sub"}, or \code{"2"}).
 #' @export
 #'
 attach_truth <- function(svcf_out, truth){

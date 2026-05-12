@@ -3,7 +3,11 @@
 #' @param sv_sum an object of class 'data frame'. This object stores the output from `sum_sv_info`.
 #' @param cnv an object of class 'data frame'. This object stores the cnv data loaded from `load_data`.
 #'
-#' @returns sth
+#' @return A data.frame combining \code{sv_sum} rows with their best-overlapping
+#'   CNV segment.  Each row gains columns \code{cna} (total copy number),
+#'   \code{minor} (minor-allele CN), \code{major} (major-allele CN), and
+#'   \code{cncf} (clonal cell fraction from FACETS).  SVs with no overlapping
+#'   CNV segment are dropped.
 #' @export
 #'
 assign_cnv <- function(sv_sum, cnv) {

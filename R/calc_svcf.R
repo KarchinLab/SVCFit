@@ -34,12 +34,15 @@
 #' @param samp an object of class 'character'. This object describes the sample name.
 #' @param exper an object of class 'character'. This object describes the experiment number.
 #'
-#' @returns sth
+#' @return A data.frame with one row per SV containing all input columns plus
+#'   \code{r_bar} (mean read-depth ratio), \code{r_2} (estimated copy number of
+#'   break intervals), \code{raw_svcf}, \code{s1}, \code{s2}, \code{ss1},
+#'   \code{ss2}, \code{final_svcf} (the SVCF estimate), \code{expmt}, and
+#'   \code{sample}.
 #' @export
 #'
 calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
   final <- inner_join(anno_sv_cnv, sv_info)%>%
-    filter(!is.na(ASCN))%>%
     ##ss2 is cnv and sv diff phase, ss1 is same phase
     mutate(r_bar=2*(sv_alt+sv_ref)/sv_ref,
            r_2=ifelse((major+minor-2)< 1, r_bar*sv_alt/(sv_alt+sv_ref), (major+minor-2)),
@@ -51,16 +54,17 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh=0.1, samp, exper){
            ss2=ifelse(zygosity=="hom", 0.5*s2, s2),
            ## decide order (only consider del happened before sv, so cn_type==del always ss2)
            final_svcf=ifelse(cn_type=="DEL" | ss1<=thresh, ss2,ss1 ),
-           final_svcf=ifelse(classification=="COPBND" & cn_type=='DUP', round(cncf, 2), final_svcf),
-           #final_svcf=ifelse(classification=="COPBND" & bkg_cnv=='norm', round(raw_svcf, 2), final_svcf),
+           #final_svcf=ifelse(classification=="COPBND" & cn_type=='DUP', round(cncf, 2), final_svcf),
+           final_svcf=ifelse(classification=="COPBND" & bkg_cnv=='norm', round(raw_svcf, 2), round(final_svcf,2)),
            ## if del or dup is detected in facet, directly use cncf to avoid unnecessary modification when cnv doesn't overlap with them
-           final_svcf=ifelse(cn_type=='DEL' & classification=='DEL' , round(cncf, 2), round(final_svcf,2)),
-           final_svcf=ifelse(cn_type=='DUP' & classification=='DUP' , round(cncf, 2), round(final_svcf,2)),
-           #final_svcf=ifelse(bkg_cnv=='norm' & classification=='DEL' , round(raw_svcf,2), round(final_svcf,2)),
-           #final_svcf=ifelse(bkg_cnv=='norm' & classification=='DUP' , round(raw_svcf,2), round(final_svcf,2)),
+           #final_svcf=ifelse(cn_type=='DEL' & classification=='DEL' , round(cncf, 2), round(final_svcf,2)),
+           #final_svcf=ifelse(cn_type=='DUP' & classification=='DUP' , round(cncf, 2), round(final_svcf,2)),
+           final_svcf=ifelse(bkg_cnv=='norm' & classification=='DEL' , round(raw_svcf,2), round(final_svcf,2)),
+           final_svcf=ifelse(bkg_cnv=='norm' & classification=='DUP' , round(raw_svcf,2), round(final_svcf,2)),
+           final_svcf=ifelse(is.na(final_svcf), round(raw_svcf,2), final_svcf),
            expmt=exper,
            sample=samp)%>%
-    filter(final_svcf != Inf)%>%
+    filter(!is.infinite(final_svcf), !is.infinite(r_bar)) %>%
     group_by(mate)%>%
     mutate(classification=ifelse(grepl('BND', classification), 'BND', classification),
            final_svcf=ifelse(classification %in% c('INV', 'BND'), mean(final_svcf), final_svcf))%>%

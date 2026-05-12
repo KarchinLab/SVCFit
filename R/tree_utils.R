@@ -2,10 +2,12 @@
 # DATA STRUCTURE HELPERS
 # -------------------------------------------------------------------------
 
-#' Pop the first row from a tibble and update the global variable
-pop <- function(edges_tb, tb_name) {
-  assign(tb_name, edges_tb[-1, ], envir = .GlobalEnv)
-  return(edges_tb[1, ])
+#' Return the first row of an edge tibble
+#'
+#' @param edges_tb data.frame or tibble. The edge table to pop from.
+#' @keywords internal
+pop <- function(edges_tb) {
+  edges_tb[1, ]
 }
 
 #' Convert a long-format adjacency tibble to a wide matrix

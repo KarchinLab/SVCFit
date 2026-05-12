@@ -10,7 +10,10 @@ parse_het_snps(het_snp)
 \item{het_snp}{an object of class 'data frame'. This object stores the het snp data loaded from \code{load_data}.}
 }
 \value{
-sth
+A data.frame with columns \code{CHROM}, \code{POS}, \code{REF},
+\code{ALT}, \code{snp_ref} (reference-allele read count), \code{snp_alt}
+(alternate-allele read count), and \code{dep} (total sequencing depth).
+Restricted to single-nucleotide SNPs (length-1 REF and ALT alleles).
 }
 \description{
 parse information for germline heterozygous snps

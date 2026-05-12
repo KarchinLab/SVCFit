@@ -15,9 +15,19 @@ and types obtained from \emph{parse_sv_info()}.}
 
 \item{cnv}{object of class 'dataframe'. This object stores CNV information
 obtained from \emph{load_data()}.}
+
+\item{flank_snp}{Numeric. Flanking window (bp) used when mapping SNPs to SVs
+in \code{\link{assign_svids}}. Default \code{500}.}
+
+\item{flank_cnv}{Numeric. Flanking window (bp) used when assigning background
+CNV in \code{\link{assign_background_cnv}}. Default \code{1000}.}
 }
 \value{
-sth
+A data.frame combining CNV annotation from \code{\link{annotate_cnv}},
+full SV metadata, and background CNV classification from
+\code{\link{assign_background_cnv}}.  Key added columns: \code{cn_type},
+\code{ASCN}, \code{bkg_cnv} (\code{"DUP"}, \code{"norm"}, or \code{"DEL"}
+indicating the background copy number state flanking each SV breakpoint).
 }
 \description{
 Characterize SV

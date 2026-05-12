@@ -4,3 +4,5 @@
 ^LICENSE\.md$
 ^doc$
 ^Meta$
+^vignettes/SVCFit_guide_files$
+\.DS_Store$

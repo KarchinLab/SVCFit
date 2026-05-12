@@ -11,7 +11,8 @@ run_dp_gmm_pair(
   n_steps = 100,
   thr_min_w = 0.01,
   random_state = 0L,
-  concentration = 1
+  concentration = 1,
+  deduplicate = TRUE
 )
 }
 \arguments{
@@ -35,6 +36,9 @@ Default \code{0L}.}
 
 \item{concentration}{Numeric. Dirichlet process concentration parameter
 (higher = more components allowed).  Default \code{1}.}
+
+\item{deduplicate}{Logical. Remove duplicate (pre_BAT, on_BAT) rows before
+fitting the DP-GMM. Default \code{TRUE}.}
 }
 \value{
 A named list:

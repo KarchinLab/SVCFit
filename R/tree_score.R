@@ -27,22 +27,55 @@
 #'   \code{1}.
 #' @param tol Numeric. Tolerance added to the parent CCF before checking for
 #'   violations.  Default \code{1e-6}.
+#' @param linear_penalty Numeric. Per-edge penalty added to the tree fitness
+#'   score to favour simpler topologies. Default \code{0} (no penalty).
 #'
 #' @return Numeric vector of fitness scores, one per tree in \code{trees}.
 #'
 #' @export
+#calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1,
+#                             weight_mass = 1, weight_topology = 1, scaling_coeff = 5,
+#                             zero_thresh = 0.001, restriction_val = 1, tol = 1e-6) {
+#  cpov <- create.cpov_n(mcf_matrix, zero.thresh = zero_thresh, restriction.val = restriction_val, tol = tol)
+#  schism_scores <- unlist(parallel::mclapply(trees,
+#                                             function(x) calcTreeFitness(x, cpov, mcf_matrix, am_format = "edges",
+#                                                                         weight_mass = weight_mass,
+#                                                                         weight_topology = weight_topology,
+#                                                                         scaling_coeff = scaling_coeff),
+#                                             mc.cores = mc.cores))
+#  return(schism_scores)
+#}
 calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1,
-                             weight_mass = 1, weight_topology = 1, scaling_coeff = 5,
-                             zero_thresh = 0.001, restriction_val = 1, tol = 1e-6) {
-  cpov <- create.cpov_n(mcf_matrix, zero.thresh = zero_thresh, restriction.val = restriction_val, tol = tol)
-  schism_scores <- unlist(parallel::mclapply(trees,
-                                             function(x) calcTreeFitness(x, cpov, mcf_matrix, am_format = "edges",
-                                                                         weight_mass = weight_mass,
-                                                                         weight_topology = weight_topology,
-                                                                         scaling_coeff = scaling_coeff),
-                                             mc.cores = mc.cores))
-  return(schism_scores)
-}
+                               weight_mass = 1, weight_topology = 1, scaling_coeff = 5,
+                               zero_thresh = 0.001, restriction_val = 1, tol = 1e-6,   
+                               linear_penalty = 0) {                                                                              
+    cpov <- create.cpov_n(mcf_matrix, zero.thresh = zero_thresh, restriction.val = restriction_val, tol = tol)
+    schism_scores <- unlist(parallel::mclapply(trees,                                                                             
+                                               function(x) calcTreeFitness(x, cpov, mcf_matrix, am_format = "edges",              
+                                                                           weight_mass = weight_mass,               
+                                                                           weight_topology = weight_topology,                     
+                                                                           scaling_coeff = scaling_coeff,    
+                                                                           linear_penalty = linear_penalty),                      
+                                               mc.cores = mc.cores))                                        
+    return(schism_scores)                                                                                                         
+  } 
+
+
+
+#' Count non-root parents with exactly one child (linear-chain structural penalty)
+  #'
+  #' @param am data.frame. Long-format adjacency table (after \code{edgesToAmLong}).
+  #' @return Integer count of non-root unary parents.
+  #' @keywords internal
+  calcLinearPenalty <- function(am) {                                                                                             
+    edges <- getEdges(am)                                                                                                         
+    non_root_parents <- setdiff(unique(edges$parent), "root")
+    sum(vapply(non_root_parents, function(p) length(getChildren(am, p)) == 1L, logical(1)))                                       
+  }
+
+
+
+
 #' Compute the fitness score for a single spanning tree
 #'
 #' Calculates the combined topology cost and mass cost for one tree and
@@ -65,19 +98,38 @@ calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1,
 #'
 #' @return Scalar numeric fitness score in \code{(0, 1]}.
 #'
-#' @export
-calcTreeFitness <- function(admat, cpov, mcf_matrix, am_format = "long", weight_mass = 1, weight_topology = 1, scaling_coeff=5) {
-  if (am_format == "edges") {
-    admat <- edgesToAmLong(admat)
-    am_format <- "long"
+#' @keywords internal
+#calcTreeFitness <- function(admat, cpov, mcf_matrix, am_format = "long", weight_mass = 1, weight_topology = 1, scaling_coeff=5) {
+#  if (am_format == "edges") {
+#    admat <- edgesToAmLong(admat)
+#    am_format <- "long"
+#  }
+#  
+#  TC <- calcTopologyCost(admat, cpov, am_format)
+#  MC <- calcMassCost(admat, mcf_matrix, am_format)
+#  Z <- weight_topology * TC + weight_mass * MC
+#  fitness <- exp(-scaling_coeff * Z)
+#  fitness
+#}
+calcTreeFitness <- function(admat, cpov, mcf_matrix, am_format = "long", weight_mass = 1, weight_topology = 1, scaling_coeff =
+  5, linear_penalty = 0) {                                                                                                      
+    if (am_format == "edges") {                                                                                                   
+      admat <- edgesToAmLong(admat)
+      am_format <- "long"                                                                                                         
+    }                    
+                                                                                                                                  
+    TC <- calcTopologyCost(admat, cpov, am_format)
+    MC <- calcMassCost(admat, mcf_matrix, am_format)                                                                              
+    LP <- if (linear_penalty > 0) linear_penalty * calcLinearPenalty(admat) else 0
+    Z <- weight_topology * TC + weight_mass * MC + LP                             
+    fitness <- exp(-scaling_coeff * Z)                                                                                            
+    fitness                           
   }
-  
-  TC <- calcTopologyCost(admat, cpov, am_format)
-  MC <- calcMassCost(admat, mcf_matrix, am_format)
-  Z <- weight_topology * TC + weight_mass * MC
-  fitness <- exp(-scaling_coeff * Z)
-  fitness
-}
+
+
+
+
+
 #' Build the conditional probability-of-violation (CPOV) matrix
 #'
 #' Constructs a \eqn{(K+1) \times K} matrix encoding whether each directed
@@ -99,7 +151,7 @@ calcTreeFitness <- function(admat, cpov, mcf_matrix, am_format = "long", weight_
 #'   \code{"1"}, ..., \code{"K"}.  Entries are \code{0} (no violation) or
 #'   \code{restriction_val} (violation).
 #'
-#' @export
+#' @keywords internal
 create.cpov_n <- function(mcf_matrix, zero.thresh = 0.001, restriction.val = 1, tol = 1e-6) {
   if (is.null(mcf_matrix) || !is.matrix(mcf_matrix) && !is.data.frame(mcf_matrix)) {
     stop("mcf_matrix must be a numeric matrix/data.frame with rows=clusters and cols=samples.")
@@ -144,7 +196,7 @@ create.cpov_n <- function(mcf_matrix, zero.thresh = 0.001, restriction.val = 1, 
 #'
 #' @return Scalar numeric topology cost (\eqn{\geq 0}).
 #'
-#' @export
+#' @keywords internal
 calcTopologyCost <- function(am, cpov, am_format = "long") {
   TC <- 0
   if (am_format == "long") {
@@ -170,7 +222,7 @@ calcTopologyCost <- function(am, cpov, am_format = "long") {
 #'
 #' @return Scalar numeric mass cost (\eqn{\geq 0}).
 #'
-#' @export
+#' @keywords internal
 calcMassCost <- function(am, mcf_matrix, am_format="long") {
   if (am_format == "long") {
     edges <- getEdges(am)
@@ -193,6 +245,7 @@ calcMassCost <- function(am, mcf_matrix, am_format="long") {
       }
       
       mc_s <- ifelse(parent_w >= children_w, 0, children_w - parent_w)
+      #mc_s <- pmax(0, children_w - parent_w - thresh)
       mass_cost[i] <- max(mc_s) 
     }
     return(sum(mass_cost))

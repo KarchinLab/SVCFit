@@ -103,8 +103,7 @@ prune <- function(graph, mcf_mat){
 #'
 #' Recursively enumerates all spanning trees of the candidate graph that
 #' satisfy the CCF sum condition (the sum of children CCFs does not exceed the
-#' parent CCF by more than \code{sum_filter_thresh}).  Results are written to
-#' the global variable \code{all_spanning_trees}.
+#' parent CCF by more than \code{sum_filter_thresh}).
 #'
 #' @param graph_G data.frame. Pruned edge table (columns: \code{edge},
 #'   \code{parent}, \code{child}), typically produced by \code{\link{prune}}.
@@ -112,92 +111,94 @@ prune <- function(graph, mcf_mat){
 #' @param sum_filter_thresh Numeric. Maximum allowed excess of summed children
 #'   CCFs over the parent CCF.  Default \code{0.2}.
 #'
-#' @return Invisibly \code{NULL}.  All valid spanning trees are stored in the
-#'   global variable \code{all_spanning_trees} as a list of edge-list
-#'   data.frames.
+#' @return A list of edge-list data.frames, one per valid spanning tree found.
+#'   Returns an empty list when no valid spanning tree exists.
 #'
 #' @export
 enumerateSpanningTreesModified <- function(graph_G, mcf, sum_filter_thresh=0.2) {
-  # Initialize globals required for recursion
-  all_spanning_trees <- assign("all_spanning_trees", list(), envir = .GlobalEnv)
-  F_tb <- assign("F_tb", dplyr::filter(graph_G, parent == "root"), envir = .GlobalEnv)
-  
+  env <- new.env(parent = emptyenv())
+  env$all_spanning_trees <- list()
+  env$F_tb  <- dplyr::filter(graph_G, parent == "root")
+  env$graph_G <- graph_G
+
   all_vertices <- verticesInGraph(graph_G)
   tree_T <- dplyr::tibble(parent = character(), child = character())
-  
-  growModified(tree_T, all_vertices, mcf, sum_filter_thresh)
+
+  growModified(tree_T, all_vertices, mcf, sum_filter_thresh, env)
+  env$all_spanning_trees
 }
 
 #' Recursive worker for the modified Gabow-Myers tree enumeration
 #'
 #' Internal recursive function called by \code{\link{enumerateSpanningTreesModified}}.
 #' Grows a partial spanning tree one edge at a time, checking the CCF sum
-#' condition at each step, and stores each complete spanning tree in the global
-#' \code{all_spanning_trees} list.
+#' condition at each step, and accumulates complete spanning trees in \code{env}.
 #'
 #' @param tree_T tibble. Current partial spanning tree (columns: \code{parent},
 #'   \code{child}).
 #' @param all_vertices Character vector. All vertex labels in the graph.
 #' @param w Numeric matrix. CCF matrix (rows = clones, columns = samples).
 #' @param sum_thresh Numeric. CCF sum-condition threshold.  Default \code{0.2}.
+#' @param env environment. Local mutable state carrying \code{all_spanning_trees},
+#'   \code{F_tb}, and \code{graph_G} across recursive calls.
 #'
-#' @return Invisibly \code{NULL}; results are accumulated in the global
-#'   \code{all_spanning_trees}.
+#' @return Invisibly \code{NULL}; results are accumulated in \code{env$all_spanning_trees}.
 #'
-#' @export
-growModified <- function(tree_T, all_vertices, w, sum_thresh=0.2) {
-  
+#' @keywords internal
+growModified <- function(tree_T, all_vertices, w, sum_thresh=0.2, env) {
+
   if (length(verticesInGraph(tree_T)) == length(all_vertices) & nrow(tree_T) == (length(all_vertices)-1)) {
-    assign("all_spanning_trees", c(all_spanning_trees, list(tree_T)), envir = .GlobalEnv)
-    
+    env$all_spanning_trees <- c(env$all_spanning_trees, list(tree_T))
+
   } else {
     FF <- dplyr::tibble(parent = character(), child = character())
     bridge <- FALSE
-    
+
     while(!bridge) {
-      if (nrow(F_tb) == 0) stop("F_tb is empty")
-      edge_e <- pop(F_tb, "F_tb")
+      if (nrow(env$F_tb) == 0) break
+      edge_e    <- env$F_tb[1, ]
+      env$F_tb  <- env$F_tb[-1, ]
       v <- edge_e$child
       tree_T <- rbind(tree_T, edge_e)
-      
+
       # Check sum condition constraint
       if (satisfiesSumCondition(tree_T, w, sum_thresh)) {
         # update F: push each edge (v,w), w not in T onto F
         in_T <- verticesInGraph(tree_T)
-        temp_add_to_F <- dplyr::filter(graph_G, parent == v, !(child %in% in_T))
-        assign("F_tb", rbind(temp_add_to_F, F_tb), envir = .GlobalEnv)
-        
+        temp_add_to_F <- dplyr::filter(env$graph_G, parent == v, !(child %in% in_T))
+        env$F_tb <- rbind(temp_add_to_F, env$F_tb)
+
         # remove each edge (w,v), w in T from F
         w_in_T <- verticesInGraph(tree_T)
-        removed_edges <- dplyr::filter(F_tb, parent %in% w_in_T, child == v)
-        assign("F_tb", dplyr::filter(F_tb, !edge %in% removed_edges$edge), envir = .GlobalEnv)
-        
+        removed_edges <- dplyr::filter(env$F_tb, parent %in% w_in_T, child == v)
+        env$F_tb <- dplyr::filter(env$F_tb, !edge %in% removed_edges$edge)
+
         # Recurse
-        growModified(tree_T, all_vertices, w, sum_thresh)
-        
+        growModified(tree_T, all_vertices, w, sum_thresh, env)
+
         # Restore F
         not_in_T <- all_vertices[!all_vertices %in% verticesInGraph(tree_T)]
-        if (length(not_in_T) > 0 & nrow(F_tb) > 0) {
+        if (length(not_in_T) > 0 & nrow(env$F_tb) > 0) {
           edges_to_remove_9 <- paste0(v, "->", not_in_T)
-          assign("F_tb", dplyr::filter(F_tb, !edge %in% edges_to_remove_9), envir = .GlobalEnv)
+          env$F_tb <- dplyr::filter(env$F_tb, !edge %in% edges_to_remove_9)
         }
-        assign("F_tb", rbind(removed_edges, F_tb), envir = .GlobalEnv)
+        env$F_tb <- rbind(removed_edges, env$F_tb)
       }
-      
+
       # delete e from T and from G, add e to FF
-      tree_T <- tree_T[tree_T$edge != edge_e$edge, ]
-      assign("graph_G", graph_G[graph_G$edge != edge_e$edge, ], envir = .GlobalEnv)
+      tree_T    <- tree_T[tree_T$edge != edge_e$edge, ]
+      env$graph_G <- env$graph_G[env$graph_G$edge != edge_e$edge, ]
       FF <- rbind(edge_e, FF)
-      
+
       # bridge test
-      bridge <- bridgeTestBFS(graph_G, edge_e)
+      bridge <- bridgeTestBFS(env$graph_G, edge_e)
     }
-    
+
     # Restore edges
     if (nrow(FF) > 0) {
-      assign("graph_G", rbind(FF, graph_G), envir = .GlobalEnv)
+      env$graph_G <- rbind(FF, env$graph_G)
       while (nrow(FF) > 0) {
-        assign("F_tb", rbind(FF[1, ], F_tb), envir = .GlobalEnv)
+        env$F_tb <- rbind(FF[1, ], env$F_tb)
         FF <- FF[-1, ]
       }
     }

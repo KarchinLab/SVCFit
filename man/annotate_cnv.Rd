@@ -10,7 +10,12 @@ annotate_cnv(sv_cnv)
 \item{sv_cnv}{an object of class 'data frame'. This object stores the output from \code{assign_cnv}}
 }
 \value{
-sth
+A data.frame with columns \code{CHROM}, \code{POS}, \code{ID},
+\code{zygosity}, \code{sv_phase}, \code{cnv_phase}, \code{cncf},
+\code{major}, \code{minor}, \code{cna}, \code{ASCN} (allele-specific copy
+number used in SVCF calculation), \code{cn_type} (\code{"DUP"},
+\code{"norm"}, or \code{"DEL"}), \code{tascn}, \code{no_snp}, and
+\code{mate}.
 }
 \description{
 Annotate the type and phasing of a CNV and calculate allele specific copy number for it.

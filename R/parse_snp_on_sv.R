@@ -3,7 +3,11 @@
 #' @param het_on_sv an object of class 'data frame'. This object stores the het snp on sv data loaded from `load_data`.
 #' @param snp_df an object of class 'data frame'. This object stores the output from `parse_het_snps`.
 #'
-#' @returns sth
+#' @return A data.frame with one row per SNP on an SV-supporting read.  Columns
+#'   include \code{CHROM}, \code{POS}, \code{REF}, allele read counts
+#'   (\code{onsv_ref}, \code{onsv_alt}), depth (\code{DEP}), \code{a_count},
+#'   \code{allele}, and all columns from \code{snp_df} joined by
+#'   chromosome/position/reference allele.
 #' @export
 #'
 parse_snp_on_sv <- function(het_on_sv, snp_df) {

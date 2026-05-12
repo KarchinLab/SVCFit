@@ -11,7 +11,7 @@ extract_info(
   p_cnv,
   chr_lst = NULL,
   flank_del = 50,
-  QUAL_tresh = 100,
+  QUAL_thresh = 100,
   min_alt = 2,
   tum_only
 )
@@ -29,19 +29,28 @@ to vcf files for SVs.}
 \item{p_cnv}{object of class 'character'. This object stores the file path
 to CNV file.}
 
+\item{chr_lst}{Character vector or \code{NULL}. Restrict analysis to these
+chromosomes (e.g. \code{"chr1"}). Default \code{NULL} (all chromosomes).}
+
 \item{flank_del}{object of class 'numeric'. This object describes the maximum allowed
 differences in genomic locations for a deletion to be considered as overlapping to a translocation.}
 
-\item{QUAL_tresh}{object of class 'numeric'. This object describes the minimum quality score
+\item{QUAL_thresh}{object of class 'numeric'. This object describes the minimum quality score
 allowed to include an SV.}
 
 \item{min_alt}{object of class 'numeric'. This object describes the minimum
 amount of SV supporting read counts to include an SV.}
 
-\item{tumor_only}{object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM}
+\item{tum_only}{Logical. Whether SVs were called from a tumor-only BAM.
+Default \code{FALSE}.}
 }
 \value{
-sth
+A list of four elements: \code{[[1]]} the raw data list from
+\code{\link{load_data}} (named elements \code{het_snp}, \code{het_on_sv},
+\code{sv}, \code{cnv}); \code{[[2]]} \code{sv_info} from
+\code{\link{parse_sv_info}}; \code{[[3]]} \code{snp_df} from
+\code{\link{parse_het_snps}}; \code{[[4]]} \code{sv_phase} from
+\code{\link{parse_snp_on_sv}}.
 }
 \description{
 extract information

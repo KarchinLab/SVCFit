@@ -4,7 +4,13 @@
 \alias{pre_process_cluster}
 \title{Pre-process paired SV data for DP-GMM clustering}
 \usage{
-pre_process_cluster(pair_path, pur_path, data_dir, exclude_pairs = integer(0))
+pre_process_cluster(
+  pair_path,
+  pur_path,
+  data_dir,
+  exclude_pairs = integer(0),
+  ccf_floor = 0.1
+)
 }
 \arguments{
 \item{pair_path}{Character. Path to a tab-delimited file with paired sample
@@ -18,6 +24,9 @@ Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.}
 
 \item{exclude_pairs}{Integer vector. Pair indices (1-based row numbers in
 \code{pair_path}) to drop before processing.  Default \code{integer(0)}.}
+
+\item{ccf_floor}{Numeric. CCF values below this threshold are zeroed out
+before clustering. Default \code{0.1}.}
 }
 \value{
 A named list with two elements:

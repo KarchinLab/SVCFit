@@ -23,3 +23,4 @@ the long format the maximum per-sample excess is summed across all parent
 nodes; for the wide format the Euclidean norm of per-sample excesses is
 summed.
 }
+\keyword{internal}

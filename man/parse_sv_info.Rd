@@ -4,7 +4,7 @@
 \alias{parse_sv_info}
 \title{parse SV information}
 \usage{
-parse_sv_info(sv, bnd, del, QUAL_tresh = 100, min_alt = 2)
+parse_sv_info(sv, bnd, del, QUAL_thresh = 100, min_alt = 2)
 }
 \arguments{
 \item{sv}{an object of class 'data frame'. This object stores the sv data loaded from \code{load_data}.}
@@ -13,14 +13,19 @@ parse_sv_info(sv, bnd, del, QUAL_tresh = 100, min_alt = 2)
 
 \item{del}{an object of class 'data frame'. This object stores the output from \code{proc_bnd}.}
 
-\item{QUAL_tresh}{an object of class 'integer'. This object describes the minimum QUAL score
+\item{QUAL_thresh}{an object of class 'integer'. This object describes the minimum QUAL score
 to include for analysis.}
 
 \item{min_alt}{an object of class 'integer'. This object describes the minimum alternative read
 count for a structural varinats to have to be included for anlaysis.}
 }
 \value{
-sth
+A data.frame of filtered SVs with columns \code{CHROM}, \code{chr2},
+\code{pos2}, \code{POS}, \code{END}, \code{nPOS}, \code{mPOS}, \code{ID},
+\code{sv_ref}, \code{sv_alt}, \code{class}, \code{donor}, \code{receiver},
+\code{classification}, \code{zygosity_tmp}, and \code{mate}.  BND records
+are annotated with translocation class; INV records share read counts across
+mate pairs.
 }
 \description{
 parse SV information

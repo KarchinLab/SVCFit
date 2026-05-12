@@ -1,0 +1,16 @@
+citHeader("To cite SVCFit in publications use:")
+
+bibentry(
+  bibtype  = "Article",
+  title    = "SVCFit: Estimating Structural Variant Cellular Fraction",
+  author   = person("Yunzhou", "Liu"),
+  journal  = "bioRxiv",
+  year     = "2025",
+  doi      = "10.1101/2025.02.01.636056",
+  url      = "https://doi.org/10.1101/2025.02.01.636056",
+  textVersion = paste(
+    "Liu Y. (2025).",
+    "SVCFit: Estimating Structural Variant Cellular Fraction.",
+    "bioRxiv. https://doi.org/10.1101/2025.02.01.636056"
+  )
+)

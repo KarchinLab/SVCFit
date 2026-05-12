@@ -1,0 +1,416 @@
+---
+title: "SVCFit Guide"
+format: html
+vignette: >
+  %\VignetteIndexEntry{SVCFit Guide}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+SVCFit estimates the **Structural Variant Cellular Fraction (SVCF)** for somatic structural variants (SVs) detected in tumor sequencing data. The SVCF is the proportion of cancer cells that carry a given SV — analogous to the cancer cell fraction (CCF) used for point mutations, but adapted for the read-depth patterns of SVs under copy-number change.
+
+A key challenge is that SVs frequently co-occur with somatic copy-number alterations (CNAs). When an SV breakpoint falls inside a deleted or amplified segment, naively dividing SV-supporting reads by total reads gives a biased estimate of the true cellular fraction. SVCFit corrects for this by:
+
+1.  Detecting whether a deletion or duplication overlaps each SV breakpoint.
+2.  Using nearby heterozygous SNPs to infer the **zygosity** (hemizygous vs. homozygous) and **phase** (same vs. opposite allele as the CNA) of the SV.
+3.  Applying the appropriate correction formula for each configuration.
+
+The resulting `final_svcf` column is a copy-number–corrected cellular fraction that can be fed into downstream clustering and phylogenetic tree inference.
+
+## Pipeline overview
+
+```         
+BAM (tumor + normal)
+       │
+       ├─▶ Manta → SV calls (VCF)
+       │
+       ├─▶ SVtyper → genotyped SV VCF (p_sv)
+       │
+       ├─▶ GATK HaplotypeCaller → het SNPs (p_het, p_onsv)
+       │
+       └─▶ FACETS → CNV segments (p_cnv)
+                │
+                ▼
+          run_svcfit()
+                │
+                ▼
+        SVCF table (.bed)
+                │
+                ▼
+          build_trees()   ← optional: clustering + phylogenetic tree
+```
+
+------------------------------------------------------------------------
+
+# Input files
+
+SVCFit requires four input files. Example files ship with the package and are used throughout this vignette.
+
+```{r}
+#| label: setup
+#| message: false
+library(SVCFit)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(readr)
+library(GenomicRanges)
+
+p_het   <- system.file("extdata", "examples/het_near_sv_c50p80m50.vcf",  package = "SVCFit")
+p_onsv  <- system.file("extdata", "examples/het_on_sv_c50p80m50.vcf",   package = "SVCFit")
+p_sv    <- system.file("extdata", "examples/example_sv.bed",             package = "SVCFit")
+p_cnv   <- system.file("extdata", "examples/c50p80m50.bed",              package = "SVCFit")
+p_truth <- system.file("extdata", "examples/",                           package = "SVCFit")
+```
+
+## `p_sv` — Structural variant calls
+
+A headerless VCF produced by running **Manta** followed by **SVtyper** for genotyping. Each row is one SV breakpoint record with 11 tab-separated columns (10 for tumor-only mode).
+
+```{r}
+#| label: show-sv
+#| echo: false
+sv_raw <- read.table(p_sv, quote = '"')
+colnames(sv_raw) <- c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","normal","tumor")
+head(sv_raw[, 1:8], 3)
+```
+
+Key columns:
+
+| Column | Description |
+|----------------------------|--------------------------------------------|
+| `CHROM`, `POS` | Breakpoint chromosome and position |
+| `ID` | Manta SV identifier (encodes SV type, e.g. `MantaDEL`, `MantaDUP`, `MantaINV`, `MantaBND`) |
+| `ALT` | `<DEL>`, `<DUP:TANDEM>`, `<INV>`, or a breakend string for translocations |
+| `QUAL` | SV quality score (low-quality calls are filtered by `QUAL_thresh`) |
+| `INFO` | Contains `SVTYPE`, `SVLEN`, `END`, `SOMATIC`, etc. |
+| `FORMAT` / `normal` / `tumor` | Genotype fields; SVtyper adds `PR` (paired reads) and `SR` (split reads) |
+
+## `p_het` — Heterozygous SNPs near SVs
+
+A headerless VCF from **GATK HaplotypeCaller** containing germline heterozygous SNPs in the tumor sample, restricted to a window around each SV breakpoint. Used to infer the zygosity and allelic phase of each SV.
+
+```{r}
+#| label: show-het
+#| echo: false
+het_raw <- read.table(p_het, quote = '"')
+colnames(het_raw) <- c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","bulk")
+head(het_raw[, 1:7], 3)
+```
+
+## `p_onsv` — Heterozygous SNPs on SV-supporting reads
+
+Same format as `p_het`. These are the same germline SNPs, but here only reads that support the SV (i.e. split reads or discordant read pairs crossing the breakpoint) are included. The ratio of the two allele counts on SV-supporting reads reveals which haplotype carries the SV.
+
+## `p_cnv` — Copy-number segments (FACETS format)
+
+A tab-separated file from **FACETS** (or any tool that produces the same columns). Each row is one segment.
+
+```{r}
+#| label: show-cnv
+#| echo: false
+cnv_raw <- read.delim(p_cnv, header = TRUE)
+head(cnv_raw[, c("chrom","start","end","tcn.em","lcn.em","cf.em")], 4)
+```
+
+Key columns:
+
+| Column | Description |
+|----------------------------|--------------------------------------------|
+| `chrom`, `start`, `end` | Segment coordinates |
+| `tcn.em` | Total copy number of the segment |
+| `lcn.em` | Minor-allele copy number (`NA` is treated as 1) |
+| `cf.em` | Cancer cell fraction of the segment (used directly for SVs that match a CNV event) |
+
+------------------------------------------------------------------------
+
+# Quick start — `run_svcfit()`
+
+For most users, a single call to `run_svcfit()` runs the full SVCF inference pipeline and returns a list with two elements: `svcf` (the SVCF result table) and `sv_info` (parsed SV metadata).
+
+```{r}
+#| label: quickstart
+#| message: true
+result <- run_svcfit(
+  p_het   = p_het,
+  p_onsv  = p_onsv,
+  p_sv    = p_sv,
+  p_cnv   = p_cnv,
+  samp    = "example_sample",
+  exper   = "exp1"
+)
+
+svcfit_out <- result$svcf
+sv_info    <- result$sv_info
+```
+
+## Key output columns
+
+```{r}
+#| label: show-output
+svcfit_out %>%
+  select(ID, classification, bkg_cnv, cn_type, zygosity, final_svcf) %>%
+  head(10)
+```
+
+| Column | Description |
+|----------------------------|--------------------------------------------|
+| `ID` | SV identifier from the input VCF |
+| `classification` | SV type after processing: `DEL`, `DUP`, `INV`, `BND` (translocation), `COPBND` (copy-paste translocation) |
+| `bkg_cnv` | Copy-number context at the breakpoint: `norm` (diploid), `del`, or `dup` |
+| `cn_type` | Type of overlapping CNV event (`DEL`, `DUP`, or `norm`) |
+| `zygosity` | Inferred allelic state of the SV: `het` (one allele) or `hom` (both alleles) |
+| `final_svcf` | **Copy-number–corrected SVCF** (0–1). This is the main output. |
+| `raw_svcf` | Uncorrected allele fraction (before CNA adjustment) |
+
+### Interpreting `final_svcf`
+
+This example data contains a artificial dataset with two clones (trunk 80% SVCF and subclone 40% SVCF).
+
+```{r}
+#| label: plot-svcf
+#| fig-width: 5
+#| fig-height: 3
+ggplot(svcfit_out, aes(x = final_svcf, fill = classification)) +
+  geom_histogram(binwidth = 0.05, colour = "white") +
+  geom_density(
+    aes(x = final_svcf, y = after_stat(density) * nrow(svcfit_out) * 0.05),
+    inherit.aes = FALSE,
+    colour = "black", linewidth = 0.8,
+    adjust = 0.8
+  ) +
+  labs(x = "SVCF", y = "Count", title = "Distribution of SVCF estimates",
+       fill = "SV type") +
+  theme_bw()
+```
+
+------------------------------------------------------------------------
+
+# Step-by-step walkthrough
+
+This section breaks down what `run_svcfit()` does internally. Each sub-function can be called independently if you need finer control.
+
+## Step 1: Extract information — `extract_info()`
+
+`extract_info()` loads all four input files and parses them into structured data frames. It also processes translocations (BND records) and filters low-quality SVs.
+
+```{r}
+#| label: extract
+#| message: false
+info <- extract_info(
+  p_het       = p_het,
+  p_onsv      = p_onsv,
+  p_sv        = p_sv,
+  p_cnv       = p_cnv,
+  chr_lst     = NULL,      # NULL = all chromosomes
+  flank_del   = 50,        # bp window for BND-associated deletions
+  QUAL_thresh = 100,       # minimum SV quality score
+  min_alt     = 2,         # minimum SV-supporting reads
+  tum_only    = FALSE      # paired normal BAM available
+)
+
+data      <- info[[1]]   # list(het_snp, het_on_sv, sv, cnv)
+sv_info   <- info[[2]]   # parsed SV records
+snp_df    <- info[[3]]   # parsed SNP records
+sv_phase  <- info[[4]]   # SNP phase on SV reads
+```
+
+The input data has `r nrow(read.table(p_sv, quote='"'))` SV breakpoint records. After quality filtering, `r nrow(sv_info)` remain.
+
+## Step 2: Characterize SVs — `characterize_sv()`
+
+`characterize_sv()` integrates CNV segments with nearby heterozygous SNPs to annotate each SV with:
+
+-   **Zygosity**: is the SV on one or both homologous chromosomes?
+-   **Phase**: is the SV on the same haplotype as the overlapping CNA, or the opposite?
+-   **Overlapping CNV**: which segment (if any) overlaps this SV breakpoint?
+
+```{r}
+#| label: characterize
+anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
+head(anno_sv_cnv %>% select(ID, zygosity, ASCN, cn_type, bkg_cnv))
+```
+
+`ASCN` is the allele-specific copy number relevant for the SV allele, which is used in the correction formula.
+
+## Step 3: Calculate SVCF — `calc_svcf()`
+
+`calc_svcf()` applies the copy-number–aware correction and produces the final SVCF estimates.
+
+The `thresh` parameter (default `0.1`) controls the ordering decision: if the uncorrected fraction under the "SV occurred before CNV" model is below `thresh`, SVCFit assumes the CNA came first and uses the other correction branch.
+
+```{r}
+#| label: calcsvcf
+svcfit_out2 <- calc_svcf(anno_sv_cnv, sv_info, thresh = 0.1,
+                          samp = "example_sample", exper = "exp1")
+head(svcfit_out2 %>% select(ID, classification, raw_svcf, final_svcf))
+```
+
+------------------------------------------------------------------------
+
+# Individual sub-functions
+
+Both `extract_info()` and `characterize_sv()` are wrappers. You can call their constituent steps individually for debugging or custom pipelines.
+
+## `extract_info()` sub-functions
+
+### `load_data()`
+
+Reads all four input files and returns a named list.
+
+```{r}
+#| label: load
+data <- load_data(p_het, p_onsv, p_sv, p_cnv, chr = NULL, tumor_only = FALSE)
+# Returns: data$het_snp, data$het_on_sv, data$sv, data$cnv
+```
+
+### `proc_bnd()`
+
+Classifies BND (breakend) records into three translocation types:
+
+| Type | Description |
+|-----------------------|-------------------------------------------------|
+| `copbnd` | Copy-paste (unbalanced): one copy is inserted elsewhere, original is retained |
+| `cutbnd` | Cut-paste (unbalanced): original locus is deleted |
+| `rtl` | Reciprocal translocation: balanced exchange between two loci |
+
+```{r}
+#| label: procbnd
+bnd_info <- proc_bnd(sv = data$sv, flank_del = 50)
+```
+
+### `parse_sv_info()`
+
+Extracts SV type, genomic coordinates, and read counts; applies QUAL and read-count filters.
+
+```{r}
+#| label: parsesv
+sv_info <- parse_sv_info(sv = data$sv, bnd = bnd_info$bnd, del = bnd_info$del,
+                          QUAL_thresh = 100, min_alt = 2)
+```
+
+### `parse_het_snps()`
+
+Extracts allele counts from the heterozygous SNP VCF.
+
+```{r}
+#| label: parsesnps
+snp_df <- parse_het_snps(data$het_snp)
+```
+
+### `parse_snp_on_sv()`
+
+Compares SNP allele counts in all reads vs. SV-supporting reads to determine which haplotype the SV is on.
+
+```{r}
+#| label: parseonsv
+sv_phase <- parse_snp_on_sv(het_on_sv = data$het_on_sv, snp_df)
+```
+
+## `characterize_sv()` sub-functions
+
+### `assign_svids()`
+
+Assigns each heterozygous SNP to the nearest SV within `flank_snp` bp.
+
+```{r}
+#| label: assignids
+assign_id <- assign_svids(sv_phase, sv_info, flank_snp = 500)
+```
+
+### `sum_sv_info()`
+
+Summarises the per-SNP phase evidence into a single zygosity and phase call per SV.
+
+```{r}
+#| label: sumsv
+sv_sum <- sum_sv_info(sv_phase, assign_id, sv_info)
+```
+
+### `assign_cnv()`
+
+Overlaps SV breakpoints with CNV segments to find which segment (if any) each SV falls in.
+
+```{r}
+#| label: assigncnv
+sv_cnv <- assign_cnv(sv_sum, data$cnv)
+```
+
+### `annotate_cnv()`
+
+Classifies each overlapping CNV as a deletion or duplication using copy-number values.
+
+```{r}
+#| label: annotcnv
+anno_sv_cnv <- annotate_cnv(sv_cnv)
+```
+
+------------------------------------------------------------------------
+
+# Downstream: clustering and tree inference — `build_trees()`
+
+After computing SVCF values across multiple samples (e.g. pre-treatment and on-treatment biopsies), you can cluster SVs into subclones and infer a phylogenetic tree.
+
+`build_trees()` runs in two stages:
+
+1.  **DP-GMM clustering** (`run_clustering = TRUE`): groups SVs with similar SVCF profiles across paired samples into clones using a Dirichlet-process Gaussian mixture model. Requires Python with `scikit-learn` installed (via the `reticulate` package).
+2.  **Tree inference** (`run_tree = TRUE`): fits a spanning tree over the clone CCF table that satisfies the lineage-precedence constraint (parent CCF ≥ sum of children CCFs).
+
+```{r}
+#| label: build-trees-example
+#| eval: false
+# Example — requires paired BED files and a purity table
+bt <- build_trees(
+  run_clustering = TRUE,
+  pair_path      = "pairs.txt",   # tab-delimited: pre_BAT, on_BAT
+  pur_path       = "purity.txt",  # tab-delimited: sample, purity
+  data_dir       = "/path/to/svcfit_output",
+  pair_num       = 1L,
+  run_tree       = TRUE
+)
+
+# bt[[1]] — clustering results
+# bt[[2]][[3]] — igraph plot of the inferred phylogenetic tree
+bt[[2]][[3]]
+```
+
+------------------------------------------------------------------------
+
+# Optional: evaluating accuracy on simulated data
+
+`load_truth()` and `attach_truth()` are only applicable when the ground-truth clone assignments are known (e.g. VISOR simulations). They attach the true clone label to each SV so you can measure how accurately SVCFit recovered the cellular fraction.
+
+```{r}
+#| label: truth
+#| message: false
+overlap      <- FALSE   # TRUE only for overlapping-clone simulations
+truth        <- load_truth(p_truth, overlap)
+svcfit_truth <- attach_truth(svcfit_out, truth)
+
+# Show estimated SVCF alongside the ground-truth clone label
+# clone: "clonal" = present in all simulated cancer cells,
+#        "sub"    = present in one subclone only
+svcfit_truth %>%
+  select(ID, classification, final_svcf, clone) %>%
+  head(6)
+```
+
+------------------------------------------------------------------------
+
+# Session info
+
+```{r}
+#| label: session
+sessionInfo()
+```

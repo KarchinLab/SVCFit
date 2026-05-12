@@ -16,13 +16,11 @@ enumerateSpanningTreesModified(graph_G, mcf, sum_filter_thresh = 0.2)
 CCFs over the parent CCF.  Default \code{0.2}.}
 }
 \value{
-Invisibly \code{NULL}.  All valid spanning trees are stored in the
-global variable \code{all_spanning_trees} as a list of edge-list
-data.frames.
+A list of edge-list data.frames, one per valid spanning tree found.
+Returns an empty list when no valid spanning tree exists.
 }
 \description{
 Recursively enumerates all spanning trees of the candidate graph that
 satisfy the CCF sum condition (the sum of children CCFs does not exceed the
-parent CCF by more than \code{sum_filter_thresh}).  Results are written to
-the global variable \code{all_spanning_trees}.
+parent CCF by more than \code{sum_filter_thresh}).
 }

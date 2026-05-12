@@ -19,7 +19,11 @@ threshold for SVCFit to decide whether an SV occurs before CNV or after.}
 \item{exper}{an object of class 'character'. This object describes the experiment number.}
 }
 \value{
-sth
+A data.frame with one row per SV containing all input columns plus
+\code{r_bar} (mean read-depth ratio), \code{r_2} (estimated copy number of
+break intervals), \code{raw_svcf}, \code{s1}, \code{s2}, \code{ss1},
+\code{ss2}, \code{final_svcf} (the SVCF estimate), \code{expmt}, and
+\code{sample}.
 }
 \description{
 Calculate SVCF

@@ -4,7 +4,7 @@
 \alias{growModified}
 \title{Recursive worker for the modified Gabow-Myers tree enumeration}
 \usage{
-growModified(tree_T, all_vertices, w, sum_thresh = 0.2)
+growModified(tree_T, all_vertices, w, sum_thresh = 0.2, env)
 }
 \arguments{
 \item{tree_T}{tibble. Current partial spanning tree (columns: \code{parent},
@@ -15,14 +15,16 @@ growModified(tree_T, all_vertices, w, sum_thresh = 0.2)
 \item{w}{Numeric matrix. CCF matrix (rows = clones, columns = samples).}
 
 \item{sum_thresh}{Numeric. CCF sum-condition threshold.  Default \code{0.2}.}
+
+\item{env}{environment. Local mutable state carrying \code{all_spanning_trees},
+\code{F_tb}, and \code{graph_G} across recursive calls.}
 }
 \value{
-Invisibly \code{NULL}; results are accumulated in the global
-\code{all_spanning_trees}.
+Invisibly \code{NULL}; results are accumulated in \code{env$all_spanning_trees}.
 }
 \description{
 Internal recursive function called by \code{\link{enumerateSpanningTreesModified}}.
 Grows a partial spanning tree one edge at a time, checking the CCF sum
-condition at each step, and stores each complete spanning tree in the global
-\code{all_spanning_trees} list.
+condition at each step, and accumulates complete spanning trees in \code{env}.
 }
+\keyword{internal}

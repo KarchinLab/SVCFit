@@ -24,7 +24,10 @@ to CNV file.}
 \item{tumor_only}{object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM}
 }
 \value{
-sth
+A named list with four elements: \code{het_snp} (heterozygous SNP
+data.frame), \code{het_on_sv} (SNPs on SV-supporting reads data.frame),
+\code{sv} (structural variant data.frame), and \code{cnv} (copy number
+segment data.frame in FACETS format).
 }
 \description{
 load input data
