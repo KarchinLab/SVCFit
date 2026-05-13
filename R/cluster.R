@@ -31,7 +31,7 @@ sk <- NULL
 #'     original \code{POS} / \code{END} coordinates and an \code{event_id}
 #'     column for joining cluster assignments back to individual rows.}
 #' }
-#' @export
+#' @keywords internal
 pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = integer(0), ccf_floor = 0.1){
   sample_pair <- read.delim(pair_path, header = FALSE)
   colnames(sample_pair) <- c("pre_BAT", "on_BAT")
@@ -406,7 +406,7 @@ run_dp_gmm_pair <- function(input, pair_num,
 #' The \code{pre_center} and \code{post_center} columns are recomputed after
 #' merging.
 #'
-#' @export
+#' @keywords internal
 enforce_min_cluster_size <- function(df, min_n = 5) {
   df %>%
     mutate(cluster = as.integer(cluster)) %>%
@@ -484,7 +484,7 @@ enforce_min_cluster_size <- function(df, min_n = 5) {
 #'   unique close pair.  Returns an empty data.frame if fewer than two clusters
 #'   exist or no pairs fall below the threshold.
 #'
-#' @export
+#' @keywords internal
 merge_cluster <- function(input, pair_num, min_dist=0.2){
   tmp <- input %>%
     filter(pair == pair_num) %>%

@@ -283,7 +283,7 @@ sv_char <- characterize_sv(
 | `flank_snp` | numeric    | 500     | Max assignment distance for SNPs. |
 | `flank_cnv` | numeric    | 1000    | Max assignment distance for CNVs. |
 
-### 3. Calculate SVCF for Structural Variants — `calculate_svcf()`
+### 3. Calculate SVCF for Structural Variants — `calc_svcf()`
 
 This step computes the **Structural Variant Cellular Fraction (SVCF)**.
 and returns an annotated VCF file in data.frame format.

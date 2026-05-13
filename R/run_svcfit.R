@@ -290,7 +290,7 @@ build_trees <- function(
           clones                    = clones,
           lineage_precedence_thresh = lineage_precedence_thresh,
           sum_filter_thresh         = sum_filter_thresh,
-	  linear_penalty            = linear_penalty
+          linear_penalty            = linear_penalty
         )
         message("[SVCFit] Tree building complete.")
       }

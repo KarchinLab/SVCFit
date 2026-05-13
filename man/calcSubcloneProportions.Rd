@@ -7,9 +7,15 @@
 calcSubcloneProportions(w_mat, tree_edges)
 }
 \arguments{
-\item{w_mat}{Matrix of CCF estimates (from \code{estimateCCFs})}
+\item{w_mat}{Numeric matrix. Clone CCF matrix with rows = clones and
+columns = samples.}
 
-\item{tree_edges}{Tibble of tree edges with columns edge, parent, and child}
+\item{tree_edges}{Tibble of tree edges with columns \code{edge},
+\code{parent}, and \code{child}.}
+}
+\value{
+Numeric matrix of subclone proportions with the same dimensions as
+\code{w_mat}; columns sum to 1 (proportions per sample).
 }
 \description{
 Calculate proportions of subclones in each sample (assumes CCFs comply with lineage precedence and sum condition)

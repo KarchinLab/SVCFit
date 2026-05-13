@@ -28,7 +28,7 @@
 #' @export
 #'
 
-extract_info <- function(p_het, p_onsv, p_sv, p_cnv, chr_lst=NULL, flank_del=50, QUAL_thresh=100, min_alt=2, tum_only){
+extract_info <- function(p_het, p_onsv, p_sv, p_cnv, chr_lst=NULL, flank_del=50, QUAL_thresh=100, min_alt=2, tum_only=FALSE){
   data      <- load_data(p_het, p_onsv, p_sv, p_cnv, chr=chr_lst, tumor_only=tum_only)
   bnd_info   <- proc_bnd(data$sv, flank_del=flank_del)
   sv_info   <- parse_sv_info(data$sv, bnd_info$bnd, bnd_info$del, QUAL_thresh=QUAL_thresh, min_alt=min_alt)

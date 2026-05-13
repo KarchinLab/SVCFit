@@ -13,7 +13,7 @@ extract_info(
   flank_del = 50,
   QUAL_thresh = 100,
   min_alt = 2,
-  tum_only
+  tum_only = FALSE
 )
 }
 \arguments{

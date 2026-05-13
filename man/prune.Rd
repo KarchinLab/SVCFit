@@ -21,3 +21,4 @@ Removes edges that violate birth-order or continuity constraints: a child
 clone cannot appear before its parent (birth violation), and neither clone
 should be absent for an interval and then reappear (continuity violation).
 }
+\keyword{internal}

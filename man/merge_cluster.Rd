@@ -27,3 +27,4 @@ Computes pairwise Euclidean distances between cluster centres in
 whose centre-to-centre distance is below \code{min_dist}.  These pairs are
 candidates for merging in the downstream clustering workflow.
 }
+\keyword{internal}

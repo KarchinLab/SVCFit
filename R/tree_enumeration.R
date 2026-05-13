@@ -17,7 +17,7 @@
 #' @return data.frame with columns \code{edge} (e.g. \code{"root->1"}),
 #'   \code{parent}, and \code{child}.
 #'
-#' @export
+#' @keywords internal
 prepareGraph <- function(mcf_mat, thresh) {
   graph_pre <- data.frame(edge = character(), parent = character(), child = character())
   for (i in seq_len(nrow(mcf_mat))) {
@@ -49,7 +49,7 @@ prepareGraph <- function(mcf_mat, thresh) {
 #'
 #' @return Filtered data.frame with the same columns as \code{graph_G}.
 #'
-#' @export
+#' @keywords internal
 filterEdgesBasedOnCCFs <- function(graph_G, mcf, thresh = 0.1) {
   check_edges_logical <- apply(graph_G, 1, function(edge) checkEdge(edge, mcf, thresh))
   filtered_graph_G <- graph_G[check_edges_logical, ]
@@ -69,7 +69,7 @@ filterEdgesBasedOnCCFs <- function(graph_G, mcf, thresh = 0.1) {
 #' @return Pruned data.frame with the same columns as \code{graph}, sorted by
 #'   \code{child}.
 #'
-#' @export
+#' @keywords internal
 prune <- function(graph, mcf_mat){
   roots <- graph %>% dplyr::filter(parent=='root')
   
@@ -114,7 +114,7 @@ prune <- function(graph, mcf_mat){
 #' @return A list of edge-list data.frames, one per valid spanning tree found.
 #'   Returns an empty list when no valid spanning tree exists.
 #'
-#' @export
+#' @keywords internal
 enumerateSpanningTreesModified <- function(graph_G, mcf, sum_filter_thresh=0.2) {
   env <- new.env(parent = emptyenv())
   env$all_spanning_trees <- list()

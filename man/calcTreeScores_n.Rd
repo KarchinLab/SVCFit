@@ -57,3 +57,4 @@ Computes a fitness score for each spanning tree in \code{trees} using a
 combined topology cost and mass cost, optionally in parallel.  Higher scores
 indicate better agreement between the tree structure and the observed CCFs.
 }
+\keyword{internal}

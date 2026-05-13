@@ -23,3 +23,4 @@ clone pairs where the child's CCF does not exceed the parent's CCF by more
 than \code{thresh} in any sample.  Every clone is also given an edge from a
 virtual \code{"root"} node.
 }
+\keyword{internal}

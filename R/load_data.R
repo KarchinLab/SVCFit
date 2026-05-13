@@ -9,15 +9,16 @@
 #' @param p_cnv object of class 'character'. This object stores the file path 
 #' to CNV file. 
 #' @param chr an object of class 'character'. This object describes what chromosome to include for analysis.
-#' @param tumor_only object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM
-#' 
+#' @param tumor_only Logical. Whether the SVs were called from a tumor-only BAM
+#'   (no matched normal). Default \code{FALSE}.
+#'
 #' @return A named list with four elements: \code{het_snp} (heterozygous SNP
 #'   data.frame), \code{het_on_sv} (SNPs on SV-supporting reads data.frame),
 #'   \code{sv} (structural variant data.frame), and \code{cnv} (copy number
 #'   segment data.frame in FACETS format).
 #' @export
 #'
-load_data <- function(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only) {
+load_data <- function(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only=FALSE) {
 
   het_snp <- read.table(p_het, quote="\"")
   colnames(het_snp) = c('CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT','bulk')

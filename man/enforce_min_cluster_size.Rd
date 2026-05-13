@@ -30,3 +30,4 @@ reassigned to the geometrically nearest cluster that meets the size
 requirement.  If no cluster meets the threshold, the single largest cluster
 is kept as the fallback.
 }
+\keyword{internal}

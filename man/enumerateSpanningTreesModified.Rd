@@ -24,3 +24,4 @@ Recursively enumerates all spanning trees of the candidate graph that
 satisfy the CCF sum condition (the sum of children CCFs does not exceed the
 parent CCF by more than \code{sum_filter_thresh}).
 }
+\keyword{internal}

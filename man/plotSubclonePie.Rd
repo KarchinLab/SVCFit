@@ -24,6 +24,10 @@ Accent palette via \code{colorRampPalette}.}
 
 \item{legend_size}{Numeric. Font size for legend text. Default \code{10}.}
 }
+\value{
+A \code{ggplot} object: faceted pie charts of subclone proportions
+per sample.
+}
 \description{
 Plot pie charts for subclone proportions in each sample
 }

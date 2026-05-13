@@ -46,3 +46,4 @@ genomic event, separate columns for pre/on CCF) ready for clustering.  Raw
 breakpoint coordinates are preserved in a parallel table so that cluster
 assignments can later be mapped back to individual SV rows.
 }
+\keyword{internal}

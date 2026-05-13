@@ -4,7 +4,7 @@
 \alias{load_data}
 \title{load input data}
 \usage{
-load_data(p_het, p_onsv, p_sv, p_cnv, chr = NULL, tumor_only)
+load_data(p_het, p_onsv, p_sv, p_cnv, chr = NULL, tumor_only = FALSE)
 }
 \arguments{
 \item{p_het}{object of class 'character'. This object stores the file path
@@ -21,7 +21,8 @@ to CNV file.}
 
 \item{chr}{an object of class 'character'. This object describes what chromosome to include for analysis.}
 
-\item{tumor_only}{object of class 'Boolean'. This object describes if the SVs were called only using tumor BAM}
+\item{tumor_only}{Logical. Whether the SVs were called from a tumor-only BAM
+(no matched normal). Default \code{FALSE}.}
 }
 \value{
 A named list with four elements: \code{het_snp} (heterozygous SNP

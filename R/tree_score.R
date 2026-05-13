@@ -32,7 +32,7 @@
 #'
 #' @return Numeric vector of fitness scores, one per tree in \code{trees}.
 #'
-#' @export
+#' @keywords internal
 #calcTreeScores_n <- function(mcf_matrix, trees, mc.cores = 1,
 #                             weight_mass = 1, weight_topology = 1, scaling_coeff = 5,
 #                             zero_thresh = 0.001, restriction_val = 1, tol = 1e-6) {

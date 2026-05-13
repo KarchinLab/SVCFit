@@ -23,7 +23,7 @@ plotGraph <- function(am.long, v_color){
   am[is.na(am)] <- 0
 
   ig <- igraph::graph_from_adjacency_matrix(am, mode = "directed", weighted = TRUE,
-                                            diag = FALSE, add.row = TRUE)
+                                            diag = FALSE)
   igraph::V(ig)$color <- as.list(v_color %>% dplyr::arrange(match(v_sorted, names(igraph::V(ig)))) %>% dplyr::select(colors))$colors
   old_par <- par(mar = c(0, 0, 0, 0) + .1)
   on.exit(par(old_par), add = TRUE)
@@ -49,8 +49,12 @@ plotTree <- function(edges, palette=colorRampPalette(brewer.pal(8, "Accent"))) {
 
 #' Calculate proportions of subclones in each sample (assumes CCFs comply with lineage precedence and sum condition)
 #'
-#' @param w_mat Matrix of CCF estimates (from \code{estimateCCFs})
-#' @param tree_edges Tibble of tree edges with columns edge, parent, and child
+#' @param w_mat Numeric matrix. Clone CCF matrix with rows = clones and
+#'   columns = samples.
+#' @param tree_edges Tibble of tree edges with columns \code{edge},
+#'   \code{parent}, and \code{child}.
+#' @return Numeric matrix of subclone proportions with the same dimensions as
+#'   \code{w_mat}; columns sum to 1 (proportions per sample).
 #' @export
 calcSubcloneProportions <- function(w_mat, tree_edges) {
   K <- nrow(w_mat)
@@ -90,6 +94,8 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' @param sample_names (Optional) Vector of sample names. Should be in the order of columns of subclone_props
 #' @param title_size Numeric. Font size for facet strip titles. Default \code{16}.
 #' @param legend_size Numeric. Font size for legend text. Default \code{10}.
+#' @return A \code{ggplot} object: faceted pie charts of subclone proportions
+#'   per sample.
 #' @export
 plotSubclonePie <- function(subclone_props, palette=colorRampPalette(brewer.pal(8, "Accent")), sample_names = NULL, title_size=16, legend_size=10) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
