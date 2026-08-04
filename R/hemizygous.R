@@ -158,6 +158,10 @@ classify_cn <- function(cna, minor, pl) {
 #' cn_bar for the H3 duplication form. If per-locus depth later shows the reference dropout is
 #' real rather than technical, these are recoverable as SVCF = 1 with no change to the algebra.
 #'
+#' @param pl Integer vector of local normal ploidy from \code{local_ploidy()}.
+#' @param cn_type Character vector of copy-number class from \code{classify_cn()}.
+#' @param sv_ref Integer vector of reference-supporting read counts.
+#' @return Character vector of per-row status labels.
 #' @export
 svcf_status <- function(pl, cn_type, sv_ref) {
   st <- rep("ok", length(pl))
@@ -314,6 +318,9 @@ hemizygous_dup_svcf <- function(cn_bar, r = 2) {
 #' @param bpc,bec numeric vectors of breakpoint and breakend counts.
 #' @param cn_bar numeric vector from depth, or NA to use the read estimate alone.
 #' @param tol numeric. Disagreement above this is flagged.
+#' @param bg_cn numeric vector, flanking (background) copy number for the CNV-first form;
+#'   \code{NA} falls back to the previous behaviour.
+#' @param bg_tol numeric. Copy-neutral band half-width for the background estimate.
 #' @return data.frame with \code{svcf}, \code{svcf_depth}, \code{svcf_vaf}, \code{svcf_source},
 #'   \code{status}.
 #' @export
@@ -446,6 +453,7 @@ hemizygous_del_svcf <- function(bpc, bec, cn_bar = NA_real_, tol = 0.15,
 #' caller still expecting it fails loudly instead of silently reintroducing the wrong quantity.
 #' The history is in HOW-C-IS-COMPUTED.md and CORRECTION-c-vs-cnbar-2026-07-29.md.
 #'
+#' @param ... Ignored. The function is defunct and always signals an error.
 #' @export
 solve_hemizygous_cn <- function(...) {
   stop("solve_hemizygous_cn() is defunct. The hemizygous forms take cn_bar directly; c and f_CNV ",

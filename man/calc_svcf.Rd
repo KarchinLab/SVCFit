@@ -52,6 +52,9 @@ GENERATED, NEVER HAND-WRITTEN. Produce it with scripts/13_zero_ref_allowlist.sh,
 the verdict from matched-normal soft-clipping calibrated against control loci. The distinction
 cannot be made from the bed alone: both suppression guards fire on sv_ref == 0 and the matched
 normal is what separates a somatic clonal loss from a germline or mapping artifact.}
+
+\item{hemi_bg_cn}{data.frame, numeric, or NULL. Flanking (background) copy number for the
+CNV-first deletion form; optional.}
 }
 \value{
 data.frame as before, plus \code{pl} (local normal ploidy), \code{svcf_status},

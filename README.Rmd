@@ -17,9 +17,11 @@ knitr::opts_chunk$set(
 
 SVCFit is a fast and scalable computational tool designed to estimate the Structural Variant Cellular Fraction (SVCF) of inversions, deletions, tandem duplications, and translocations. Developed for the R environment, SVCFit integrates structural variant (SV) calls with Copy Number Variation (CNV) and Single Nucleotide Polymorphism (SNP) data to provide accurate cellular fraction estimates.
 
+SVCFit also handles **hemizygous (single-copy) chromosomes** — for example chrX and chrY in a male subject — where heterozygous germline SNPs do not exist and the standard allele-copy-ratio correction cannot be estimated. On these chromosomes SVCFit switches to a ploidy-aware estimator that uses a read-depth–derived mean copy number (`cn_bar`) in place of SNP-based phasing. See [Hemizygous chromosomes (chrX / chrY)](#hemizygous-chromosomes-chrx--chry).
+
 **Resources**
 
--   Open access data: It is available on mendeley (doi: 10.17632/2nhhdjx225.3)
+-   Open access data: It is available on mendeley (doi: 10.17632/2nhhdjx225.6)
 
 -   Protected Data: Available via European Genome-phenome Archive (EGAD00001001343).
 
@@ -214,8 +216,8 @@ bcftools mpileup -f $ref -a DP,AD -A \
 
 -   **Manta[5]**: writes `INFO/CIPOS` and `INFO/CIEND` natively — no reformatting needed.
 -   **Delly[6]**: writes `INFO/CIPOS` but not `INFO/CIEND` — append `CIEND=-50,50` (or the per-call confidence interval if available).
--   **GRIDSS[7]**: uses paired-end / split-read counts in dedicated INFO fields; convert to LUMPY-style `INFO/MATEID`, `INFO/CIPOS`, and `INFO/CIEND` before SVtyper. A converter script `gridss_to_lumpy.py` is provided in `scripts/`.
--   **Manta + Delly + GRIDSS consensus via SURVIVOR[8]**: SURVIVOR drops `CIPOS`/`CIEND` from some merged records — run `add_cipos_ciend.py` to backfill them.
+-   **GRIDSS[7]**: uses paired-end / split-read counts in dedicated INFO fields; convert to LUMPY-style `INFO/MATEID`, `INFO/CIPOS`, and `INFO/CIEND` before SVtyper.
+-   **Manta + Delly + GRIDSS consensus via SURVIVOR[8]**: SURVIVOR drops `CIPOS`/`CIEND` from some merged records — backfill them before genotyping.
 
 ## Usage Workflow
 
@@ -228,7 +230,7 @@ Load and preprocess input VCF and CNV files. This step parses metadata, processe
 1.  **Load input data** — `load_data()`
 2.  **Process BND events** — `proc_bnd()`
 3.  **Parse SV metadata** — `parse_sv_info()`
-4.  **Parse heterozygous SNPs** — `parse_het_snp()`, `parse_snp_on_sv()`
+4.  **Parse heterozygous SNPs** — `parse_het_snps()`, `parse_snp_on_sv()`
 
 ``` r
 info <- extract_info(
@@ -317,8 +319,13 @@ svcf_out <- calc_svcf(
 | `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
 | `samp`        | character  | —       | Sample name.                           |
 | `exper`       | character  | —       | Experiment name.                       |
+| `hemizygous_chr` | character | NULL | Chromosomes single-copy in the germline (e.g. `c("chrX","chrY")`). `NULL` = diploid-only behavior. |
+| `hemi_cn_bar` | data.frame / numeric | NULL | Read-depth mean copy number (`cn_bar`) for hemizygous rows — a `data.frame(CHROM, POS, cn_bar)` or numeric vector. `NULL` leaves copy-altered hemizygous rows unresolved. |
+| `hemi_bg_cn` | data.frame / numeric | NULL | Flanking (background) copy number for the CNV-first deletion form; optional. |
+| `hemi_dup_r` | numeric | 2 | Copies in carrier cells for a hemizygous tandem duplication; SVCFs reported as upper bounds. |
+| `zero_ref_allowlist` | data.frame | NULL | Hemizygous rows with `sv_ref = 0` that BAM evidence confirms are genuine clonal losses (SVCF = VAF = 1). |
 
-**Output:** An annotated VCF-like data frame with additional fields for VAF, Rbar, r, and SVCF.
+**Output:** An annotated VCF-like data frame with additional fields for VAF, Rbar, r, and SVCF. On hemizygous chromosomes it also carries `pl` (local normal ploidy), `svcf_status`, `sv_cnv_order`, and `svcf_is_bound`.
 
 1.  VAF: variant allele frequency
 2.  Rbar: average break interval count in a sample
@@ -426,6 +433,57 @@ This function has 2 arguments:
 
 This appends the known clonal assignment to the calculated SVCF output for performance evaluation.
 
+## Hemizygous chromosomes (chrX / chrY)
+
+On a diploid autosome SVCFit uses heterozygous germline SNPs to estimate the allele copy ratio and phase each SV against overlapping CNVs. A **hemizygous** chromosome — a male X or Y, or any chromosome that is single-copy in the germline — has no heterozygous SNPs, so that route is undefined and the diploid conversion factor of 2 no longer applies. Left uncorrected, a clonal hemizygous SV is estimated at roughly twice its true cellular fraction and is then silently dropped downstream.
+
+SVCFit handles these chromosomes with a ploidy-aware estimator. The key quantity is `cn_bar`, the **mean copy number of the locus per cell**, measured from read depth (`cn_bar = R * psi_sample / 2`, where `R` is the tumor/normal depth ratio and `psi_sample` the autosomal ploidy scaling). Total alleles per cell is always `cn_bar`, and with `VAF = BPC / (BPC + BEC)` the two orderings of an SV relative to an overlapping CNV are:
+
+```         
+H1  (SV precedes CNV):  SVCF = cn_bar * VAF - (cn_bar - 1)
+H2  (CNV precedes SV):  SVCF = cn_bar * VAF
+```
+
+Both reduce to `SVCF = VAF` at `cn_bar = 1` (copy-neutral). The ordering is decided by the sign of the H1 form — no integer copy number or CNV cellular fraction is needed. A tandem duplication is its own copy-number change and uses `SVCF = (cn_bar - 1) / (r - 1)`; because `r` is not identifiable from a single locus, these are reported as **upper bounds**.
+
+### Enabling it
+
+Pass the single-copy chromosomes to `run_svcfit()` (or `calc_svcf()`), together with a per-SV `cn_bar` table from a depth segmentation of the chromosome:
+
+``` r
+result <- run_svcfit(
+  p_het = p_het, p_onsv = p_onsv, p_sv = p_sv, p_cnv = p_cnv,
+  samp = "SampleID", exper = "ExperimentID",
+  hemizygous_chr = c("chrX", "chrY"),   # single-copy in this subject's germline
+  hemi_cn_bar    = cn_bar_table         # data.frame(CHROM, POS, cn_bar), from read depth
+)
+```
+
+With `hemi_cn_bar = NULL`, copy-neutral hemizygous SVs still resolve to `SVCF = VAF`, while copy-altered ones are left unresolved (and counted via `svcf_status`) rather than guessed. Autosomes are unaffected: with `hemizygous_chr = NULL` every result is identical to the diploid path.
+
+### Estimator helpers
+
+These building blocks are exported so a `cn_bar` and read counts can be scored directly, without the full VCF pipeline:
+
+| Function | Purpose |
+|----|----|
+| `local_ploidy(chrom, hemizygous_chr)` | Local normal ploidy (1 on a hemizygous chromosome, 2 otherwise). |
+| `classify_cn(cna, minor, pl)` | Ploidy-aware DUP / norm / DEL classification (reduces to the diploid tests at `pl = 2`). |
+| `resolve_hemizygous_svcf(bpc, bec, cn_bar)` | SVCF for an SV inside a CNV made by another event; picks H1/H2 by the sign rule. |
+| `hemizygous_dup_svcf(cn_bar, r = 2)` | SVCF for a hemizygous tandem duplication (upper bound). |
+| `hemizygous_del_svcf(bpc, bec, cn_bar)` | SVCF for a hemizygous deletion, with a depth-vs-read consistency check. |
+| `svcf_status(pl, cn_type, sv_ref)` | Per-row status label so exclusions are countable, not silent. |
+
+``` r
+resolve_hemizygous_svcf(bpc = 4, bec = 1, cn_bar = 2.0)
+#>   svcf      ordering status  h1  h2
+#> 1  0.6 sv_before_cnv     ok 0.6 1.6
+
+hemizygous_dup_svcf(cn_bar = 1.5, r = 2)
+#>   svcf is_upper_bound status
+#> 1  0.5           TRUE     ok
+```
+
 ## Tutorial
 
 ``` r
@@ -437,7 +495,7 @@ vignette("SVCFit_guide", package = "SVCFit")
 
 **Can I use a different SV caller?** Yes. Any caller that produces a per-SV breakpoint VCF compatible with SVtyper will work. Differences across callers in breakpoint detection sensitivity, split-read versus discordant-pair definitions, and quality filtering may produce different REF/ALT counts and therefore different SVCF estimates from the same data — see Discussion in the manuscript.
 
-**Can I skip FACETS and use Battenberg / ASCAT instead?** Yes, as long as you provide per-segment total copy number and gain/loss classification in the same TSV format. A converter is in `scripts/cnv_converter.R`.
+**Can I skip FACETS and use Battenberg / ASCAT instead?** Yes, as long as you provide per-segment total copy number and gain/loss classification in the same TSV format.
 
 **Do I need a matched normal?** For the COMBAT analysis we used matched normals throughout. SVCFit can run on tumor-only when a matched normal is unavailable, but tumor purity must be supplied externally and ASCN inference becomes less reliable without germline-heterozygous SNP calls; this is treated as an unsupported configuration in the current release.
 

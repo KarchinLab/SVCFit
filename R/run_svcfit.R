@@ -28,6 +28,19 @@
 #' @param flank_cnv Numeric. Flanking window (bp) used when assigning background
 #'   CNV segments. Default \code{1000}.
 #'
+#' @param hemizygous_chr Character vector or \code{NULL}. Chromosomes single-copy in this
+#'   subject's germline (e.g. \code{c("chrX","chrY")}). \code{NULL} reproduces diploid-only behaviour.
+#' @param hemi_cn_bar data.frame, numeric, or \code{NULL}. Read-depth mean copy number
+#'   (\code{cn_bar}) for hemizygous rows: a \code{data.frame(CHROM, POS, cn_bar)} or numeric vector.
+#'   \code{NULL} leaves copy-altered hemizygous rows unresolved rather than guessing.
+#' @param hemi_bg_cn data.frame, numeric, or \code{NULL}. Flanking (background) copy number for the
+#'   CNV-first deletion form; optional.
+#' @param hemi_dup_r Numeric. Copies in carrier cells for a hemizygous tandem duplication.
+#'   Default \code{2}; duplication SVCFs are reported as upper bounds.
+#' @param hemi_cn_override data.frame or \code{NULL}. Externally-derived hemizygous copy number
+#'   replacing the default single-copy germline state.
+#' @param zero_ref_allowlist data.frame or \code{NULL}. Hemizygous rows with \code{sv_ref = 0} that
+#'   BAM evidence confirms are genuine clonal losses (SVCF = VAF = 1).
 #' @return A named list with two elements:
 #' \describe{
 #'   \item{\code{svcf}}{data.frame. Full SVCF result table from

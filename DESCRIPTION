@@ -30,7 +30,9 @@ Imports:
     utils,
     RColorBrewer,
     igraph,
-    parallel
+    parallel,
+    graphics,
+    grDevices
 Suggests:
     knitr,
     markdown,

@@ -40,5 +40,6 @@ utils::globalVariables(c(
   "snp_ref", "ss1", "ss2", "stage", "sv_alt", "sv_len", "sv_phase",
   "sv_ref", "sv_zy", "tascn", "tmpid", "tumor", "type", "use_mate",
   "v_sorted", "vaf", "var_day85", "var_pre", "vio_birth", "w_day85",
-  "w_pre", "z1", "z2", "zygosity", "zygosity_snp", "zygosity_tmp"
+  "w_pre", "z1", "z2", "zygosity", "zygosity_snp", "zygosity_tmp",
+  "pl"
 ))

@@ -38,6 +38,8 @@
 #'   r is not identifiable from a single locus, and r = 2 maximises SVCF, so the duplication values
 #'   are upper bounds; \code{svcf_is_bound} marks them.
 #'
+#' @param hemi_bg_cn data.frame, numeric, or NULL. Flanking (background) copy number for the
+#'   CNV-first deletion form; optional.
 #' @return data.frame as before, plus \code{pl} (local normal ploidy), \code{svcf_status},
 #'   \code{sv_cnv_order} and \code{svcf_is_bound}. Rows whose status is not "ok" are returned with
 #'   \code{final_svcf = NA} rather than dropped, so exclusions are countable instead of silent.

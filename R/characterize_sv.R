@@ -11,6 +11,8 @@
 #' @param flank_cnv Numeric. Flanking window (bp) used when assigning background
 #'   CNV in \code{\link{assign_background_cnv}}. Default \code{1000}.
 #'
+#' @param hemizygous_chr Character vector or NULL. Chromosomes single-copy in the germline;
+#'   forwarded to \code{annotate_cnv}. NULL reproduces diploid-only behaviour.
 #' @return A data.frame combining CNV annotation from \code{\link{annotate_cnv}},
 #'   full SV metadata, and background CNV classification from
 #'   \code{\link{assign_background_cnv}}.  Key added columns: \code{cn_type},

@@ -19,6 +19,11 @@ hemizygous_del_svcf(
 \item{cn_bar}{numeric vector from depth, or NA to use the read estimate alone.}
 
 \item{tol}{numeric. Disagreement above this is flagged.}
+
+\item{bg_cn}{numeric vector, flanking (background) copy number for the CNV-first form;
+\code{NA} falls back to the previous behaviour.}
+
+\item{bg_tol}{numeric. Copy-neutral band half-width for the background estimate.}
 }
 \value{
 data.frame with \code{svcf}, \code{svcf_depth}, \code{svcf_vaf}, \code{svcf_source},

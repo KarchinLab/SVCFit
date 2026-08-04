@@ -6,6 +6,9 @@
 \usage{
 solve_hemizygous_cn(...)
 }
+\arguments{
+\item{...}{Ignored. The function is defunct and always signals an error.}
+}
 \description{
 Removed 2026-07-29. Nothing needs \code{c} or \code{f_CNV} any more: the corrected forms take \code{cn_bar}
 directly, and the ordering is decided by the sign of the H1 form. Retained as a stub so that any

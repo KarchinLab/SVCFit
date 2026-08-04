@@ -6,6 +6,16 @@
 \usage{
 svcf_status(pl, cn_type, sv_ref)
 }
+\arguments{
+\item{pl}{Integer vector of local normal ploidy from \code{local_ploidy()}.}
+
+\item{cn_type}{Character vector of copy-number class from \code{classify_cn()}.}
+
+\item{sv_ref}{Integer vector of reference-supporting read counts.}
+}
+\value{
+Character vector of per-row status labels.
+}
 \description{
 "ok"                          usable estimate
 "hemizygous_cnv_unresolved"   hemizygous and copy-altered, but resolve_hemizygous_svcf() has not

@@ -259,6 +259,55 @@ head(svcfit_out2 %>% select(ID, classification, raw_svcf, final_svcf))
 
 ------------------------------------------------------------------------
 
+# Hemizygous chromosomes (chrX / chrY)
+
+Autosomal SVCF estimation relies on heterozygous germline SNPs to infer the allele copy ratio and phase each SV against overlapping CNVs. A **hemizygous** chromosome — a male X or Y, or any chromosome single-copy in the germline — carries no heterozygous SNPs, so that route is undefined and the diploid conversion factor of 2 does not apply. Uncorrected, a clonal hemizygous SV is estimated at roughly twice its true cellular fraction and then drops out of the clustered output.
+
+SVCFit corrects this with a ploidy-aware estimator keyed on `cn_bar`, the mean copy number of the locus per cell, measured from read depth. With `VAF = BPC / (BPC + BEC)`:
+
+-   **SV precedes CNV (H1):** `SVCF = cn_bar * VAF - (cn_bar - 1)`
+-   **CNV precedes SV (H2):** `SVCF = cn_bar * VAF`
+
+Both reduce to `SVCF = VAF` when `cn_bar = 1` (copy-neutral). The ordering is chosen by the sign of the H1 form. A tandem duplication uses `SVCF = (cn_bar - 1) / (r - 1)` and is reported as an upper bound, because `r` is not identifiable from a single locus.
+
+## Running the pipeline on a hemizygous chromosome
+
+Pass the single-copy chromosomes and a per-SV `cn_bar` table (from a read-depth segmentation) to `run_svcfit()`:
+
+```{r}
+#| label: hemizygous-run
+#| eval: false
+result <- run_svcfit(
+  p_het = p_het, p_onsv = p_onsv, p_sv = p_sv, p_cnv = p_cnv,
+  samp = "SampleID", exper = "ExperimentID",
+  hemizygous_chr = c("chrX", "chrY"),   # single-copy in this subject's germline
+  hemi_cn_bar    = cn_bar_table         # data.frame(CHROM, POS, cn_bar)
+)
+```
+
+With `hemizygous_chr = NULL` the results are identical to the diploid path. With `hemi_cn_bar = NULL`, copy-neutral hemizygous SVs still resolve to `SVCF = VAF`, while copy-altered ones are left unresolved (and flagged in `svcf_status`) rather than guessed.
+
+## Estimator helpers
+
+The estimator building blocks are exported, so read counts and a `cn_bar` can be scored directly without the VCF pipeline:
+
+```{r}
+#| label: hemizygous-helpers
+# local normal ploidy: 1 on a hemizygous chromosome, 2 on autosomes
+local_ploidy(c("chr1", "chrX", "chrY"), hemizygous_chr = c("chrX", "chrY"))
+
+# an SV inside a CNV made by another event — ordering picked by the sign rule
+resolve_hemizygous_svcf(bpc = 4, bec = 1, cn_bar = 2.0)
+
+# a copy-neutral locus reduces to SVCF = VAF
+resolve_hemizygous_svcf(bpc = 3, bec = 7, cn_bar = 1.0)
+
+# a hemizygous tandem duplication (reported as an upper bound)
+hemizygous_dup_svcf(cn_bar = 1.5, r = 2)
+```
+
+------------------------------------------------------------------------
+
 # Individual sub-functions
 
 Both `extract_info()` and `characterize_sv()` are wrappers. You can call their constituent steps individually for debugging or custom pipelines.
