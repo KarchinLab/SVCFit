@@ -1,3 +1,13 @@
+# chrX_rerun patch: FACETS codes the sex chromosomes numerically (23 = X, 24 = Y) while the
+# SV records use chrX/chrY. Mapping them here is what lets the CNV join in characterize_sv()
+# match at all, and what lets apply_hemizygous_cn() find the rows it is meant to override.
+normalize_chrom_names <- function(x) {
+  x <- sub('^chr', '', trimws(as.character(x)))
+  x[x == '23'] <- 'X'
+  x[x == '24'] <- 'Y'
+  paste0('chr', x)
+}
+
 #' load input data
 #'
 #' @param p_het object of class 'character'. This object stores the file path 
@@ -44,7 +54,7 @@ load_data <- function(p_het, p_onsv, p_sv, p_cnv, chr=NULL, tumor_only=FALSE) {
   }
   cnv <- read.delim(p_cnv, header = TRUE) %>%
     mutate(lcn.em=ifelse(is.na(lcn.em), 1, lcn.em),
-           chrom=paste0("chr", sub("^chr", "", chrom)))
+           chrom=normalize_chrom_names(chrom))   # chrX_rerun patch: 23 -> X, 24 -> Y
   if(!is.null(chr)){
     cnv <- cnv %>% filter(chrom %in% chr)
   }

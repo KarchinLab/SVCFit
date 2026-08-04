@@ -2,21 +2,25 @@
 % Please edit documentation in R/annotate_cnv.R
 \name{annotate_cnv}
 \alias{annotate_cnv}
-\title{Annotate the type and phasing of a CNV and calculate allele specific copy number for it.}
+\title{Annotate the type and phasing of a CNV and calculate the allele copy ratio.}
 \usage{
-annotate_cnv(sv_cnv)
+annotate_cnv(sv_cnv, hemizygous_chr = NULL)
 }
 \arguments{
-\item{sv_cnv}{an object of class 'data frame'. This object stores the output from \code{assign_cnv}}
+\item{sv_cnv}{data.frame. Output of \code{assign_cnv}.}
+
+\item{hemizygous_chr}{character vector or NULL. Chromosomes that are single-copy in this
+subject's germline.}
 }
 \value{
-A data.frame with columns \code{CHROM}, \code{POS}, \code{ID},
-\code{zygosity}, \code{sv_phase}, \code{cnv_phase}, \code{cncf},
-\code{major}, \code{minor}, \code{cna}, \code{ASCN} (allele-specific copy
-number used in SVCF calculation), \code{cn_type} (\code{"DUP"},
-\code{"norm"}, or \code{"DEL"}), \code{tascn}, \code{no_snp}, and
-\code{mate}.
+data.frame with the original columns plus \code{pl}.
 }
 \description{
-Annotate the type and phasing of a CNV and calculate allele specific copy number for it.
+Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification reduces exactly to the
+original diploid tests. See chrX_rerun/MATH.md, change 3.
+}
+\details{
+On a hemizygous chromosome there are no heterozygous germline SNPs, so \code{tascn} and
+\code{ASCN} (Eq. 6) are undefined. They are left as NA and the downstream correction is skipped
+rather than being fed a fabricated value.
 }

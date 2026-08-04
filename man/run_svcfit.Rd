@@ -18,7 +18,13 @@ run_svcfit(
   tum_only = FALSE,
   thresh = 0.1,
   flank_snp = 500,
-  flank_cnv = 1000
+  flank_cnv = 1000,
+  hemizygous_chr = NULL,
+  hemi_cn_bar = NULL,
+  hemi_bg_cn = NULL,
+  hemi_dup_r = 2,
+  hemi_cn_override = NULL,
+  zero_ref_allowlist = NULL
 )
 }
 \arguments{

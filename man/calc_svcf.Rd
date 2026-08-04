@@ -4,27 +4,69 @@
 \alias{calc_svcf}
 \title{Calculate SVCF}
 \usage{
-calc_svcf(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper)
+calc_svcf(
+  anno_sv_cnv,
+  sv_info,
+  thresh = 0.1,
+  samp,
+  exper,
+  hemizygous_chr = NULL,
+  hemi_cn_bar = NULL,
+  hemi_dup_r = 2,
+  zero_ref_allowlist = NULL,
+  hemi_bg_cn = NULL
+)
 }
 \arguments{
-\item{anno_sv_cnv}{an object of class 'data frame'. This object stores the output from \code{annotate_cnv}.}
+\item{anno_sv_cnv}{data.frame. Output of \code{annotate_cnv}.}
 
-\item{sv_info}{an object of class 'data frame'. This object stores the output from \code{parse_sv_info}.}
+\item{sv_info}{data.frame. Output of \code{parse_sv_info}.}
 
-\item{thresh}{an object of class 'numeric'. This object is strictly between 0 and 1, and describes the
-threshold for SVCFit to decide whether an SV occurs before CNV or after.}
+\item{thresh}{numeric in (0, 1). Threshold for deciding whether the SV occurs before or after the
+CNV.}
 
-\item{samp}{an object of class 'character'. This object describes the sample name.}
+\item{samp}{character. Sample name.}
 
-\item{exper}{an object of class 'character'. This object describes the experiment number.}
+\item{exper}{character. Experiment identifier.}
+
+\item{hemizygous_chr}{character vector or NULL. Chromosomes that are single-copy in this
+subject's germline, e.g. c("chrX", "chrY") for a male subject. NULL reproduces the original
+diploid-only behaviour.}
+
+\item{hemi_cn_bar}{numeric or NULL. Mean copies of the locus per cell for each row on a
+hemizygous chromosome, from read depth (\code{cn_bar = R * psi_sample / 2}). This is a
+continuous measurement and is never rounded to an integer copy number. NULL leaves hemizygous
+copy-altered rows unresolved rather than guessing, which is countable downstream via
+\code{svcf_status}.}
+
+\item{hemi_dup_r}{numeric. Copies in carrier cells for a hemizygous tandem duplication. Default 2.
+r is not identifiable from a single locus, and r = 2 maximises SVCF, so the duplication values
+are upper bounds; \code{svcf_is_bound} marks them.}
+
+\item{zero_ref_allowlist}{data.frame or NULL. Rows on a hemizygous chromosome with sv_ref = 0
+that BAM evidence shows are genuine clonal losses rather than reference dropout, so that
+SVCF = VAF = 1 is the correct answer. Columns \code{sample}, \code{chrom}, \code{pos}, and
+\code{verdict}; only rows with \code{verdict == "recover"} are used.
+
+GENERATED, NEVER HAND-WRITTEN. Produce it with scripts/13_zero_ref_allowlist.sh, which derives
+the verdict from matched-normal soft-clipping calibrated against control loci. The distinction
+cannot be made from the bed alone: both suppression guards fire on sv_ref == 0 and the matched
+normal is what separates a somatic clonal loss from a germline or mapping artifact.}
 }
 \value{
-A data.frame with one row per SV containing all input columns plus
-\code{r_bar} (mean read-depth ratio), \code{r_2} (estimated copy number of
-break intervals), \code{raw_svcf}, \code{s1}, \code{s2}, \code{ss1},
-\code{ss2}, \code{final_svcf} (the SVCF estimate), \code{expmt}, and
-\code{sample}.
+data.frame as before, plus \code{pl} (local normal ploidy), \code{svcf_status},
+\code{sv_cnv_order} and \code{svcf_is_bound}. Rows whose status is not "ok" are returned with
+\code{final_svcf = NA} rather than dropped, so exclusions are countable instead of silent.
 }
 \description{
-Calculate SVCF
+Ploidy-aware version. With \code{hemizygous_chr = NULL} every line reduces to the original
+diploid code and results are bit-identical; this is asserted by
+chrX_rerun/scripts/04_regression_autosomes.R. See chrX_rerun/MATH.md, as corrected by
+CORRECTION-c-vs-cnbar-2026-07-29.md.
+}
+\details{
+UPDATED 2026-07-29. The hemizygous branch previously took the CNV cellular fraction
+(\code{hemi_cncf}) and the integer copy number, and selected the SV-CNV ordering by a
+lineage-precedence rule. Both quantities are gone. The corrected forms take the measured mean
+copy number \code{cn_bar} directly, and the ordering is decided by the sign of the SV-first form.
 }

@@ -1,42 +1,54 @@
-#' Annotate the type and phasing of a CNV and calculate allele specific copy number for it.
+#' Annotate the type and phasing of a CNV and calculate the allele copy ratio.
 #'
-#' @param sv_cnv an object of class 'data frame'. This object stores the output from `assign_cnv`
+#' Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification reduces exactly to the
+#' original diploid tests. See chrX_rerun/MATH.md, change 3.
 #'
-#' @return A data.frame with columns \code{CHROM}, \code{POS}, \code{ID},
-#'   \code{zygosity}, \code{sv_phase}, \code{cnv_phase}, \code{cncf},
-#'   \code{major}, \code{minor}, \code{cna}, \code{ASCN} (allele-specific copy
-#'   number used in SVCF calculation), \code{cn_type} (\code{"DUP"},
-#'   \code{"norm"}, or \code{"DEL"}), \code{tascn}, \code{no_snp}, and
-#'   \code{mate}.
+#' On a hemizygous chromosome there are no heterozygous germline SNPs, so \code{tascn} and
+#' \code{ASCN} (Eq. 6) are undefined. They are left as NA and the downstream correction is skipped
+#' rather than being fed a fabricated value.
+#'
+#' @param sv_cnv data.frame. Output of `assign_cnv`.
+#' @param hemizygous_chr character vector or NULL. Chromosomes that are single-copy in this
+#'   subject's germline.
+#'
+#' @return data.frame with the original columns plus \code{pl}.
 #' @export
 #'
-annotate_cnv <- function(sv_cnv) {
-  anno_sv_cnv = sv_cnv %>%
-    # label CNA
+annotate_cnv <- function(sv_cnv, hemizygous_chr = NULL) {
+  anno_sv_cnv <- sv_cnv %>%
     mutate(
-      vaf = snp_alt/dep,
-      tascn = round(vaf/(1-vaf),2),
-      cn_type = case_when(
-        cna > 2           ~ 'DUP',
-        cna == 2 & minor==1 ~ 'norm',
-        minor == 0        ~ 'DEL'
-      ),
+      pl    = local_ploidy(CHROM, hemizygous_chr),
+      vaf   = snp_alt / dep,
+      tascn = round(vaf / (1 - vaf), 2),
+
+      ## no heterozygous SNPs exist on a hemizygous chromosome, so the allele copy ratio is not
+      ## estimable there; do not let a spurious value through
+      tascn = ifelse(pl == 1L, NA_real_, tascn),
+
+      ## ploidy-aware classification. For pl == 2 these are the original tests.
+      cn_type = classify_cn(cna, minor, pl),
+
       cnv_phase = case_when(
-        cn_type=='DUP' & tascn > 1  ~ 'pat',
-        cn_type=='DUP' & tascn < 1  ~ 'mat',
-        cn_type=='DEL' & tascn > 1   ~ 'mat',
-        cn_type=='DEL' & tascn < 1   ~ 'pat',
+        pl == 1L                     ~ NA_character_,
+        cn_type == 'DUP' & tascn > 1 ~ 'pat',
+        cn_type == 'DUP' & tascn < 1 ~ 'mat',
+        cn_type == 'DEL' & tascn > 1 ~ 'mat',
+        cn_type == 'DEL' & tascn < 1 ~ 'pat',
         TRUE                         ~ 'pat'
       ),
+
       ASCN = case_when(
-        cn_type=='DUP' & cnv_phase=='pat' ~ tascn,
-        cn_type=='DUP' & cnv_phase=='mat' ~ 1/tascn,
-        cn_type=='DEL' & cnv_phase=='pat' ~ tascn,
-        cn_type=='DEL' & cnv_phase=='mat' ~ 1/tascn,
-        TRUE                              ~ 1
+        pl == 1L                                ~ NA_real_,
+        cn_type == 'DUP' & cnv_phase == 'pat'   ~ tascn,
+        cn_type == 'DUP' & cnv_phase == 'mat'   ~ 1 / tascn,
+        cn_type == 'DEL' & cnv_phase == 'pat'   ~ tascn,
+        cn_type == 'DEL' & cnv_phase == 'mat'   ~ 1 / tascn,
+        TRUE                                    ~ 1
       )
-    )%>%
-    arrange(POS)%>%
-    select(CHROM, POS, ID, zygosity, sv_phase, cnv_phase, cncf, major, minor, cna, ASCN,cn_type, tascn, no_snp, mate)
+    ) %>%
+    arrange(POS) %>%
+    select(CHROM, POS, ID, zygosity, sv_phase, cnv_phase, cncf, major, minor, cna,
+           ASCN, cn_type, tascn, no_snp, mate, pl)
+
   return(anno_sv_cnv)
 }

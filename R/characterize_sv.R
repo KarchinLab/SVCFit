@@ -19,11 +19,11 @@
 #' @export
 #'
 
-characterize_sv <- function(sv_phase, sv_info, cnv, flank_snp=500, flank_cnv = 1000){
+characterize_sv <- function(sv_phase, sv_info, cnv, flank_snp=500, flank_cnv = 1000, hemizygous_chr = NULL){
   assign_id <- assign_svids(sv_phase, sv_info, flank_snp)
   sv_sum    <- sum_sv_info(sv_phase, assign_id, sv_info)
   sv_cnv    <- assign_cnv(sv_sum, cnv)
-  anno_sv_cnv     <- annotate_cnv(sv_cnv)
+  anno_sv_cnv     <- annotate_cnv(sv_cnv, hemizygous_chr)
   sv_background <- assign_background_cnv(sv_sum, cnv, flank_cnv)
   sv_all <- left_join(anno_sv_cnv, sv_background)
   return(sv_all)

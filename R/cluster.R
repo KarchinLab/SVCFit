@@ -1,7 +1,9 @@
-# Package-level variable for the reticulate sklearn module.
-# Assigned in cluster_data() on first use; <<- writes to the package
-# namespace (not .GlobalEnv) because sk is declared here at package scope.
-sk <- NULL
+# Package-level holder for the reticulate sklearn module.
+# chrX_rerun patch: this was `sk <- NULL` written by `sk <<- import(...)`, which fails with
+# "cannot change value of locked binding" in an installed package -- loadNamespace() seals the
+# namespace. An environment works because the LOCK IS ON THE BINDING, not on the contents of
+# the environment it points at, so .sk$mod can still be assigned. Same once-per-session cache.
+.sk <- new.env(parent = emptyenv())
 
 #' Pre-process paired SV data for DP-GMM clustering
 #'
@@ -181,7 +183,7 @@ read_data <- function(pair, row, pur_file, data_dir){
 
 dp_gmm_convergence <- function(Z, Kmax = 10, n_steps = 50, random_state = 0L, concentration) {
   
-  bgmm <- sk$mixture$BayesianGaussianMixture(
+  bgmm <- .sk$mod$mixture$BayesianGaussianMixture(
     n_components = as.integer(Kmax),
     covariance_type = "full",
     weight_concentration_prior_type = "dirichlet_process",
@@ -312,7 +314,7 @@ run_dp_gmm_pair <- function(input, pair_num,
     ) +
     theme_classic()
   
-  bgmm_final <- sk$mixture$BayesianGaussianMixture(
+  bgmm_final <- .sk$mod$mixture$BayesianGaussianMixture(
     n_components = as.integer(Kmax),
     covariance_type = "full",
     weight_concentration_prior_type = "dirichlet_process",
@@ -592,7 +594,7 @@ cluster_data <- function(pair_path,
 
   #use_condaenv("py3", required = TRUE)
   py_config()
-  sk <<- import("sklearn", delay_load = TRUE)
+  .sk$mod <- import("sklearn", delay_load = TRUE)   # chrX_rerun patch: was sk <<-
 
   if (is.null(pairs)) pairs <- sort(unique(as.integer(new_dat$pair)))
 
