@@ -320,7 +320,7 @@ svcf_out <- calc_svcf(
 | `samp`        | character  | —       | Sample name.                           |
 | `exper`       | character  | —       | Experiment name.                       |
 | `hemizygous_chr` | character | NULL | Chromosomes single-copy in the germline (e.g. `c("chrX","chrY")`). `NULL` = diploid-only behavior. |
-| `hemi_cn_bar` | data.frame / numeric | NULL | Read-depth mean copy number (`cn_bar`) for hemizygous rows — a `data.frame(CHROM, POS, cn_bar)` or numeric vector. `NULL` leaves copy-altered hemizygous rows unresolved. |
+| `hemi_cn_bar` | data.frame / numeric | NULL | Read-depth mean copy number (`cn_bar`) for hemizygous rows — a `data.frame(CHROM, POS, cn_bar)` or numeric vector. Without it (or for an unmatched row) hemizygous **duplications** are left unresolved; deletions, inversions, and translocations fall back to `SVCF = VAF`. |
 | `hemi_bg_cn` | data.frame / numeric | NULL | Flanking (background) copy number for the CNV-first deletion form; optional. |
 | `hemi_dup_r` | numeric | 2 | Copies in carrier cells for a hemizygous tandem duplication; SVCFs reported as upper bounds. |
 | `zero_ref_allowlist` | data.frame | NULL | Hemizygous rows with `sv_ref = 0` that BAM evidence confirms are genuine clonal losses (SVCF = VAF = 1). |
@@ -459,7 +459,57 @@ result <- run_svcfit(
 )
 ```
 
-With `hemi_cn_bar = NULL`, copy-neutral hemizygous SVs still resolve to `SVCF = VAF`, while copy-altered ones are left unresolved (and counted via `svcf_status`) rather than guessed. Autosomes are unaffected: with `hemizygous_chr = NULL` every result is identical to the diploid path.
+With `hemi_cn_bar = NULL`, hemizygous SVs are treated as copy-neutral and resolve to `SVCF = VAF` — except tandem duplications, which need `cn_bar` and are left unresolved (`final_svcf = NA`, flagged `hemizygous_dup_needs_cn_bar` in `svcf_status`). A deletion or inversion on a genuinely copy-altered segment is *not* detectable without `cn_bar` on a hemizygous chromosome (there are no heterozygous SNPs to flag it), so it too falls back to `SVCF = VAF` rather than being singled out. Autosomes are unaffected: with `hemizygous_chr = NULL` every result is identical to the diploid path.
+
+### Obtaining `cn_bar` (chrX/chrY depth segmentation with DNAcopy)
+
+SVCFit does not compute `cn_bar` itself — it consumes it. On the autosomes copy number comes from FACETS, but **FACETS cannot fit a hemizygous chromosome**: a male X has no heterozygous germline SNPs to supply the allelic-imbalance signal FACETS relies on, so it returns a single whole-chromosome segment with an inflated, unusable total copy number (`tcn.em` of 3–9 in our cohort, contradicted by read depth). The containing SV's own SVCFit estimate cannot be used either — it is hemizygous and copy-altered, so that would be circular.
+
+`cn_bar` is therefore measured directly from **read depth**, segmented with the Bioconductor **DNAcopy** package (circular binary segmentation, CBS). The recipe:
+
+1.  **Bin** chrX read depth (e.g. 100 kb bins) in both the tumor and the matched-normal BAM (`samtools depth`).
+2.  **Normalize** each BAM by its own autosomal 2-copy baseline (the median depth of a few known-diploid autosomal regions), then take the tumor/normal ratio. Because the matched normal is *also single-copy* on chrX, this ratio is the tumor's mean copy number per cell relative to the germline.
+3.  **Scale by `psi_sample / 2`** to recover absolute copy number, where `psi_sample = purity * psi_tumor + (1 - purity) * 2` is the sample mean autosomal ploidy (from the FACETS autosomal fit, which *is* trustworthy). This step is not optional: across our cohort `psi_sample / 2` ran from 0.87 to 1.72.
+4.  **Segment** `log2(cn_bar)` per bin with DNAcopy and report each segment's mean as `cn_bar = 2^seg.mean`.
+
+```
+library(DNAcopy)
+# cn_bar_bin : per-bin (tumor/normal depth ratio) * (psi_sample / 2)
+# pos        : bin start positions on the hemizygous contig
+cna <- CNA(log2(cn_bar_bin), rep("chrX", length(pos)), pos,
+           data.type = "logratio", sampleid = "chrX")
+seg <- segment(smooth.CNA(cna), alpha = 0.01, min.width = 2)$output
+seg_cn_bar <- 2^seg$seg.mean          # mean copy number per cell, per segment
+```
+
+`cn_bar` is the **final** product and is never rounded to an integer — the corrected hemizygous forms take it directly (there is no integer copy number `c` or CNV cellular fraction `f_CNV` to solve for; read depth alone cannot separate them on a hemizygous locus). A segment at true germline copy number reads near `1.0`; if none does, either the chromosome is wholly altered or `psi_sample` is wrong.
+
+DNAcopy's own defaults split a flat chrX into dozens of noise segments on real data; the `alpha`, `min.width`, and `undo.SD` knobs control that and should be tuned against a known copy-neutral control before use.
+
+#### The format SVCFit actually needs — DNAcopy is replaceable
+
+**SVCFit never sees DNAcopy or its segment objects.** It consumes a plain per-SV table, so any method that yields a mean copy number per cell — a different segmenter (CBS, PSCBS, HMMcopy, GATK ModelSegments, CNVkit, Battenberg/ASCAT on the autosome-analogous signal), or even a single tumor/normal depth ratio per breakpoint — works as long as the output is coerced into this shape:
+
+`hemi_cn_bar` — `data.frame` with **exactly these columns**:
+
+| Column   | Type      | Meaning                                                                 |
+|----------|-----------|-------------------------------------------------------------------------|
+| `CHROM`  | character | Contig name, matching the SV's `CHROM` exactly (e.g. `"chrX"`, or `"X"`). |
+| `POS`    | integer   | The SV breakpoint position, matching the SV's `POS` **exactly**.        |
+| `cn_bar` | numeric   | Mean copy number of that locus per cell (not rounded to an integer).    |
+
+The lookup is an exact `(CHROM, POS)` match against the SV rows — **one row per SV, keyed on the breakpoint**, not per segment. That is the one manual step: if your source produces segment *intervals* (`chrom, start, end, cn_bar`), assign each SV the `cn_bar` of the segment spanning its `POS` before passing the table. An SV whose breakpoint has no matching row gets no depth correction — a tandem duplication is then left unresolved (`final_svcf = NA`, flagged `hemizygous_dup_needs_cn_bar`), while a deletion, inversion, or translocation falls back to the copy-neutral `SVCF = VAF`. A bare numeric vector is also accepted, but it is recycled across **all** SV rows in internal order (not just the hemizygous ones), so in practice only a single value — the same `cn_bar` for every hemizygous SV — is reliable; use the keyed data frame otherwise.
+
+```
+# minimal hemi_cn_bar — however you produced cn_bar, this is all SVCFit reads
+hemi_cn_bar <- data.frame(
+  CHROM  = c("chrX",     "chrX"),
+  POS    = c(31200000L,  67500000L),   # exact SV breakpoint positions
+  cn_bar = c(1.02,       1.54)         # mean copies/cell at each locus
+)
+```
+
+The optional `hemi_bg_cn` (flanking/background copy number for the CNV-first deletion form) uses the same convention with columns `CHROM, POS, bg_cn`. DNAcopy is only needed for this hemizygous depth step — it is **not** a dependency of the autosomal pipeline.
 
 ### Estimator helpers
 
@@ -517,6 +567,7 @@ Tool versions used in the manuscript:
 | Germline SNP calling       | GATK4 HaplotypeCaller                 | v4.6.2.0 |
 | Het-SNP filter             | bcftools                              | v1.20    |
 | Copy number                | FACETS                                | v0.6.2   |
+| Copy number (hemizygous chrX/chrY) | DNAcopy (circular binary segmentation) | Bioconductor |
 | Breakpoint read filter     | samtools                              | v1.21    |
 | SNP pileup                 | bcftools mpileup                      | v1.20    |
 
