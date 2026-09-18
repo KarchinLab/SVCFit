@@ -1,6 +1,6 @@
 # SVCFit analysis workflow preservation
 
-This directory holds the shared configuration and migration design for the mixed legacy scripts currently in `SVCFit-2024-2026/script`. The original directory remains untouched. See `SCRIPT_DIRECTORY_REVIEW.md` for the file-by-file assessment, unavailable-source inventory, recommended repository layout, and migration order.
+This directory holds the shared configuration framework for migrating the mixed legacy scripts currently in `SVCFit-2024-2026/script`. The original directory remains untouched. The file-by-file assessment, unavailable-source inventory, and migration recommendations are maintained with the resubmission working documents outside this repository.
 
 To configure a machine:
 
@@ -12,4 +12,4 @@ export SVCFIT_CONFIG=/absolute/path/to/config.local.sh
 
 Preserved workflow scripts should source `lib/load_config.sh` and consume its exported variables. `config.local.sh`, logs, and outputs are ignored. No protected data, credentials, local paths, or generated results should be committed.
 
-The configuration and review are the first preservation commit. Workflow copies should be migrated in the order described in `SCRIPT_DIRECTORY_REVIEW.md`, with their embedded paths replaced by these variables and their outputs validated against the completed legacy runs on the protected server.
+When approved workflow copies are migrated, replace their embedded paths with these variables and validate their outputs against the completed legacy runs on the protected server.
