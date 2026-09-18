@@ -47,6 +47,10 @@ export ENV_MANTA="${ENV_MANTA:-/home/yliu498/miniforge3/envs/manta}"
 export ENV_SVTYPER="${ENV_SVTYPER:-/home/yliu498/miniforge3/envs/svtyp}"
 export ENV_SURVIVOR="${ENV_SURVIVOR:-/home/yliu498/miniforge3/envs/survivor}"
 export GRIDSS_JAR="${GRIDSS_JAR:-${ENV_GRIDSS}/share/gridss-2.13.2-6/gridss.jar}"
+export MANTA_ROOT="${MANTA_ROOT:-/home/yliu498/manta}"
+export MANTA_CONFIG="${MANTA_CONFIG:-${MANTA_ROOT}/bin/configManta.py}"
+export MANTA_CONVERT_INV="${MANTA_CONVERT_INV:-${MANTA_ROOT}/libexec/convertInversion.py}"
+export SAMTOOLS_BIN="${SAMTOOLS_BIN:-${ENV_VISOR}/bin/samtools}"
 
 # SVCFit parameters shared by the COMBAT rerun
 export SVCFIT_THRESHOLD="${SVCFIT_THRESHOLD:-0.1}"
@@ -67,8 +71,8 @@ export DOWNSAMPLE_SEED_BASE="${DOWNSAMPLE_SEED_BASE:-1000}"
 export DOWNSAMPLE_OUTPUT_DIR="${DOWNSAMPLE_OUTPUT_DIR:-${BAM_DIR}/down_samp}"
 export DOWNSAMPLE_TUMOR_PURITY="${DOWNSAMPLE_TUMOR_PURITY:-0.68}"
 export DOWNSAMPLE_ON_TREATMENT_PURITY="${DOWNSAMPLE_ON_TREATMENT_PURITY:-0.37}"
+export DOWNSAMPLE_REFERENCE_DELLY_VCF="${DOWNSAMPLE_REFERENCE_DELLY_VCF:-${SV_CALL_ROOT}/delly/d${DOWNSAMPLE_TUMOR_SAMPLE}/${DOWNSAMPLE_TUMOR_SAMPLE}.vcf}"
 
 # Runtime behavior
 export FORCE="${FORCE:-0}"
 export KEEP_INTERMEDIATE="${KEEP_INTERMEDIATE:-0}"
-

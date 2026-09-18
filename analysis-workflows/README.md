@@ -1,6 +1,6 @@
 # SVCFit analysis workflow preservation
 
-This directory holds the shared configuration framework for migrating the mixed legacy scripts currently in `SVCFit-2024-2026/script`. The original directory remains untouched. The file-by-file assessment, unavailable-source inventory, and migration recommendations are maintained with the resubmission working documents outside this repository.
+This directory holds the shared configuration and the maintained analysis-specific workflows migrated from the legacy script collection. The original directory remains outside this repository and is protected by the checksum manifest. The file-by-file assessment and correspondence are maintained with the resubmission working documents outside this repository.
 
 To configure a machine:
 
@@ -10,6 +10,13 @@ cp config.example.sh config.local.sh
 export SVCFIT_CONFIG=/absolute/path/to/config.local.sh
 ```
 
-Preserved workflow scripts should source `lib/load_config.sh` and consume its exported variables. `config.local.sh`, logs, and outputs are ignored. No protected data, credentials, local paths, or generated results should be committed.
+Each maintained workflow sources `lib/load_config.sh` and consumes its exported variables. `config.local.sh`, logs, and outputs are ignored. No protected data, credentials, local paths, or generated results should be committed.
 
-When approved workflow copies are migrated, replace their embedded paths with these variables and validate their outputs against the completed legacy runs on the protected server.
+## Migrated workflows
+
+- `workflows/combat-germline-rerun`: PBMC-derived germline heterozygous-site filtering, tumor pileup at those sites, and paired SVCFit clustering/tree analysis.
+- `workflows/combat-81875-downsampling`: 20-replicate 17x BAM downsampling, Delly/GRIDSS/Manta calling, SVTyper genotyping, SURVIVOR merging, and SVCFit-VCF preparation.
+
+Both workflows pass local syntax, parse, configuration, and dry-run checks. They still require a one-sample smoke test and comparison with completed outputs on the protected server before being treated as production-validated.
+
+The unresolved legacy `run_svcfit_boot.sh` was not installed as a maintained step because its comments and command disagree about whether the analysis is single-stage or longitudinal.
