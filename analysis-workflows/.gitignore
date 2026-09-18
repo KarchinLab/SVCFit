@@ -1,0 +1,7 @@
+config.local.sh
+logs/
+output/
+*.out
+*.err
+.DS_Store
+
