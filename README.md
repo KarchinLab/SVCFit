@@ -724,3 +724,14 @@ Tool versions used in the manuscript:
 8.  Jeffares, D. C. *et al.* Transient structural variations have strong
     effects on quantitative traits and reproductive isolation in fission
     yeast. *Nat. Commun.* **8**, 14061 (2017).
+
+## Repository scope and example data
+
+This repository contains the reusable SVCFit R package, API documentation,
+usage guide, tests, and the de-identified example data used by the vignette.
+The example and plotting data are bundled under `inst/extdata` and available
+through `system.file()` after installation; no external data path is needed.
+
+Analysis pipelines, benchmark drivers, cluster submission scripts, and
+figure-generation tools belong in the separate `svcfit_workflows` repository.
+Large research datasets and generated results remain outside both repositories.
