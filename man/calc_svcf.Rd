@@ -49,10 +49,9 @@ that BAM evidence shows are genuine clonal losses rather than reference dropout,
 SVCF = VAF = 1 is the correct answer. Columns \code{sample}, \code{chrom}, \code{pos}, and
 \code{verdict}; only rows with \code{verdict == "recover"} are used.
 
-GENERATED, NEVER HAND-WRITTEN. Produce it with scripts/13_zero_ref_allowlist.sh, which derives
-the verdict from matched-normal soft-clipping calibrated against control loci. The distinction
-cannot be made from the bed alone: both suppression guards fire on sv_ref == 0 and the matched
-normal is what separates a somatic clonal loss from a germline or mapping artifact.}
+This table must come from an independently reviewed procedure using
+evidence outside the SVCFit output, such as matched-normal alignment
+evidence. The distinction cannot be made from the SVCFit table alone.}
 
 \item{hemi_bg_cn}{data.frame, numeric, or NULL. Flanking (background) copy number for the
 CNV-first deletion form; optional.}
@@ -71,8 +70,7 @@ alternate form for deletions. The alternate candidate is constrained to the
 biological SVCF range after the zygosity correction.
 }
 \details{
-UPDATED 2026-07-29. The hemizygous branch previously took the CNV cellular fraction
-(\code{hemi_cncf}) and the integer copy number, and selected the SV-CNV ordering by a
-lineage-precedence rule. Both quantities are gone. The corrected forms take the measured mean
-copy number \code{cn_bar} directly, and the ordering is decided by the sign of the SV-first form.
+The hemizygous branch takes measured mean copy number \code{cn_bar}
+directly. It selects SV-CNV ordering by the sign of the SV-first form and
+does not require a CNV cellular fraction or an integer carrier copy number.
 }

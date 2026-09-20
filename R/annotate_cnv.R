@@ -1,7 +1,7 @@
 #' Annotate the type and phasing of a CNV and calculate the allele copy ratio.
 #'
-#' Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification reduces exactly to the
-#' original diploid tests. See chrX_rerun/MATH.md, change 3.
+#' Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification
+#' reduces to the diploid tests.
 #'
 #' On a hemizygous chromosome there are no heterozygous germline SNPs, so \code{tascn} and
 #' \code{ASCN} (Eq. 6) are undefined. They are left as NA and the downstream correction is skipped

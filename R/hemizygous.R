@@ -1,21 +1,10 @@
 #' Hemizygous-chromosome support for SVCFit
 #'
-#' Rationale and derivation: chrX_rerun/MATH.md, as corrected by
-#' CORRECTION-c-vs-cnbar-2026-07-29.md. SVCFit's allele copy ratio (Eq. 6) is estimated from
-#' heterozygous germline SNPs, which do not exist on the hemizygous X of a male subject. The diploid
-#' conversion factor R = 2, the read-depth ratio r_bar, and the copy-number classification in
-#' annotate_cnv() all assume two copies. These helpers make the local normal ploidy explicit so the
-#' same code serves both cases, leaving autosomal behaviour bit-identical.
-#'
-#' REWRITTEN 2026-07-29. The previous version expressed the hemizygous forms in `c`, the copy number
-#' in the cells carrying the copy-number change, and selected between them with a lineage-precedence
-#' rule against `f_CNV`. Ground-truth allele counting
-#' (scripts/10_hemizygous_groundtruth_check.py) shows those forms are wrong except when
-#' `f_CNV = SVCF` (H1) or `f_CNV = 1` (H2), which is what their derivations silently assumed.
-#'
-#' The governing fact is that total alleles per cell is always `cn_bar`, the mean copy number of the
-#' locus, which is exactly how R is defined in the paper. Everything follows from that, and neither
-#' `c` nor `f_CNV` is needed anywhere.
+#' The allele copy ratio used by the diploid estimator is derived from
+#' heterozygous germline SNPs. That quantity is unavailable on a chromosome
+#' that is single-copy in the germline. These helpers make local normal ploidy
+#' explicit and use \code{cn_bar}, the read-depth estimate of mean copies per
+#' cell, for hemizygous copy-number corrections.
 
 #' Local normal ploidy for each row
 #'
@@ -35,9 +24,9 @@ local_ploidy <- function(chrom, hemizygous_chr = NULL) {
 
 #' Default germline copy-number state for hemizygous chromosomes
 #'
-#' FACETS cannot fit a male X: it returns one whole-chromosome segment with lcn.em = NA and a handful
-#' of heterozygous SNPs, giving inflated tcn.em (3 to 9 across this cohort) that read depth
-#' contradicts. Unless an override is supplied, a hemizygous chromosome is treated as one copy.
+#' Allele-specific copy-number estimates can be unreliable on chromosomes with
+#' no informative heterozygous SNPs. Unless an override is supplied, a declared
+#' hemizygous chromosome is assigned its one-copy germline state.
 #'
 #' This default is the GERMLINE state only. Somatic copy-number variation on the chromosome enters
 #' through \code{cn_bar}, measured from depth, and never through this function.
@@ -128,35 +117,11 @@ classify_cn <- function(cna, minor, pl) {
 #'                               span and its flank fall in the same segment and bg_cn - cn_bar is
 #'                               0 by construction. NOT a conflict -- nothing corroborated the
 #'                               estimate, which is different from two measurements disagreeing.
-#'                               Added 2026-07-31; these rows were previously counted as mismatches.
 #'
-#' NOT because VAF is undefined. VAF = sv_alt/(sv_alt + sv_ref) is perfectly well defined at
-#' sv_ref = 0 and equals exactly 1. It is r_bar, the alt-to-ref ratio, that blows up, and the
-#' copy-neutral hemizygous path never uses r_bar: it returns SVCF = VAF directly. An earlier
-#' version of this line claimed VAF was undefined, which is false and made a modelling choice
-#' look like an algebraic impossibility.
-#'
-#' MODELLING NOTE. Suppressing these rows is a deliberate decision, not a limit of the algebra,
-#' and it should be revisited rather than inherited.
-#'
-#' On a copy-neutral hemizygous locus resolve_hemizygous_svcf() takes its copy-neutral branch and
-#' returns svcf = VAF = 1 with status "ok":
-#'
-#'   resolve_hemizygous_svcf(bpc = 10, bec = 0, cn_bar = 1)  ->  svcf 1, copy_neutral, ok
-#'
-#' That value is then overridden twice: here, by the unconditional sv_ref == 0 rule below, and
-#' again in calc_svcf() by the is.infinite(r_bar) relabel. Both are intentional.
-#'
-#' The reason is statistical. In this cohort the affected rows carry 4 to 30 alt reads against
-#' zero reference reads, at purity < 1. A genuinely clonal event should still draw reference reads
-#' from the normal fraction, so zero reference support at that depth is at least as consistent
-#' with a coverage or mapping artifact as with a clonal variant. Admitting them would assign every
-#' one an SVCF of exactly 1.00 and put a hard spike at the ceiling of the distribution.
-#'
-#' The cost is not negligible and should be quoted honestly: 23 chrX rows across 16 samples, all
-#' copy-neutral (pl = 1, cn_type NA), 21 INV and 2 DEL. That is larger than the 13 rows awaiting
-#' cn_bar for the H3 duplication form. If per-locus depth later shows the reference dropout is
-#' real rather than technical, these are recoverable as SVCF = 1 with no change to the algebra.
+#' VAF is mathematically defined when \code{sv_ref = 0}, but SVCFit labels the
+#' row \code{"zero_ref_depth"} because the alt-to-reference depth ratio used by
+#' other branches is infinite. \code{calc_svcf()} can recover independently
+#' reviewed hemizygous rows through \code{zero_ref_allowlist}.
 #'
 #' @param pl Integer vector of local normal ploidy from \code{local_ploidy()}.
 #' @param cn_type Character vector of copy-number class from \code{classify_cn()}.
@@ -174,9 +139,8 @@ svcf_status <- function(pl, cn_type, sv_ref) {
 #'
 #' \code{apply_hemizygous_cn()} defaults a hemizygous chromosome to one germline copy. Somatic
 #' copy-number variation must then arrive as \code{cn_bar}. This reports the copy-number-changing
-#' SVs on a hemizygous chromosome, so a caller that has no \code{cn_bar} for them is warned rather
-#' than silently treating the chromosome as flat. In this cohort four samples carry megabase-scale
-#' chrX events; see chrX-overlapping-cnv-2026-07-28.md.
+#' SVs on a hemizygous chromosome, so a caller that has no \code{cn_bar} for
+#' them is warned rather than silently treating the chromosome as flat.
 #'
 #' @param sv data.frame with columns CHROM, POS, END, classification.
 #' @param hemizygous_chr character vector of hemizygous chromosome names.
@@ -291,24 +255,10 @@ hemizygous_dup_svcf <- function(cn_bar, r = 2) {
 #' cn_bar = 1 - s. The junction reads give the same quantity independently, VAF = s. The two are
 #' therefore a genuine cross-check rather than one estimate used twice.
 #'
-#' DEPTH IS THE ESTIMATE; VAF IS THE CROSS-CHECK (changed 2026-07-29, user ruling).
-#'
-#' This function previously returned VAF and used depth only to flag disagreement. The chrX
-#' simulation scores the two directly against known cellular fractions and depth wins decisively
-#' wherever the background is not amplified:
-#'
-#'   condition   VAF within 0.05   depth within 0.05
-#'   e1                   45.0%              75.0%
-#'   e2                   15.7%              92.2%
-#'
-#' The asymmetry is mechanical, not a quirk of this simulation. Both estimators are unbiased in
-#' principle, but on a HEMIZYGOUS deletion the carrier cells contribute no reads at all, so the
-#' junction evidence comes from a shrinking population as s rises, and VAF is both noisy and biased
-#' low. Depth measures the same quantity over the whole span and every cell contributes to it.
-#'
-#' On a DIPLOID deletion this argument does not hold -- the surviving homologue still yields
-#' reference reads -- which is why this change is confined to the hemizygous helper and leaves
-#' autosomal behaviour untouched.
+#' Read depth supplies the primary estimate. VAF is retained as an independent
+#' cross-check because carrier cells contribute no locus-spanning reads after a
+#' hemizygous deletion. This rule is confined to the hemizygous helper; a
+#' diploid deletion retains a surviving homologue.
 #'
 #' Depth is used when it is available and feasible; otherwise the VAF estimate is returned, so a
 #' locus with no usable segmentation still gets an answer rather than an NA. `svcf_source` records
@@ -402,34 +352,14 @@ hemizygous_del_svcf <- function(bpc, bec, cn_bar = NA_real_, tol = 0.15,
               ifelse(h2_ok,  "h2",
                ifelse(vaf_ok, "vaf", NA_character_))))
 
-  ## THE CROSS-CHECK. REWRITTEN 2026-07-31: it compared against the wrong quantity and could not
-  ## pass on an amplified locus.
-  ##
-  ## Its premise is that a deletion removes the only copy, so reads and depth estimate the same
-  ## thing independently and their agreement is real evidence. That holds only where depth actually
-  ## produced an independent estimate, and only for the form the estimator CHOSE.
-  ##
-  ## It previously compared svcf_vaf against svcf_depth = 1 - cn_bar unconditionally -- the kappa = 1
-  ## form that the CNV-first correction replaced. On an amplified locus 1 - cn_bar is NEGATIVE while
-  ## VAF is positive by construction, so |vaf - depth| > tol ALWAYS. Measured on the prostate
-  ## mixtures: cn_bar > 1 for 89.4% of chrX deletions, median 1.388, giving 1 - cn_bar a median of
-  ## -0.388 against a VAF median of 0.549 -- and the flag fired on 1165 of 1165. That was the test
-  ## failing, not the estimates, which carry ordinary cellular fractions.
-  ##
-  ## Now compares against whichever depth-based form supplied the answer, and only then.
+  ## Compare VAF with the depth-based form that supplied the answer. The
+  ## measurements are independent only when depth produced a feasible estimate.
   svcf_depth_used <- ifelse(source == "depth",    svcf_depth,
                      ifelse(source == "bg_depth", svcf_bg, NA_real_))
 
-  ## AND DEPTH IS BLIND TO A SUB-SEGMENT DELETION. Where the SV span and its flank fall in the same
-  ## segment, bg_cn == cn_bar exactly and bg_cn - cn_bar is 0 BY CONSTRUCTION -- the join returning
-  ## the same number twice, not a measurement that there is no deletion. Calling that a disagreement
-  ## with the reads is meaningless, and it is not rare: 71.2% of chrX deletions in the prostate
-  ## mixtures span less than one 100 kb segmentation bin (median 22,141 bp), and 11 of the COMBAT
-  ## cohort's 14 were under 100 kb.
-  ##
-  ## Those rows get their own status. They are NOT failures -- the estimate stands, on whichever
-  ## form was chosen -- but nothing corroborated it, and that differs from two measurements
-  ## disagreeing. Conflating the two is what made del_depth_mismatch unreadable.
+  ## Depth is blind to a deletion smaller than the segmentation resolution. If
+  ## the SV span and its flank receive the same segment value, bg_cn - cn_bar is
+  ## zero by construction. Label this separately from a genuine disagreement.
   depth_blind <- is.finite(bg_cn) & is.finite(cn_bar) & abs(bg_cn - cn_bar) <= 1e-9
 
   status <- rep("ok", n)
@@ -448,14 +378,13 @@ hemizygous_del_svcf <- function(bpc, bec, cn_bar = NA_real_, tol = 0.15,
 
 #' DEFUNCT: solve hemizygous copy number and CNV cellular fraction
 #'
-#' Removed 2026-07-29. Nothing needs `c` or `f_CNV` any more: the corrected forms take `cn_bar`
-#' directly, and the ordering is decided by the sign of the H1 form. Retained as a stub so that any
-#' caller still expecting it fails loudly instead of silently reintroducing the wrong quantity.
-#' The history is in HOW-C-IS-COMPUTED.md and CORRECTION-c-vs-cnbar-2026-07-29.md.
+#' Hemizygous estimators now take \code{cn_bar} directly, and the ordering is
+#' decided by the sign of the H1 form. This stub produces an explicit error for
+#' callers that still use the removed interface.
 #'
 #' @param ... Ignored. The function is defunct and always signals an error.
 #' @export
 solve_hemizygous_cn <- function(...) {
   stop("solve_hemizygous_cn() is defunct. The hemizygous forms take cn_bar directly; c and f_CNV ",
-       "are not needed. See CORRECTION-c-vs-cnbar-2026-07-29.md.", call. = FALSE)
+       "are not needed.", call. = FALSE)
 }

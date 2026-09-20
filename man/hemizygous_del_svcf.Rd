@@ -35,24 +35,10 @@ cn_bar = 1 - s. The junction reads give the same quantity independently, VAF = s
 therefore a genuine cross-check rather than one estimate used twice.
 }
 \details{
-DEPTH IS THE ESTIMATE; VAF IS THE CROSS-CHECK (changed 2026-07-29, user ruling).
-
-This function previously returned VAF and used depth only to flag disagreement. The chrX
-simulation scores the two directly against known cellular fractions and depth wins decisively
-wherever the background is not amplified:
-
-condition   VAF within 0.05   depth within 0.05
-e1                   45.0\%              75.0\%
-e2                   15.7\%              92.2\%
-
-The asymmetry is mechanical, not a quirk of this simulation. Both estimators are unbiased in
-principle, but on a HEMIZYGOUS deletion the carrier cells contribute no reads at all, so the
-junction evidence comes from a shrinking population as s rises, and VAF is both noisy and biased
-low. Depth measures the same quantity over the whole span and every cell contributes to it.
-
-On a DIPLOID deletion this argument does not hold -- the surviving homologue still yields
-reference reads -- which is why this change is confined to the hemizygous helper and leaves
-autosomal behaviour untouched.
+Read depth supplies the primary estimate. VAF is retained as an independent
+cross-check because carrier cells contribute no locus-spanning reads after a
+hemizygous deletion. This rule is confined to the hemizygous helper; a
+diploid deletion retains a surviving homologue.
 
 Depth is used when it is available and feasible; otherwise the VAF estimate is returned, so a
 locus with no usable segmentation still gets an answer rather than an NA. \code{svcf_source} records

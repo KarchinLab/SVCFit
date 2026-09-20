@@ -28,34 +28,10 @@ measurements. The estimate is still returned.
 span and its flank fall in the same segment and bg_cn - cn_bar is
 0 by construction. NOT a conflict -- nothing corroborated the
 estimate, which is different from two measurements disagreeing.
-Added 2026-07-31; these rows were previously counted as mismatches.
 }
 \details{
-NOT because VAF is undefined. VAF = sv_alt/(sv_alt + sv_ref) is perfectly well defined at
-sv_ref = 0 and equals exactly 1. It is r_bar, the alt-to-ref ratio, that blows up, and the
-copy-neutral hemizygous path never uses r_bar: it returns SVCF = VAF directly. An earlier
-version of this line claimed VAF was undefined, which is false and made a modelling choice
-look like an algebraic impossibility.
-
-MODELLING NOTE. Suppressing these rows is a deliberate decision, not a limit of the algebra,
-and it should be revisited rather than inherited.
-
-On a copy-neutral hemizygous locus resolve_hemizygous_svcf() takes its copy-neutral branch and
-returns svcf = VAF = 1 with status "ok":
-
-resolve_hemizygous_svcf(bpc = 10, bec = 0, cn_bar = 1)  ->  svcf 1, copy_neutral, ok
-
-That value is then overridden twice: here, by the unconditional sv_ref == 0 rule below, and
-again in calc_svcf() by the is.infinite(r_bar) relabel. Both are intentional.
-
-The reason is statistical. In this cohort the affected rows carry 4 to 30 alt reads against
-zero reference reads, at purity < 1. A genuinely clonal event should still draw reference reads
-from the normal fraction, so zero reference support at that depth is at least as consistent
-with a coverage or mapping artifact as with a clonal variant. Admitting them would assign every
-one an SVCF of exactly 1.00 and put a hard spike at the ceiling of the distribution.
-
-The cost is not negligible and should be quoted honestly: 23 chrX rows across 16 samples, all
-copy-neutral (pl = 1, cn_type NA), 21 INV and 2 DEL. That is larger than the 13 rows awaiting
-cn_bar for the H3 duplication form. If per-locus depth later shows the reference dropout is
-real rather than technical, these are recoverable as SVCF = 1 with no change to the algebra.
+VAF is mathematically defined when \code{sv_ref = 0}, but SVCFit labels the
+row \code{"zero_ref_depth"} because the alt-to-reference depth ratio used by
+other branches is infinite. \code{calc_svcf()} can recover independently
+reviewed hemizygous rows through \code{zero_ref_allowlist}.
 }

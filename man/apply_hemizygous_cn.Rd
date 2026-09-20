@@ -18,9 +18,9 @@ externally-derived hemizygous copy number instead of the default of one copy.}
 The cnv data.frame with hemizygous rows replaced.
 }
 \description{
-FACETS cannot fit a male X: it returns one whole-chromosome segment with lcn.em = NA and a handful
-of heterozygous SNPs, giving inflated tcn.em (3 to 9 across this cohort) that read depth
-contradicts. Unless an override is supplied, a hemizygous chromosome is treated as one copy.
+Allele-specific copy-number estimates can be unreliable on chromosomes with
+no informative heterozygous SNPs. Unless an override is supplied, a declared
+hemizygous chromosome is assigned its one-copy germline state.
 }
 \details{
 This default is the GERMLINE state only. Somatic copy-number variation on the chromosome enters

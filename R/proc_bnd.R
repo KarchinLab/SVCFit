@@ -27,6 +27,23 @@ proc_bnd <- function(sv, flank_del=50, bnd_window=400, mate_pos_window=50, len_d
     mutate(chr2=paste0("chr", sub("^chr", "", gsub("\\D+(.*):(\\d+).*", "\\1", ALT))),
            pos2=gsub("\\D+(.*):(\\d+).*",'\\2', ALT),
            pos2=as.integer(pos2))
+
+  if (nrow(tmp) == 0L) {
+    bnd <- tmp
+    bnd$class <- character()
+    bnd$donor <- character()
+    bnd$receiver <- character()
+    bnd$nPOS <- numeric()
+    bnd$mPOS <- numeric()
+    bnd$mate <- character()
+
+    del <- sv[0, , drop = FALSE]
+    del$chr2 <- character()
+    del$pos2 <- integer()
+    del$overlap <- logical()
+    del$BNDid <- character()
+    return(list(bnd = bnd, del = del))
+  }
   
   # get BND information
   bnd_tmp=tmp %>%

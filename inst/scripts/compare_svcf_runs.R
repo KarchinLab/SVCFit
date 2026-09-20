@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 3L || any(args %in% c("-h", "--help"))) {
   cat("Usage: compare_svcf_runs.R OLD_INPUT NEW_INPUT OUTPUT_DIR\n",
       "INPUT may be an RDS data.frame, a tab-delimited text file, or a run root\n",
-      "containing pair/COMBAT/SVCFit_output/*.bed files.\n", sep = "")
+      "containing per-sample BED files.\n", sep = "")
   quit(status = if (length(args) == 3L) 0L else 2L)
 }
 
@@ -37,10 +37,11 @@ read_input <- function(path, label) {
     candidates <- list.files(path, pattern = "\\.bed$", recursive = TRUE,
                              full.names = TRUE)
     normalized <- gsub("\\\\", "/", candidates)
-    files <- candidates[grepl("/COMBAT/SVCFit_output/[^/]+\\.bed$", normalized)]
+    preferred <- candidates[grepl("/SVCFit_output/[^/]+\\.bed$", normalized)]
+    files <- if (length(preferred)) preferred else candidates
     files <- sort(normalizePath(files, mustWork = TRUE))
     if (!length(files)) {
-      stop("No pair/COMBAT/SVCFit_output/*.bed files under ", path, call. = FALSE)
+      stop("No per-sample BED files under ", path, call. = FALSE)
     }
     sample_names <- tools::file_path_sans_ext(basename(files))
     if (anyDuplicated(sample_names)) {
@@ -166,7 +167,7 @@ if (length(group_columns)) {
 }
 
 report <- c(
-  "# SVCF old-versus-new shadow comparison", "",
+  "# SVCF old-versus-new run comparison", "",
   paste0("- Old input: `", old_path, "`"),
   paste0("- New input: `", new_path, "`"),
   paste0("- Old input files: ", length(old_input$files),
@@ -185,4 +186,4 @@ report <- c(
 )
 writeLines(report, file.path(out_dir, "SVCF_SHADOW_COMPARISON.md"))
 
-cat("Wrote shadow comparison to ", out_dir, "\n", sep = "")
+cat("Wrote SVCF comparison to ", out_dir, "\n", sep = "")

@@ -38,9 +38,9 @@ paired sample IDs (columns: \code{pre_BAT}, \code{on_BAT}). Required when
 (must contain columns \code{sample} and \code{purity}). Required when
 \code{run_clustering = TRUE}.}
 
-\item{data_dir}{Character or \code{NULL}. Root directory containing SVCFit
-output BED files. Expected layout:
-\code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}. Required when
+\item{data_dir}{Character or \code{NULL}. Directory containing per-sample
+SVCFit BED files, or a run root containing them under
+\code{SVCFit_output/} or \code{COMBAT/SVCFit_output/}. Required when
 \code{run_clustering = TRUE}.}
 
 \item{pair_num}{Integer. Pair index whose clone CCF table is passed to tree

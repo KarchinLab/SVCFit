@@ -86,7 +86,7 @@ run_svcfit <- function(
     flank_snp  = 500,
     flank_cnv  = 1000,
 
-    # --- hemizygous chromosome support (chrX_rerun patch) --------------------
+    # --- hemizygous chromosome support ---------------------------------------
     hemizygous_chr   = NULL,   # e.g. c("chrX","chrY"); NULL = original diploid behaviour
     hemi_cn_bar      = NULL,   # per-SV mean copies per cell from depth; NULL = leave unresolved
     hemi_bg_cn       = NULL,   # per-SV FLANKING copies (kappa) for the CNV-first deletion form
@@ -113,7 +113,7 @@ run_svcfit <- function(
   sv_info  <- extracted[[2]]   # data.frame from parse_sv_info
   sv_phase <- extracted[[4]]   # data.frame from parse_snp_on_sv
 
-  # ---- hemizygous germline copy number (chrX_rerun patch) --------------------
+  # ---- hemizygous germline copy number ---------------------------------------
   # FACETS cannot fit a male X: one whole-chromosome segment, lcn.em NA, 3-10 het SNPs across
   # 145 Mb, tcn.em 3-9 in every sample here, contradicted by read depth. Replace it with the
   # germline state before it can select a branch downstream.
@@ -178,9 +178,9 @@ run_svcfit <- function(
 #' @param pur_path Character or \code{NULL}. Path to a tab-delimited purity file
 #'   (must contain columns \code{sample} and \code{purity}). Required when
 #'   \code{run_clustering = TRUE}.
-#' @param data_dir Character or \code{NULL}. Root directory containing SVCFit
-#'   output BED files. Expected layout:
-#'   \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}. Required when
+#' @param data_dir Character or \code{NULL}. Directory containing per-sample
+#'   SVCFit BED files, or a run root containing them under
+#'   \code{SVCFit_output/} or \code{COMBAT/SVCFit_output/}. Required when
 #'   \code{run_clustering = TRUE}.
 #' @param pair_num Integer. Pair index whose clone CCF table is passed to tree
 #'   building. Default \code{1L}.

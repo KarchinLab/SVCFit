@@ -16,8 +16,8 @@ subject's germline.}
 data.frame with the original columns plus \code{pl}.
 }
 \description{
-Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification reduces exactly to the
-original diploid tests. See chrX_rerun/MATH.md, change 3.
+Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification
+reduces to the diploid tests.
 }
 \details{
 On a hemizygous chromosome there are no heterozygous germline SNPs, so \code{tascn} and

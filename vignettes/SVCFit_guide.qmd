@@ -178,7 +178,8 @@ svcfit_out %>%
 
 ### Interpreting `final_svcf`
 
-This example data contains a artificial dataset with two clones (trunk 80% SVCF and subclone 40% SVCF).
+The example is an artificial dataset with two clones: a trunk at 80% SVCF and
+a subclone at 40% SVCF.
 
 ```{r}
 #| label: plot-svcf
@@ -291,7 +292,12 @@ With `hemizygous_chr = NULL` the results are identical to the diploid path. With
 
 ## Where `cn_bar` comes from (DNAcopy depth segmentation)
 
-SVCFit consumes `cn_bar` but does not compute it. FACETS — used for autosomal copy number — cannot fit a hemizygous chromosome: with no heterozygous germline SNPs it returns a single whole-chromosome segment with an inflated, unusable total copy number. `cn_bar` is instead measured from **read depth** and segmented with the Bioconductor **DNAcopy** package (circular binary segmentation):
+SVCFit consumes `cn_bar` but does not compute it. FACETS supplies autosomal
+copy-number inputs for the standard estimator. On a hemizygous chromosome,
+allele-specific estimates may be unreliable because no heterozygous germline
+SNPs are available. Measure `cn_bar` independently from **read depth**; one
+option is circular binary segmentation with the Bioconductor **DNAcopy**
+package:
 
 1.  Bin chrX read depth (e.g. 100 kb) in the tumor and the matched-normal BAM.
 2.  Normalize each BAM by its own autosomal 2-copy baseline and take the tumor/normal ratio; because the matched normal is also single-copy on chrX, this ratio is the tumor's mean copy number per cell.
@@ -453,6 +459,10 @@ After computing SVCF values across multiple samples (e.g. pre-treatment and on-t
 
 1.  **DP-GMM clustering** (`run_clustering = TRUE`): groups SVs with similar SVCF profiles across paired samples into clones using a Dirichlet-process Gaussian mixture model. Requires Python with `scikit-learn` installed (via the `reticulate` package).
 2.  **Tree inference** (`run_tree = TRUE`): fits a spanning tree over the clone CCF table that satisfies the lineage-precedence constraint (parent CCF ≥ sum of children CCFs).
+
+`data_dir` may point directly to the directory containing `<sample>.bed`
+files. SVCFit also recognizes existing workflow layouts with the files under
+`SVCFit_output/` or `COMBAT/SVCFit_output/`.
 
 ```{r}
 #| label: build-trees-example

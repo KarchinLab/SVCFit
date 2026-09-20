@@ -10,8 +10,7 @@ solve_hemizygous_cn(...)
 \item{...}{Ignored. The function is defunct and always signals an error.}
 }
 \description{
-Removed 2026-07-29. Nothing needs \code{c} or \code{f_CNV} any more: the corrected forms take \code{cn_bar}
-directly, and the ordering is decided by the sign of the H1 form. Retained as a stub so that any
-caller still expecting it fails loudly instead of silently reintroducing the wrong quantity.
-The history is in HOW-C-IS-COMPUTED.md and CORRECTION-c-vs-cnbar-2026-07-29.md.
+Hemizygous estimators now take \code{cn_bar} directly, and the ordering is
+decided by the sign of the H1 form. This stub produces an explicit error for
+callers that still use the removed interface.
 }

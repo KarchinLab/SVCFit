@@ -19,7 +19,6 @@ data.frame of contradicting events; zero rows means the flat default is safe.
 \description{
 \code{apply_hemizygous_cn()} defaults a hemizygous chromosome to one germline copy. Somatic
 copy-number variation must then arrive as \code{cn_bar}. This reports the copy-number-changing
-SVs on a hemizygous chromosome, so a caller that has no \code{cn_bar} for them is warned rather
-than silently treating the chromosome as flat. In this cohort four samples carry megabase-scale
-chrX events; see chrX-overlapping-cnv-2026-07-28.md.
+SVs on a hemizygous chromosome, so a caller that has no \code{cn_bar} for
+them is warned rather than silently treating the chromosome as flat.
 }

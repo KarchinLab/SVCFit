@@ -19,8 +19,9 @@ IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).}
 \item{pur_path}{Character. Path to a tab-delimited purity file (must contain
 columns \code{sample} and \code{purity}).}
 
-\item{data_dir}{Character. Root directory containing SVCFit output BED files.
-Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.}
+\item{data_dir}{Character. Directory containing per-sample SVCFit BED files,
+or a run root containing them under \code{SVCFit_output/} or
+\code{COMBAT/SVCFit_output/}.}
 
 \item{exclude_pairs}{Integer vector. Pair indices (1-based row numbers in
 \code{pair_path}) to drop before processing.  Default \code{integer(0)}.}

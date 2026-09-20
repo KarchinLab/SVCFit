@@ -20,57 +20,54 @@ chrY)](#hemizygous-chromosomes-chrx--chry).
 
 **Resources**
 
-- Open access data: It is available on mendeley (doi:
-  10.17632/2nhhdjx225.6)
-
-- Protected Data: Available via European Genome-phenome Archive
-  (EGAD00001001343).
-
-- Prostate mixture scripts: [GitHub
-  Repository](https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh)
+- [Open example and benchmark
+  data](https://doi.org/10.17632/2nhhdjx225.6) on Mendeley Data.
+- Controlled-access study data: European Genome-phenome Archive
+  accession `EGAD00001001343`.
+- [Prostate mixture
+  scripts](https://github.com/mcmero/SVclone_Rmarkdown/blob/master/make_insilico_mixtures.sh).
 
 ## Installation
 
-SVCFit is hosted on GitHub. You can install it directly within R using
-the `remotes` package.
-
-**Note:** Installation requires a GitHub Personal Access Token (PAT)
-because the repository is hosted on GitHub.\\
+SVCFit is public. Installation does not require a GitHub account or
+personal access token. Install the current release from GitHub with
+`remotes`:
 
 ``` r
-if (!requireNamespace("remotes", quietly = TRUE))
-    install.packages("remotes")
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+remotes::install_github("KarchinLab/SVCFit")
 
-# 1. Setup GitHub Credentials (if not already configured)
-if (!requireNamespace("usethis", quietly = TRUE))
-    install.packages("usethis")
-
-# Create a token in your browser
-usethis::create_github_token() 
-
-# Store the token (paste when prompted)
-credentials::set_github_pat()
-
-# 2. Install SVCFit
-remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencies = TRUE)
+library(SVCFit)
+packageVersion("SVCFit")
 ```
 
-### Building the package with Quarto
+### Building the source package and vignette
 
-The source vignette uses Quarto. Package developers need the Quarto CLI and
-the R `quarto` package before running `R CMD build`. The repository launcher
-uses a system Quarto installation when available, or the user-local
-`$HOME/.local/share/svcfit-quarto` environment by default:
+Ordinary installation does not require building the vignette. Developers
+and users who install with `build_vignettes = TRUE` need the [Quarto
+CLI](https://quarto.org/docs/get-started/) and the R `quarto` package.
+With Quarto on `PATH`, the repository launcher uses it directly:
 
 ``` bash
-mamba create -y -p "$HOME/.local/share/svcfit-quarto" -c conda-forge quarto
 Rscript -e 'install.packages("quarto")'
 tools/with_quarto.sh quarto check
 tools/with_quarto.sh R CMD build .
 ```
 
-Set `SVCFIT_QUARTO_PREFIX` when the user-local Quarto environment is installed
-at a different path.
+For an isolated Conda installation, the launcher also supports this
+setup:
+
+``` bash
+mamba create -y -p "$HOME/.local/share/svcfit-quarto" -c conda-forge quarto
+tools/with_quarto.sh quarto check
+```
+
+Set `SVCFIT_QUARTO_PREFIX` if that environment is stored elsewhere. To
+install from GitHub and build the vignette, use
+`remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE)`
+after Quarto is available.
 
 ## Input Requirements
 
@@ -345,8 +342,8 @@ sv_char <- characterize_sv(
 
 ### 3. Calculate SVCF for Structural Variants — `calc_svcf()`
 
-This step computes the **Structural Variant Cellular Fraction (SVCF)**.
-and returns an annotated VCF file in data.frame format.
+This step computes the **Structural Variant Cellular Fraction (SVCF)**
+and returns an annotated VCF-like data frame.
 
 ``` r
 
@@ -378,9 +375,8 @@ svcf_out <- calc_svcf(
 VAF, the read-count normalization, carrier-copy multiplicity, and SVCF.
 The alternate overlapping-CNV estimate is retained as `ss2_raw`;
 `ss2_constraint_status` records whether it was in range or constrained
-to 0 or 1. On hemizygous chromosomes the output also carries `pl`
-(local normal ploidy), `svcf_status`, `sv_cnv_order`, and
-`svcf_is_bound`.
+to 0 or 1. On hemizygous chromosomes the output also carries `pl` (local
+normal ploidy), `svcf_status`, `sv_cnv_order`, and `svcf_is_bound`.
 
 1.  VAF: variant allele frequency
 2.  Rbar: class-specific read-count normalization; for the isolated
@@ -392,23 +388,29 @@ to 0 or 1. On hemizygous chromosomes the output also carries `pl`
 
 ### 4. Build tumor evolution tree — `build_tree()`
 
-This step build the tumor evolutionary tree based on SV clusters
-obtained from Dirichlet process Gaussian Mixture Model
-(DP-GMM).Currently, this step is optimized for two sample longitudinal
-data.
+This step builds a tumor-evolution tree from SV clusters obtained with
+the Dirichlet-process Gaussian mixture model (DP-GMM). The current
+interface is designed for paired longitudinal samples.
+
+`data_dir` may point directly to the directory containing `<sample>.bed`
+files. For compatibility with existing workflow output, SVCFit also
+recognizes `SVCFit_output/` and `COMBAT/SVCFit_output/` beneath that
+directory.
 
 ``` r
-output <- cluster_data(
-  pair_path,
-  pur_path,
-  data_dir,
-  pair_num = 1)
-clone2=output[[3]]
+cluster_result <- cluster_data(
+  pair_path = pair_path,
+  pur_path = pur_path,
+  data_dir = data_dir,
+  pair_num = 1
+)
+clones <- cluster_result[[3]]
 
-build_tree(
+tree_result <- build_tree(
   clones,
-  lineage_precedence_thresh=0.2, 
-  sum_filter_thresh=0.2)
+  lineage_precedence_thresh = 0.2,
+  sum_filter_thresh = 0.2
+)
 ```
 
 #### Function Arguments
@@ -419,7 +421,7 @@ cluster_data()
 |----|----|----|----|
 | `pair_path` | character | — | Path to a tab-separated file with columns for ‘pre_BAT sample’ and ‘on_BAT sample’. |
 | `pur_path` | character | — | Path to a tab-separated file with columns for ‘sample’ and ‘purity’. |
-| `data_dir` | character | — | Path to the directory containing per-sample SVCF output files. |
+| `data_dir` | character | — | Directory containing per-sample SVCF BED files, or a run root containing `SVCFit_output/` or `COMBAT/SVCFit_output/`. |
 | `Kmax` | numeric | 10 | Maximum number of clusters for DP-GMM. |
 | `n_steps` | numeric | 100 | Number of DP-GMM iterations. |
 | `thr_min_w` | numeric | 0.01 | Minimum cluster weight threshold. |
@@ -431,7 +433,7 @@ cluster_data()
 | `pairs` | integer vector | NULL | Subset of pair IDs to process; defaults to all pairs. |
 | `exclude_pairs` | integer vector | integer(0) | Pair IDs to exclude from analysis. |
 | `deduplicate` | Logical | TRUE | Whether to deduplicate events before clustering. |
-| `ccf_floor` | numeric | 0.1 | Minimum CCF value before flooring. |
+| `ccf_floor` | numeric | 0.1 | CCF values below this threshold are set to zero before clustering. |
 
 build_tree()
 
@@ -556,14 +558,13 @@ identical to the diploid path.
 
 ### Obtaining `cn_bar` (chrX/chrY depth segmentation with DNAcopy)
 
-SVCFit does not compute `cn_bar` itself — it consumes it. On the
-autosomes copy number comes from FACETS, but **FACETS cannot fit a
-hemizygous chromosome**: a male X has no heterozygous germline SNPs to
-supply the allelic-imbalance signal FACETS relies on, so it returns a
-single whole-chromosome segment with an inflated, unusable total copy
-number (`tcn.em` of 3–9 in our cohort, contradicted by read depth). The
-containing SV’s own SVCFit estimate cannot be used either — it is
-hemizygous and copy-altered, so that would be circular.
+SVCFit does not compute `cn_bar` itself; it consumes it. FACETS supplies
+the autosomal copy-number inputs used by the standard estimator. On a
+hemizygous chromosome, allele-specific estimates may be unreliable
+because there are no heterozygous germline SNPs to provide an
+allelic-imbalance signal. Supply `cn_bar` from an independent read-depth
+analysis. Do not derive it from the same SV’s SVCFit estimate, because
+that would be circular.
 
 `cn_bar` is therefore measured directly from **read depth**, segmented
 with the Bioconductor **DNAcopy** package (circular binary segmentation,
@@ -578,9 +579,8 @@ CBS). The recipe:
     cell relative to the germline.
 3.  **Scale by `psi_sample / 2`** to recover absolute copy number, where
     `psi_sample = purity * psi_tumor + (1 - purity) * 2` is the sample
-    mean autosomal ploidy (from the FACETS autosomal fit, which *is*
-    trustworthy). This step is not optional: across our cohort
-    `psi_sample / 2` ran from 0.87 to 1.72.
+    mean autosomal ploidy from the FACETS autosomal fit. This scaling is
+    required whenever the sample mean autosomal ploidy differs from two.
 4.  **Segment** `log2(cn_bar)` per bin with DNAcopy and report each
     segment’s mean as `cn_bar = 2^seg.mean`.
 
@@ -674,10 +674,29 @@ hemizygous_dup_svcf(cn_bar = 1.5, r = 2)
 
 ## Tutorial
 
+The installed vignette is available when SVCFit was installed with
+`build_vignettes = TRUE`:
+
 ``` r
 library(SVCFit)
 vignette("SVCFit_guide", package = "SVCFit")
 ```
+
+## Compare two SVCFit runs
+
+The package includes a command-line utility for event-level comparison
+of two SVCFit result sets. Each input may be a tab-delimited table, an
+RDS data frame, or a run directory containing per-sample BED files:
+
+``` bash
+COMPARE_SCRIPT=$(Rscript -e \
+  'cat(system.file("scripts", "compare_svcf_runs.R", package = "SVCFit"))')
+Rscript "$COMPARE_SCRIPT" old_run_or_table new_run_or_table comparison_output
+```
+
+The utility requires unique event keys and writes the joined event
+table, overall and grouped summaries, source-file checksums, and a
+Markdown report. It never modifies either input.
 
 ## Frequently Asked Questions
 
@@ -692,11 +711,11 @@ REF/ALT counts and therefore different SVCF estimates from the same data
 as you provide per-segment total copy number and gain/loss
 classification in the same TSV format.
 
-**Do I need a matched normal?** For the COMBAT analysis we used matched
-normals throughout. SVCFit can run on tumor-only when a matched normal
-is unavailable, but tumor purity must be supplied externally and ASCN
-inference becomes less reliable without germline-heterozygous SNP calls;
-this is treated as an unsupported configuration in the current release.
+**Do I need a matched normal?** A matched normal is recommended. For a
+tumor-only SV VCF, set `tum_only = TRUE`; SVCFit still requires
+compatible heterozygous-SNP and copy-number inputs. Tumor purity is not
+used to calculate SVCF. It is required only when converting SVCF to
+cancer cell fraction (CCF) for downstream clustering.
 
 **What about complex SVs (chromothripsis, BFB, chromoplexy)?** The
 closed-form SVCF estimators cover deletions, tandem duplications,
@@ -752,11 +771,13 @@ Tool versions used in the manuscript:
 
 ## Repository scope and example data
 
-This repository contains the reusable SVCFit R package, API documentation,
-usage guide, tests, and the de-identified example data used by the vignette.
-The example and plotting data are bundled under `inst/extdata` and available
-through `system.file()` after installation; no external data path is needed.
+This repository contains the reusable SVCFit R package, API
+documentation, usage guide, tests, and the de-identified example data
+used by the vignette. The example and plotting data are bundled under
+`inst/extdata` and available through `system.file()` after installation;
+no external data path is needed.
 
 Analysis pipelines, benchmark drivers, cluster submission scripts, and
-figure-generation tools belong in the separate `svcfit_workflows` repository.
-Large research datasets and generated results remain outside both repositories.
+figure-generation tools belong in the separate `svcfit_workflows`
+repository. Large research datasets and generated results remain outside
+both repositories.

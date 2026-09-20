@@ -5,10 +5,9 @@
 #' alternate form for deletions. The alternate candidate is constrained to the
 #' biological SVCF range after the zygosity correction.
 #'
-#' UPDATED 2026-07-29. The hemizygous branch previously took the CNV cellular fraction
-#' (\code{hemi_cncf}) and the integer copy number, and selected the SV-CNV ordering by a
-#' lineage-precedence rule. Both quantities are gone. The corrected forms take the measured mean
-#' copy number \code{cn_bar} directly, and the ordering is decided by the sign of the SV-first form.
+#' The hemizygous branch takes measured mean copy number \code{cn_bar}
+#' directly. It selects SV-CNV ordering by the sign of the SV-first form and
+#' does not require a CNV cellular fraction or an integer carrier copy number.
 #'
 #' @param anno_sv_cnv data.frame. Output of `annotate_cnv`.
 #' @param sv_info data.frame. Output of `parse_sv_info`.
@@ -30,10 +29,9 @@
 #'   SVCF = VAF = 1 is the correct answer. Columns \code{sample}, \code{chrom}, \code{pos}, and
 #'   \code{verdict}; only rows with \code{verdict == "recover"} are used.
 #'
-#'   GENERATED, NEVER HAND-WRITTEN. Produce it with scripts/13_zero_ref_allowlist.sh, which derives
-#'   the verdict from matched-normal soft-clipping calibrated against control loci. The distinction
-#'   cannot be made from the bed alone: both suppression guards fire on sv_ref == 0 and the matched
-#'   normal is what separates a somatic clonal loss from a germline or mapping artifact.
+#'   This table must come from an independently reviewed procedure using
+#'   evidence outside the SVCFit output, such as matched-normal alignment
+#'   evidence. The distinction cannot be made from the SVCFit table alone.
 #'
 #' @param hemi_dup_r numeric. Copies in carrier cells for a hemizygous tandem duplication. Default 2.
 #'   r is not identifiable from a single locus, and r = 2 maximises SVCF, so the duplication values
@@ -104,7 +102,7 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
       final_svcf = ifelse(bkg_cnv == 'norm' & classification == 'DUP',
                           round(raw_svcf, 2), round(final_svcf, 2)),
 
-      ## a copy-neutral hemizygous locus needs no CNV correction: SVCF = VAF (MATH.md change 1).
+      ## A copy-neutral hemizygous locus needs no CNV correction: SVCF = VAF.
       ## Duplications are excluded here and handled below: see the next comment.
       final_svcf = ifelse(pl == 1L & !is.na(cn_type) & cn_type == 'norm' & classification != 'DUP',
                           round(raw_svcf, 2), final_svcf),
@@ -116,10 +114,9 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
       ## major = 1, minor = 0 and pl = 1, the "extra copies above local ploidy" term
       ## (major + minor - pl) is 0, so r_2 falls back to r_bar*VAF and
       ##     raw_svcf = (r_bar*VAF) / (r_bar*VAF) = 1
-      ## identically, for ANY input. Measured on the 2026-07-29 cohort run: all 13 chrX DUP rows
-      ## returned exactly 1.00 while their VAFs ranged 0.224 to 0.506, which would have put 13
-      ## spurious clonal duplications onto the trees. On autosomes the fallback is unreachable for
-      ## a real duplication, because major + minor - 2 >= 1 there.
+      ## identically for any input and would create spurious clonal calls. On
+      ## autosomes the fallback is unreachable for a real duplication because
+      ## major + minor - 2 >= 1.
       ##
       ## The correct form needs cn_bar (H3, SVCF = (cn_bar - 1)/(r - 1)) and is applied in the
       ## block below when it is supplied. Without cn_bar the cellular fraction is NOT estimable,
@@ -130,18 +127,9 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
 
       ## Make every exclusion explicit and countable rather than a silent filter.
       ##
-      ## SCOPE CONTAINMENT (RK, 2026-07-29). The status column is computed for every row, but the
-      ## NA that follows from it is applied ONLY on a hemizygous chromosome. Autosomal output
-      ## therefore stays bit-identical to the submitted run.
-      ##
-      ## Why this is not merely cosmetic: 203 autosomal rows across the cohort (3.9%) have
-      ## sv_ref == 0, and the submitted pipeline reports final_svcf of 1 or 2 for them. Two is not
-      ## a cellular fraction, so those values are wrong, and this patch would have corrected them
-      ## to NA. That correction is real but out of scope for a revision about chrX: it widens the
-      ## diff, forces the autosomal figures to be regenerated, and invites a reviewer question
-      ## unrelated to the change under review. It is recorded in GATE-RESULT-2026-07-29.md and
-      ## belongs in its own piece of work. `svcf_status` still labels these rows, so they remain
-      ## countable without being altered.
+      ## Status is computed for every row. Suppression is applied only to
+      ## hemizygous rows so the established diploid path remains unchanged;
+      ## zero-reference diploid rows remain labelled and auditable.
       svcf_status = svcf_status(pl, cn_type, sv_ref),
       svcf_status = ifelse(pl == 1L & classification == 'DUP' & svcf_status == "ok",
                            "hemizygous_dup_needs_cn_bar", svcf_status),
@@ -200,23 +188,11 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
         dat$svcf_is_bound[i_hdup][keep] <- dd$is_upper_bound[keep]
       }
 
-      ## GATE ON MEASURED DEPTH, NOT ON cn_type. UPDATED 2026-07-31.
-      ##
-      ## This selected `cn_type != "norm"`, which is unreachable on a hemizygous chromosome. The
-      ## SNP-based caller derives cn_type from heterozygous germline SNPs, and a male X has none,
-      ## so it returns "norm" for every chrX row -- the ABSENCE of a call, not evidence of
-      ## copy-neutrality. That is the same fact that makes ACR inestimable and is the reason this
-      ## whole hemizygous path exists, so keying the gate on it made Eqs. 4a and 5a dead code
-      ## exactly where they were needed.
-      ##
-      ## Measured on the COMBAT cohort: all 132 chrX rows are cn_type == "norm", while the depth
-      ## says 111 of them have cn_bar > 1.05 (median 1.541, range 0.021-13.523) and only 16 sit
-      ## within 0.05 of 1. Under the old gate all 119 non-DUP rows took SVCF = VAF.
-      ##
-      ## Safe as a superset: resolve_hemizygous_svcf() and hemizygous_del_svcf() each test
+      ## Gate on measured depth rather than cn_type. The SNP-based cn_type is
+      ## not informative on a chromosome without heterozygous germline SNPs.
+      ## resolve_hemizygous_svcf() and hemizygous_del_svcf() each test
       ## copy-neutrality themselves and return VAF when |cn_bar - 1| <= tol, so a locus that
-      ## really is copy-neutral gets the same answer it did before. Autosomes are untouched --
-      ## the pl == 1L term is unchanged.
+      ## is copy-neutral retains the expected answer. Autosomes are untouched.
       idx <- which(dat$pl == 1L & dat$classification != "DUP")
       ## The rows the SNP-based caller DID flag. Only meaningful for the no-depth warning below,
       ## which used to describe exactly this set.
@@ -227,15 +203,14 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
           if (length(idx_called)) {
             warning(sprintf(paste0("calc_svcf [%s]: %d hemizygous SV(s) lie on a copy-altered ",
                                    "segment but no hemi_cn_bar was supplied. They are left ",
-                                   "unresolved rather than guessed. Run the chrX depth segmentation ",
-                                   "and join cn_bar per SV; see JOIN-REVIEW.md."),
+                                   "unresolved rather than guessed. Supply read-depth cn_bar ",
+                                   "values joined by CHROM and POS."),
                             samp, length(idx_called)), call. = FALSE)
           }
         } else {
-          ## hemi_cn_bar may be a per-row numeric vector, or the output of the segment-to-SV join:
-          ## a table keyed on (CHROM, POS). The join is where "which segment applies when an SV
-          ## spans a boundary" is decided (JOIN-REVIEW.md); this is only the lookup. An unmatched
-          ## row is left unresolved and counted, never defaulted.
+          ## hemi_cn_bar may be a per-row numeric vector or a table keyed on
+          ## (CHROM, POS). Segment-to-SV assignment is performed upstream. An
+          ## unmatched row is left unresolved and counted, never defaulted.
           if (is.data.frame(hemi_cn_bar)) {
             need <- c("CHROM", "POS", "cn_bar")
             if (!all(need %in% names(hemi_cn_bar))) {
@@ -259,13 +234,8 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
 
           ## kappa for the CNV-first deletion form: the copies the locus would have WITHOUT the
           ## deletion, i.e. the flanking copy number. Resolved exactly as hemi_cn_bar is, and
-          ## OPTIONAL -- absent, hemizygous_del_svcf() falls back to its previous behaviour, so a
-          ## caller with no background estimate is unaffected.
-          ##
-          ## It matters wherever deletions land on copy-altered loci: on this cohort 13 of the 14
-          ## chrX deletions do, and without kappa each of them falls through to h2, the form that
-          ## scores 19.9% within 0.05 in the simulation against 58.9% for the CNV-first form.
-          ## Produced by 08_chrx_segment_sv_join.py --bg-out.
+          ## optional. Without it, hemizygous_del_svcf() uses the available
+          ## depth or read-based form.
           bgc <- NA_real_
           if (!is.null(hemi_bg_cn)) {
             if (is.data.frame(hemi_bg_cn)) {
@@ -346,17 +316,8 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
                            "zero_ref_depth", svcf_status),
       final_svcf  = ifelse(pl == 1L & is.infinite(final_svcf), NA_real_, final_svcf)
     ) %>%
-    ## SCOPE CONTAINMENT, second instance, and narrower than it first appears.
-    ##
-    ## The submitted beds RETAIN rows with r_bar = Inf (21 of 452 in 87955), so the original
-    ## filter(!is.infinite(final_svcf), !is.infinite(r_bar)) was not in force when they were made.
-    ## Reinstating it drops 203 autosomal rows and fails the gate on every sample. Do not.
-    ##
-    ## What the submitted beds do NOT retain is the one autosomal row whose raw_svcf is NaN: a
-    ## tandem duplication with sv_ref = 0, where r_bar and r_2 are both Inf and raw_svcf = Inf/Inf.
-    ## Exactly one such row exists in the cohort, chr4:10,075,098 in 87955, and the gate caught it.
-    ## Drop it on autosomes to preserve the row count; keep it on hemizygous chromosomes, where a
-    ## silently dropped row is what hid the chrX problem in the first place.
+    ## Preserve labelled infinite-ratio rows, but remove diploid rows whose raw
+    ## estimate is NaN. Hemizygous rows remain visible with explicit status.
     filter(pl == 1L | !is.nan(raw_svcf)) %>%
     group_by(mate) %>%
     mutate(

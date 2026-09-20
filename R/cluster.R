@@ -1,8 +1,5 @@
-# Package-level holder for the reticulate sklearn module.
-# chrX_rerun patch: this was `sk <- NULL` written by `sk <<- import(...)`, which fails with
-# "cannot change value of locked binding" in an installed package -- loadNamespace() seals the
-# namespace. An environment works because the LOCK IS ON THE BINDING, not on the contents of
-# the environment it points at, so .sk$mod can still be assigned. Same once-per-session cache.
+# Package-level holder for the lazily imported scikit-learn module. An
+# environment permits once-per-session caching in a locked package namespace.
 .sk <- new.env(parent = emptyenv())
 
 #' Pre-process paired SV data for DP-GMM clustering
@@ -18,8 +15,9 @@
 #'   IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).
 #' @param pur_path Character. Path to a tab-delimited purity file (must contain
 #'   columns \code{sample} and \code{purity}).
-#' @param data_dir Character. Root directory containing SVCFit output BED files.
-#'   Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.
+#' @param data_dir Character. Directory containing per-sample SVCFit BED files,
+#'   or a run root containing them under \code{SVCFit_output/} or
+#'   \code{COMBAT/SVCFit_output/}.
 #' @param exclude_pairs Integer vector. Pair indices (1-based row numbers in
 #'   \code{pair_path}) to drop before processing.  Default \code{integer(0)}.
 #' @param ccf_floor Numeric. CCF values below this threshold are zeroed out
@@ -122,13 +120,28 @@ pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = i
   ))
 }
 
+resolve_svcfit_bed <- function(data_dir, sample_id) {
+  filename <- paste0(sample_id, ".bed")
+  candidates <- c(
+    file.path(data_dir, filename),
+    file.path(data_dir, "SVCFit_output", filename),
+    file.path(data_dir, "COMBAT", "SVCFit_output", filename)
+  )
+  found <- candidates[file.exists(candidates)]
+  if (!length(found)) {
+    stop("No SVCFit BED found for sample '", sample_id, "' under ", data_dir,
+         call. = FALSE)
+  }
+  normalizePath(found[[1]], mustWork = TRUE)
+}
+
 read_data <- function(pair, row, pur_file, data_dir){
   pre_samp <- pair$pre_BAT[row]
   on_samp <- pair$on_BAT[row]
   pre_pur <- pur_file$purity[pur_file$sample == pre_samp]
   on_pur <- pur_file$purity[pur_file$sample == on_samp]
 
-  pre <- read.delim(paste0(data_dir, '/COMBAT/SVCFit_output/', pre_samp, '.bed')) %>%
+  pre <- read.delim(resolve_svcfit_bed(data_dir, pre_samp)) %>%
     mutate(
       sample_ID = pre_samp,
       pair = row,
@@ -136,7 +149,7 @@ read_data <- function(pair, row, pur_file, data_dir){
       purity = as.numeric(pre_pur)
     )
   
-  on <- read.delim(paste0(data_dir, '/COMBAT/SVCFit_output/', on_samp, '.bed')) %>%
+  on <- read.delim(resolve_svcfit_bed(data_dir, on_samp)) %>%
     mutate(
       sample_ID = on_samp,
       pair = row,
@@ -530,8 +543,9 @@ merge_cluster <- function(input, pair_num, min_dist=0.2){
 #'   IDs (no header; columns: \code{pre_BAT}, \code{on_BAT}).
 #' @param pur_path Character. Path to a tab-delimited purity file (columns
 #'   \code{sample} and \code{purity}).
-#' @param data_dir Character. Root directory containing SVCFit output BED files.
-#'   Expected layout: \code{<data_dir>/COMBAT/SVCFit_output/<sample_ID>.bed}.
+#' @param data_dir Character. Directory containing per-sample SVCFit BED files,
+#'   or a run root containing them under \code{SVCFit_output/} or
+#'   \code{COMBAT/SVCFit_output/}.
 #' @param Kmax Integer. Maximum number of DP-GMM components.  Default \code{10}.
 #' @param n_steps Integer. Number of warm-start EM iterations for convergence
 #'   diagnostics.  Default \code{100}.
@@ -594,7 +608,7 @@ cluster_data <- function(pair_path,
 
   #use_condaenv("py3", required = TRUE)
   py_config()
-  .sk$mod <- import("sklearn", delay_load = TRUE)   # chrX_rerun patch: was sk <<-
+  .sk$mod <- import("sklearn", delay_load = TRUE)
 
   if (is.null(pairs)) pairs <- sort(unique(as.integer(new_dat$pair)))
 

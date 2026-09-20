@@ -17,22 +17,10 @@ which reproduces the original behaviour exactly.}
 Integer vector of local normal ploidy, 1 or 2.
 }
 \description{
-Rationale and derivation: chrX_rerun/MATH.md, as corrected by
-CORRECTION-c-vs-cnbar-2026-07-29.md. SVCFit's allele copy ratio (Eq. 6) is estimated from
-heterozygous germline SNPs, which do not exist on the hemizygous X of a male subject. The diploid
-conversion factor R = 2, the read-depth ratio r_bar, and the copy-number classification in
-annotate_cnv() all assume two copies. These helpers make the local normal ploidy explicit so the
-same code serves both cases, leaving autosomal behaviour bit-identical.
-}
-\details{
-REWRITTEN 2026-07-29. The previous version expressed the hemizygous forms in \code{c}, the copy number
-in the cells carrying the copy-number change, and selected between them with a lineage-precedence
-rule against \code{f_CNV}. Ground-truth allele counting
-(scripts/10_hemizygous_groundtruth_check.py) shows those forms are wrong except when
-\code{f_CNV = SVCF} (H1) or \code{f_CNV = 1} (H2), which is what their derivations silently assumed.
-
-The governing fact is that total alleles per cell is always \code{cn_bar}, the mean copy number of the
-locus, which is exactly how R is defined in the paper. Everything follows from that, and neither
-\code{c} nor \code{f_CNV} is needed anywhere.
+The allele copy ratio used by the diploid estimator is derived from
+heterozygous germline SNPs. That quantity is unavailable on a chromosome
+that is single-copy in the germline. These helpers make local normal ploidy
+explicit and use \code{cn_bar}, the read-depth estimate of mean copies per
+cell, for hemizygous copy-number corrections.
 Local normal ploidy for each row
 }
