@@ -55,8 +55,9 @@ considered overlapping a translocation. Default \code{50}.}
 \item{tum_only}{Logical. Whether SVs were called from a tumor-only BAM.
 Default \code{FALSE}.}
 
-\item{thresh}{Numeric (0, 1). Threshold for deciding SV/CNV event ordering
-in SVCF calculation. Default \code{0.1}.}
+\item{thresh}{Numeric (0, 1). Operational noise buffer around the sign-based
+SV/CNV ordering criterion. The alternate candidate is used when
+\code{ss1 <= thresh}; deletions always use it. Default \code{0.1}.}
 
 \item{flank_snp}{Numeric. Flanking window (bp) used when mapping SNPs to SVs.
 Default \code{500}.}
@@ -95,7 +96,7 @@ A named list with two elements:
 \description{
 Runs the three-stage SVCF inference pipeline: VCF/CNV parsing
 (\code{extract_info}), SV characterisation (\code{characterize_sv}), and
-cancer cell fraction calculation (\code{calc_svcf}).  Clustering and tree
+structural variant cellular fraction calculation (\code{calc_svcf}).  Clustering and tree
 building are handled separately by \code{\link{build_trees}}.
 }
 \examples{

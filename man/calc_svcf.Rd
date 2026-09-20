@@ -22,8 +22,9 @@ calc_svcf(
 
 \item{sv_info}{data.frame. Output of \code{parse_sv_info}.}
 
-\item{thresh}{numeric in (0, 1). Threshold for deciding whether the SV occurs before or after the
-CNV.}
+\item{thresh}{numeric in (0, 1). Operational noise buffer around the sign-based
+SV/CNV ordering criterion. The alternate candidate is used when
+\code{ss1 <= thresh}; deletions always use the alternate candidate.}
 
 \item{samp}{character. Sample name.}
 
@@ -57,15 +58,17 @@ normal is what separates a somatic clonal loss from a germline or mapping artifa
 CNV-first deletion form; optional.}
 }
 \value{
-data.frame as before, plus \code{pl} (local normal ploidy), \code{svcf_status},
-\code{sv_cnv_order} and \code{svcf_is_bound}. Rows whose status is not "ok" are returned with
-\code{final_svcf = NA} rather than dropped, so exclusions are countable instead of silent.
+data.frame as before, plus \code{pl} (local normal ploidy),
+\code{s2_raw}, \code{ss2_raw}, \code{ss2_constraint_status},
+\code{svcf_status}, \code{sv_cnv_order} and \code{svcf_is_bound}.
+The raw alternate candidate is retained when the reported value is
+constrained to 0 or 1, so boundary estimates are countable and auditable.
 }
 \description{
-Ploidy-aware version. With \code{hemizygous_chr = NULL} every line reduces to the original
-diploid code and results are bit-identical; this is asserted by
-chrX_rerun/scripts/04_regression_autosomes.R. See chrX_rerun/MATH.md, as corrected by
-CORRECTION-c-vs-cnbar-2026-07-29.md.
+Ploidy-aware version. The diploid overlapping-CNV path uses the sign of the
+SV-first form with \code{thresh} as a noise buffer, and always selects the
+alternate form for deletions. The alternate candidate is constrained to the
+biological SVCF range after the zygosity correction.
 }
 \details{
 UPDATED 2026-07-29. The hemizygous branch previously took the CNV cellular fraction

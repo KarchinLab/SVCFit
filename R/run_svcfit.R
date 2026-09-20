@@ -2,7 +2,7 @@
 #'
 #' Runs the three-stage SVCF inference pipeline: VCF/CNV parsing
 #' (\code{extract_info}), SV characterisation (\code{characterize_sv}), and
-#' cancer cell fraction calculation (\code{calc_svcf}).  Clustering and tree
+#' structural variant cellular fraction calculation (\code{calc_svcf}).  Clustering and tree
 #' building are handled separately by \code{\link{build_trees}}.
 #'
 #' @param p_het Character. Path to VCF file of heterozygous SNPs.
@@ -21,8 +21,9 @@
 #' @param min_alt Numeric. Minimum SV-supporting read count. Default \code{2}.
 #' @param tum_only Logical. Whether SVs were called from a tumor-only BAM.
 #'   Default \code{FALSE}.
-#' @param thresh Numeric (0, 1). Threshold for deciding SV/CNV event ordering
-#'   in SVCF calculation. Default \code{0.1}.
+#' @param thresh Numeric (0, 1). Operational noise buffer around the sign-based
+#'   SV/CNV ordering criterion. The alternate candidate is used when
+#'   \code{ss1 <= thresh}; deletions always use it. Default \code{0.1}.
 #' @param flank_snp Numeric. Flanking window (bp) used when mapping SNPs to SVs.
 #'   Default \code{500}.
 #' @param flank_cnv Numeric. Flanking window (bp) used when assigning background

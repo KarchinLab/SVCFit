@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-SVCFit estimates the **Structural Variant Cellular Fraction (SVCF)** for somatic structural variants (SVs) detected in tumor sequencing data. The SVCF is the proportion of cancer cells that carry a given SV — analogous to the cancer cell fraction (CCF) used for point mutations, but adapted for the read-depth patterns of SVs under copy-number change.
+SVCFit estimates the **Structural Variant Cellular Fraction (SVCF)** for somatic structural variants (SVs) detected in tumor sequencing data. SVCF is the proportion of all sampled cells that carry a given SV. Cancer cell fraction (CCF) instead uses cancer cells as its denominator and is obtained through the separately documented purity adjustment.
 
 A key challenge is that SVs frequently co-occur with somatic copy-number alterations (CNAs). When an SV breakpoint falls inside a deleted or amplified segment, naively dividing SV-supporting reads by total reads gives a biased estimate of the true cellular fraction. SVCFit corrects for this by:
 
@@ -130,8 +130,8 @@ Key columns:
 |----------------------------|--------------------------------------------|
 | `chrom`, `start`, `end` | Segment coordinates |
 | `tcn.em` | Total copy number of the segment |
-| `lcn.em` | Minor-allele copy number (`NA` is treated as 1) |
-| `cf.em` | Cancer cell fraction of the segment (used directly for SVs that match a CNV event) |
+| `lcn.em` | Minor-allele copy number (`NA` is treated as 0 by the current implementation) |
+| `cf.em` | FACETS cellular fraction of the segment; retained as `cncf` for annotation and audit, but not used directly by `calc_svcf()` |
 
 ------------------------------------------------------------------------
 
@@ -171,8 +171,10 @@ svcfit_out %>%
 | `bkg_cnv` | Copy-number context at the breakpoint: `norm` (diploid), `del`, or `dup` |
 | `cn_type` | Type of overlapping CNV event (`DEL`, `DUP`, or `norm`) |
 | `zygosity` | Inferred allelic state of the SV: `het` (one allele) or `hom` (both alleles) |
-| `final_svcf` | **Copy-number–corrected SVCF** (0–1). This is the main output. |
-| `raw_svcf` | Uncorrected allele fraction (before CNA adjustment) |
+| `final_svcf` | **Copy-number–corrected SVCF.** Ordinary valid estimates lie in 0–1; inspect `svcf_status` and `ss2_constraint_status` for exceptional and boundary cases. |
+| `raw_svcf` | Initial class-adjusted SVCF estimate before an overlapping-CNA correction |
+| `ss2_raw` | Unconstrained alternate overlapping-CNA SVCF candidate after the zygosity correction |
+| `ss2_constraint_status` | Whether `ss2_raw` was in range or constrained to the lower or upper SVCF boundary |
 
 ### Interpreting `final_svcf`
 
@@ -242,13 +244,13 @@ anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
 head(anno_sv_cnv %>% select(ID, zygosity, ASCN, cn_type, bkg_cnv))
 ```
 
-`ASCN` is the allele-specific copy number relevant for the SV allele, which is used in the correction formula.
+`ASCN` is the legacy column name for the SNP-derived **allele copy ratio (ACR)** relevant to the SV allele. It is a read-ratio estimate, not a FACETS integer allele-specific copy number.
 
 ## Step 3: Calculate SVCF — `calc_svcf()`
 
 `calc_svcf()` applies the copy-number–aware correction and produces the final SVCF estimates.
 
-The `thresh` parameter (default `0.1`) controls the ordering decision: if the uncorrected fraction under the "SV occurred before CNV" model is below `thresh`, SVCFit assumes the CNA came first and uses the other correction branch.
+The sign of the SV-first candidate supplies the mathematical ordering criterion. The `thresh` parameter (default `0.1`) adds an operational noise buffer around zero: when `ss1 <= thresh`, SVCFit uses the alternate candidate. Deletions use the alternate candidate unconditionally. The alternate estimate is constrained to 0–1 after the zygosity correction, and the unconstrained value and boundary status remain in the output.
 
 ```{r}
 #| label: calcsvcf

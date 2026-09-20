@@ -51,6 +51,23 @@ credentials::set_github_pat()
 remotes::install_github("KarchinLab/SVCFit", build_vignettes = TRUE, dependencies = TRUE)
 ```
 
+### Building the package with Quarto
+
+The source vignette uses Quarto. Package developers need the Quarto CLI and
+the R `quarto` package before running `R CMD build`. The repository launcher
+uses a system Quarto installation when available, or the user-local
+`$HOME/.local/share/svcfit-quarto` environment by default:
+
+``` bash
+mamba create -y -p "$HOME/.local/share/svcfit-quarto" -c conda-forge quarto
+Rscript -e 'install.packages("quarto")'
+tools/with_quarto.sh quarto check
+tools/with_quarto.sh R CMD build .
+```
+
+Set `SVCFIT_QUARTO_PREFIX` when the user-local Quarto environment is installed
+at a different path.
+
 ## Input Requirements
 
 ### 1. Structural variants
@@ -69,7 +86,7 @@ Required **INFO** fields:
 
 ### 2. Copy number variants
 
-SVCFit currently utilizes copy number calls from the FACETS package [2]. The tool uses allele-specific copy number, total copy number, and the cellular fraction (cncf) to annotate SVs with overlapping CNVs. No modification is required for standard FACETS output.
+SVCFit currently utilizes copy-number calls from the FACETS package [2]. It retains FACETS total copy number, minor copy number, and segment cellular fraction when annotating overlapping CNVs. The SVCF equations use total/minor copy state and the SNP-derived allele copy ratio; FACETS `cf.em` is retained as `cncf` for annotation and audit rather than used directly by `calc_svcf()`.
 
 ### 3. Heterozygous SNP near SV
 
@@ -316,7 +333,7 @@ svcf_out <- calc_svcf(
 |---------------|------------|---------|----------------------------------------|
 | `anno_sv_cnv` | data.frame | —       | CNV-annotated SVs.                     |
 | `sv_info`     | data.frame | —       | Parsed SV info.                        |
-| `thresh`      | numeric    | 0.1     | Threshold for SV-before-CNV inference. |
+| `thresh`      | numeric    | 0.1     | Noise buffer around the sign-based SV/CNV ordering criterion; `ss1 <= thresh` selects the alternate branch, and deletions always use it. |
 | `samp`        | character  | —       | Sample name.                           |
 | `exper`       | character  | —       | Experiment name.                       |
 | `hemizygous_chr` | character | NULL | Chromosomes single-copy in the germline (e.g. `c("chrX","chrY")`). `NULL` = diploid-only behavior. |
@@ -325,11 +342,11 @@ svcf_out <- calc_svcf(
 | `hemi_dup_r` | numeric | 2 | Copies in carrier cells for a hemizygous tandem duplication; SVCFs reported as upper bounds. |
 | `zero_ref_allowlist` | data.frame | NULL | Hemizygous rows with `sv_ref = 0` that BAM evidence confirms are genuine clonal losses (SVCF = VAF = 1). |
 
-**Output:** An annotated VCF-like data frame with additional fields for VAF, Rbar, r, and SVCF. On hemizygous chromosomes it also carries `pl` (local normal ploidy), `svcf_status`, `sv_cnv_order`, and `svcf_is_bound`.
+**Output:** An annotated VCF-like data frame with additional fields for VAF, the read-count normalization, carrier-copy multiplicity, and SVCF. The alternate overlapping-CNV estimate is retained as `ss2_raw`; `ss2_constraint_status` records whether it was in range or constrained to 0 or 1. On hemizygous chromosomes the output also carries `pl` (local normal ploidy), `svcf_status`, `sv_cnv_order`, and `svcf_is_bound`.
 
 1.  VAF: variant allele frequency
-2.  Rbar: average break interval count in a sample
-3.  r: inferred integer copy number of break intervals
+2.  Rbar: class-specific read-count normalization; for the isolated diploid-duplication derivation, `2(A+B)/B` estimates sample-average copy load under the read model
+3.  r: carrier-cell total copy number from FACETS under the duplication model; `r-2` is the added-copy/junction multiplicity
 4.  SVCF: structural variant cellular fraction.
 
 ### 4. Build tumor evolution tree — `build_tree()`

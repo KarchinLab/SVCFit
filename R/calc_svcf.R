@@ -1,9 +1,9 @@
 #' Calculate SVCF
 #'
-#' Ploidy-aware version. With \code{hemizygous_chr = NULL} every line reduces to the original
-#' diploid code and results are bit-identical; this is asserted by
-#' chrX_rerun/scripts/04_regression_autosomes.R. See chrX_rerun/MATH.md, as corrected by
-#' CORRECTION-c-vs-cnbar-2026-07-29.md.
+#' Ploidy-aware version. The diploid overlapping-CNV path uses the sign of the
+#' SV-first form with \code{thresh} as a noise buffer, and always selects the
+#' alternate form for deletions. The alternate candidate is constrained to the
+#' biological SVCF range after the zygosity correction.
 #'
 #' UPDATED 2026-07-29. The hemizygous branch previously took the CNV cellular fraction
 #' (\code{hemi_cncf}) and the integer copy number, and selected the SV-CNV ordering by a
@@ -12,8 +12,9 @@
 #'
 #' @param anno_sv_cnv data.frame. Output of `annotate_cnv`.
 #' @param sv_info data.frame. Output of `parse_sv_info`.
-#' @param thresh numeric in (0, 1). Threshold for deciding whether the SV occurs before or after the
-#'   CNV.
+#' @param thresh numeric in (0, 1). Operational noise buffer around the sign-based
+#'   SV/CNV ordering criterion. The alternate candidate is used when
+#'   \code{ss1 <= thresh}; deletions always use the alternate candidate.
 #' @param samp character. Sample name.
 #' @param exper character. Experiment identifier.
 #' @param hemizygous_chr character vector or NULL. Chromosomes that are single-copy in this
@@ -40,9 +41,11 @@
 #'
 #' @param hemi_bg_cn data.frame, numeric, or NULL. Flanking (background) copy number for the
 #'   CNV-first deletion form; optional.
-#' @return data.frame as before, plus \code{pl} (local normal ploidy), \code{svcf_status},
-#'   \code{sv_cnv_order} and \code{svcf_is_bound}. Rows whose status is not "ok" are returned with
-#'   \code{final_svcf = NA} rather than dropped, so exclusions are countable instead of silent.
+#' @return data.frame as before, plus \code{pl} (local normal ploidy),
+#'   \code{s2_raw}, \code{ss2_raw}, \code{ss2_constraint_status},
+#'   \code{svcf_status}, \code{sv_cnv_order} and \code{svcf_is_bound}.
+#'   The raw alternate candidate is retained when the reported value is
+#'   constrained to 0 or 1, so boundary estimates are countable and auditable.
 #' @export
 #'
 calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
@@ -71,14 +74,26 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
       raw_svcf = ifelse(zygosity == 'hom' & pl == 2L, raw_svcf / 2, raw_svcf),
 
       ## Eqs. 4 and 5. Both are built on ACR and are defined for pl == 2 only.
-      s1  = (2 * sv_alt - sv_ref * (ASCN - 1)) / (sv_alt + sv_ref),
-      s2  = ((sv_alt + sv_alt * ASCN) / (sv_alt + sv_ref)) %% 2,
-      ss1 = ifelse(zygosity == "hom", 0.5 * s1, s1),
-      ss2 = ifelse(zygosity == "hom", 0.5 * s2, s2),
-      s1  = ifelse(pl == 1L, NA_real_, s1),
-      s2  = ifelse(pl == 1L, NA_real_, s2),
-      ss1 = ifelse(pl == 1L, NA_real_, ss1),
-      ss2 = ifelse(pl == 1L, NA_real_, ss2),
+      ##
+      ## s2_raw is an unconstrained first estimate of SVCF. The old `%% 2`
+      ## operation did not constrain it to [0, 1]: it mapped 2 to 0 while
+      ## leaving values between 1 and 2 invalid. Apply the zygosity correction
+      ## first, then use the constrained maximum-likelihood estimate under the
+      ## fixed-ACR binomial model. Retain the raw candidate and constraint status
+      ## so boundary estimates remain auditable.
+      s1      = (2 * sv_alt - sv_ref * (ASCN - 1)) / (sv_alt + sv_ref),
+      s2_raw  = (sv_alt + sv_alt * ASCN) / (sv_alt + sv_ref),
+      s2      = s2_raw,
+      ss1     = ifelse(zygosity == "hom", 0.5 * s1, s1),
+      ss2_raw = ifelse(zygosity == "hom", 0.5 * s2_raw, s2_raw),
+      ss2_constraint_status = svcf_constraint_status(ss2_raw),
+      ss2     = constrain_svcf(ss2_raw),
+      s1      = ifelse(pl == 1L, NA_real_, s1),
+      s2      = ifelse(pl == 1L, NA_real_, s2),
+      ss1     = ifelse(pl == 1L, NA_real_, ss1),
+      ss2_raw = ifelse(pl == 1L, NA_real_, ss2_raw),
+      ss2     = ifelse(pl == 1L, NA_real_, ss2),
+      ss2_constraint_status = ifelse(pl == 1L, NA_character_, ss2_constraint_status),
 
       ## read-count based rule selection between Eqs. 4 and 5, unchanged for pl == 2
       final_svcf = ifelse(cn_type == "DEL" | ss1 <= thresh, ss2, ss1),
