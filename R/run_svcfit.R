@@ -40,8 +40,9 @@
 #'   Default \code{2}; duplication SVCFs are reported as upper bounds.
 #' @param hemi_cn_override data.frame or \code{NULL}. Externally-derived hemizygous copy number
 #'   replacing the default single-copy germline state.
-#' @param zero_ref_allowlist data.frame or \code{NULL}. Hemizygous rows with \code{sv_ref = 0} that
-#'   BAM evidence confirms are genuine clonal losses (SVCF = VAF = 1).
+#' @param zero_ref_allowlist data.frame or \code{NULL}. Rows with \code{sv_ref = 0} that
+#'   independent evidence confirms are genuine clonal events. Reviewed rows are recovered at
+#'   SVCF = 1; all other zero-reference estimates are reported as \code{NA}.
 #' @return A named list with two elements:
 #' \describe{
 #'   \item{\code{svcf}}{data.frame. Full SVCF result table from

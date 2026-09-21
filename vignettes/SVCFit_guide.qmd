@@ -171,7 +171,9 @@ svcfit_out %>%
 | `bkg_cnv` | Copy-number context at the breakpoint: `norm` (diploid), `del`, or `dup` |
 | `cn_type` | Type of overlapping CNV event (`DEL`, `DUP`, or `norm`) |
 | `zygosity` | Inferred allelic state of the SV: `het` (one allele) or `hom` (both alleles) |
-| `final_svcf` | **Copy-number–corrected SVCF.** Ordinary valid estimates lie in 0–1; inspect `svcf_status` and `ss2_constraint_status` for exceptional and boundary cases. |
+| `final_svcf` | **Copy-number–corrected SVCF.** Every finite reported estimate lies in 0–1. Unreviewed zero-reference estimates are `NA`. |
+| `final_svcf_unconstrained` | Selected estimate before the global biological constraint; retained for audit. |
+| `final_svcf_constraint_status` | Whether the selected estimate was in range, moved to 0 or 1, or nonfinite. |
 | `raw_svcf` | Initial class-adjusted SVCF estimate before an overlapping-CNA correction |
 | `ss2_raw` | Unconstrained alternate overlapping-CNA SVCF candidate after the zygosity correction |
 | `ss2_constraint_status` | Whether `ss2_raw` was in range or constrained to the lower or upper SVCF boundary |

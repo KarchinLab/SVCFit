@@ -41,10 +41,11 @@ pre_process_cluster <- function(pair_path, pur_path, data_dir, exclude_pairs = i
     do.call(rbind, .) %>%
     ungroup() %>%
     filter(!pair %in% exclude_pairs) %>%
+    { validate_final_svcf(.$final_svcf, "clustering input")
+      . } %>%
     mutate(
       ccf = final_svcf / purity,
       ccf = ifelse(ccf > 1, 1, ccf),
-      final_svcf = ifelse(final_svcf > 1, 1, final_svcf),
       pair = as.character(pair),
       sv_len = mPOS - nPOS,
       POS_raw = POS,

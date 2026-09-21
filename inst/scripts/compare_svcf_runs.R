@@ -92,6 +92,46 @@ write.table(old, file.path(out_dir, "old_combined.tsv"), sep = "\t",
 write.table(new, file.path(out_dir, "new_combined.tsv"), sep = "\t",
             quote = FALSE, row.names = FALSE, na = "NA")
 
+validity_metrics <- function(x, arm) {
+  value <- suppressWarnings(as.numeric(x$final_svcf))
+  finite <- is.finite(value)
+  data.frame(
+    arm = arm,
+    rows = length(value),
+    finite_final_svcf = sum(finite),
+    missing_or_nonfinite_final_svcf = sum(!finite),
+    below_zero = sum(finite & value < 0),
+    above_one = sum(finite & value > 1),
+    zero_ref_depth = if ("svcf_status" %in% names(x))
+      sum(x$svcf_status == "zero_ref_depth", na.rm = TRUE) else NA_integer_,
+    stringsAsFactors = FALSE
+  )
+}
+
+count_column <- function(x, arm, column) {
+  if (!column %in% names(x)) return(NULL)
+  value <- as.character(x[[column]])
+  value[is.na(value) | value == ""] <- "NA"
+  counts <- as.data.frame(table(value), stringsAsFactors = FALSE)
+  names(counts) <- c("status", "rows")
+  counts$arm <- arm
+  counts$column <- column
+  counts[c("arm", "column", "status", "rows")]
+}
+
+validity <- rbind(validity_metrics(old, "old"), validity_metrics(new, "new"))
+write.table(validity, file.path(out_dir, "svcf_old_vs_new_validity.tsv"), sep = "\t",
+            quote = FALSE, row.names = FALSE, na = "NA")
+
+status_counts <- do.call(rbind, Filter(Negate(is.null), list(
+  count_column(old, "old", "svcf_status"),
+  count_column(new, "new", "svcf_status"),
+  count_column(old, "old", "final_svcf_constraint_status"),
+  count_column(new, "new", "final_svcf_constraint_status")
+)))
+write.table(status_counts, file.path(out_dir, "svcf_old_vs_new_status_counts.tsv"), sep = "\t",
+            quote = FALSE, row.names = FALSE, na = "NA")
+
 preferred_keys <- c("sample", "expmt", "CHROM", "POS", "END", "ID", "mate")
 keys <- preferred_keys[preferred_keys %in% names(old) & preferred_keys %in% names(new)]
 if (!length(keys)) stop("The inputs have no common event-key columns", call. = FALSE)
@@ -138,7 +178,13 @@ summary <- data.frame(
   new_boundary_low = if (!is.null(constraint_status))
     sum(constraint_status == "boundary_low", na.rm = TRUE) else NA_integer_,
   new_boundary_high = if (!is.null(constraint_status))
-    sum(constraint_status == "boundary_high", na.rm = TRUE) else NA_integer_
+    sum(constraint_status == "boundary_high", na.rm = TRUE) else NA_integer_,
+  old_below_zero = validity$below_zero[validity$arm == "old"],
+  old_above_one = validity$above_one[validity$arm == "old"],
+  new_below_zero = validity$below_zero[validity$arm == "new"],
+  new_above_one = validity$above_one[validity$arm == "new"],
+  old_zero_ref_depth = validity$zero_ref_depth[validity$arm == "old"],
+  new_zero_ref_depth = validity$zero_ref_depth[validity$arm == "new"]
 )
 write.table(summary, file.path(out_dir, "svcf_old_vs_new_summary.tsv"), sep = "\t",
             quote = FALSE, row.names = FALSE, na = "NA")
@@ -179,6 +225,12 @@ report <- c(
   paste0("| New rows | ", summary$new_rows, " |"),
   paste0("| Matched rows | ", summary$matched_rows, " |"),
   paste0("| Changed rows | ", summary$changed_rows, " |"),
+  paste0("| Old finite values below 0 | ", summary$old_below_zero, " |"),
+  paste0("| Old finite values above 1 | ", summary$old_above_one, " |"),
+  paste0("| New finite values below 0 | ", summary$new_below_zero, " |"),
+  paste0("| New finite values above 1 | ", summary$new_above_one, " |"),
+  paste0("| Old zero-reference rows | ", summary$old_zero_ref_depth, " |"),
+  paste0("| New zero-reference rows | ", summary$new_zero_ref_depth, " |"),
   paste0("| New upper-boundary estimates | ", summary$new_boundary_high, " |"),
   paste0("| Mean absolute SVCF change | ", signif(summary$mean_absolute_change, 6), " |"),
   paste0("| Maximum absolute SVCF change | ", signif(summary$maximum_absolute_change, 6), " |"), "",
@@ -187,3 +239,14 @@ report <- c(
 writeLines(report, file.path(out_dir, "SVCF_SHADOW_COMPARISON.md"))
 
 cat("Wrote SVCF comparison to ", out_dir, "\n", sep = "")
+
+if (!"final_svcf_constraint_status" %in% names(new)) {
+  stop("New run lacks final_svcf_constraint_status; it was not produced by the globally constrained SVCFit implementation",
+       call. = FALSE)
+}
+new_invalid <- summary$new_below_zero + summary$new_above_one
+if (new_invalid > 0) {
+  stop("New run contains ", new_invalid,
+       " finite final_svcf value(s) outside [0, 1]; refusing shadow acceptance",
+       call. = FALSE)
+}

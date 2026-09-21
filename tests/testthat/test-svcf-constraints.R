@@ -12,6 +12,14 @@ test_that("SVCF constraint projects finite candidates onto the unit interval", {
   )
 })
 
+test_that("downstream validation rejects unconstrained reported values", {
+  expect_true(SVCFit:::validate_final_svcf(c(NA, 0, 0.5, 1)))
+  expect_error(
+    SVCFit:::validate_final_svcf(c(0.5, 1.01), "test input"),
+    "1 test input final_svcf value"
+  )
+})
+
 test_that("zygosity correction is applied before the SVCF constraint", {
   s2_raw <- 2
 
@@ -88,4 +96,52 @@ test_that("diploid duplication uses FACETS carrier copy number", {
 
   expect_equal(out$r_2, c(1, 1, 2))
   expect_equal(out$final_svcf, c(1, 0.5, 0.5))
+})
+
+test_that("the selected final estimate is constrained and remains auditable", {
+  anno <- data.frame(
+    CHROM = "chr1", POS = 100L, ID = "high", zygosity = "het",
+    ASCN = 1, cn_type = "norm", bkg_cnv = "norm", major = 1,
+    minor = 1, mate = "high", stringsAsFactors = FALSE
+  )
+  reads <- data.frame(
+    CHROM = "chr1", POS = 100L, ID = "high", sv_alt = 8,
+    sv_ref = 2, classification = "DEL", stringsAsFactors = FALSE
+  )
+
+  out <- calc_svcf(anno, reads, samp = "sample", exper = "experiment")
+
+  expect_equal(out$final_svcf_unconstrained, 1.6)
+  expect_equal(out$final_svcf_constraint_status, "boundary_high")
+  expect_equal(out$final_svcf, 1)
+})
+
+test_that("zero-reference estimates require independent review on autosomes", {
+  anno <- data.frame(
+    CHROM = "chr1", POS = 100L, ID = "zero-ref", zygosity = "het",
+    ASCN = 1, cn_type = "norm", bkg_cnv = "norm", major = 1,
+    minor = 1, mate = "zero-ref", stringsAsFactors = FALSE
+  )
+  reads <- data.frame(
+    CHROM = "chr1", POS = 100L, ID = "zero-ref", sv_alt = 8,
+    sv_ref = 0, classification = "DEL", stringsAsFactors = FALSE
+  )
+
+  unresolved <- calc_svcf(anno, reads, samp = "sample", exper = "experiment")
+  expect_equal(unresolved$svcf_status, "zero_ref_depth")
+  expect_equal(unresolved$final_svcf_unconstrained, 2)
+  expect_equal(unresolved$final_svcf_constraint_status, "boundary_high")
+  expect_true(is.na(unresolved$final_svcf))
+
+  allowlist <- data.frame(
+    sample = "sample", chrom = "chr1", pos = 100L, verdict = "recover"
+  )
+  recovered <- calc_svcf(
+    anno, reads, samp = "sample", exper = "experiment",
+    zero_ref_allowlist = allowlist
+  )
+  expect_equal(recovered$svcf_status, "ok_zero_ref_recovered")
+  expect_equal(recovered$final_svcf_unconstrained, 1)
+  expect_equal(recovered$final_svcf_constraint_status, "in_range")
+  expect_equal(recovered$final_svcf, 1)
 })

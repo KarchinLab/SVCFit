@@ -24,9 +24,9 @@
 #'   continuous measurement and is never rounded to an integer copy number. NULL leaves hemizygous
 #'   copy-altered rows unresolved rather than guessing, which is countable downstream via
 #'   \code{svcf_status}.
-#' @param zero_ref_allowlist data.frame or NULL. Rows on a hemizygous chromosome with sv_ref = 0
-#'   that BAM evidence shows are genuine clonal losses rather than reference dropout, so that
-#'   SVCF = VAF = 1 is the correct answer. Columns \code{sample}, \code{chrom}, \code{pos}, and
+#' @param zero_ref_allowlist data.frame or NULL. Rows with sv_ref = 0 that independent evidence
+#'   shows are genuine clonal events rather than reference dropout, so that SVCF = 1 is the
+#'   reviewed boundary estimate. Columns \code{sample}, \code{chrom}, \code{pos}, and
 #'   \code{verdict}; only rows with \code{verdict == "recover"} are used.
 #'
 #'   This table must come from an independently reviewed procedure using
@@ -41,6 +41,7 @@
 #'   CNV-first deletion form; optional.
 #' @return data.frame as before, plus \code{pl} (local normal ploidy),
 #'   \code{s2_raw}, \code{ss2_raw}, \code{ss2_constraint_status},
+#'   \code{final_svcf_unconstrained}, \code{final_svcf_constraint_status},
 #'   \code{svcf_status}, \code{sv_cnv_order} and \code{svcf_is_bound}.
 #'   The raw alternate candidate is retained when the reported value is
 #'   constrained to 0 or 1, so boundary estimates are countable and auditable.
@@ -127,24 +128,24 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
 
       ## Make every exclusion explicit and countable rather than a silent filter.
       ##
-      ## Status is computed for every row. Suppression is applied only to
-      ## hemizygous rows so the established diploid path remains unchanged;
-      ## zero-reference diploid rows remain labelled and auditable.
+      ## Status is computed for every row. A zero reference count cannot
+      ## distinguish a clonal event from reference dropout, regardless of
+      ## chromosome ploidy; it is suppressed below unless independently
+      ## reviewed in zero_ref_allowlist.
       svcf_status = svcf_status(pl, cn_type, sv_ref),
       svcf_status = ifelse(pl == 1L & classification == 'DUP' & svcf_status == "ok",
                            "hemizygous_dup_needs_cn_bar", svcf_status),
-      final_svcf  = ifelse(pl == 1L & svcf_status != "ok", NA_real_, final_svcf),
+      final_svcf  = ifelse(pl == 1L & svcf_status != "ok" &
+                            svcf_status != "zero_ref_depth", NA_real_, final_svcf),
 
       expmt  = exper,
       sample = samp
     ) %>%
-    ## Zero-reference rows that BAM evidence says are real. On a copy-neutral hemizygous locus
-    ## SVCF = VAF, which at sv_ref = 0 is exactly 1: the tumour cells have lost their only copy, so
-    ## the residual reads come from the normal fraction alone and observing no reference read is the
-    ## physically correct outcome, not a technical failure. Recovering these is a scientific
-    ## decision backed by the matched normal, which is why it arrives as a generated file rather
-    ## than a code branch.
+    ## Zero-reference rows that independent evidence says are real. Recovery is
+    ## an explicit scientific decision, represented as the SVCF upper boundary,
+    ## which is why it arrives as a reviewed file rather than a code branch.
     { dat <- .
+      dat$zero_ref_reviewed <- FALSE
       if (!is.null(zero_ref_allowlist) && nrow(zero_ref_allowlist)) {
         al <- zero_ref_allowlist
         need <- c("sample", "chrom", "pos", "verdict")
@@ -155,11 +156,12 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
         if (nrow(al)) {
           key <- paste(dat$sample, dat$CHROM, dat$POS)
           hit <- key %in% paste(al$sample, al$chrom, al$pos)
-          idx <- which(hit & dat$pl == 1L & dat$svcf_status == "zero_ref_depth")
+          idx <- which(hit & dat$svcf_status == "zero_ref_depth")
           if (length(idx)) {
-            dat$final_svcf[idx]  <- round(dat$sv_alt[idx] / (dat$sv_alt[idx] + dat$sv_ref[idx]), 2)
+            dat$zero_ref_reviewed[idx] <- TRUE
+            dat$final_svcf[idx]  <- 1
             dat$svcf_status[idx] <- "ok_zero_ref_recovered"
-            message(sprintf("calc_svcf [%s]: recovered %d zero-reference chrX row(s) from the allowlist",
+            message(sprintf("calc_svcf [%s]: recovered %d zero-reference row(s) from the allowlist",
                             samp, length(idx)))
           }
         }
@@ -298,7 +300,7 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
         }
       }
       dat } %>%
-    ## infinities can only arise from ref == 0, which svcf_status already flags.
+    ## Infinities can only arise from ref == 0, which svcf_status already flags.
     ##
     ## Note this relabels on is.infinite(r_bar), so it fires even where final_svcf is finite and
     ## usable. On a copy-neutral hemizygous locus resolve_hemizygous_svcf() returns SVCF = VAF = 1
@@ -306,15 +308,19 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
     ## deliberately suppressed. The reason is statistical rather than algebraic; see the MODELLING
     ## NOTE on svcf_status() in hemizygous.R before treating these rows as unrecoverable.
     mutate(
-      ## Same containment: label everywhere, alter only hemizygous rows.
+      ## Label zero-reference rows everywhere. Preserve the selected value in
+      ## final_svcf_unconstrained, then suppress it unless reviewed.
       ## This relabel fires on is.infinite(r_bar), which is true for EVERY sv_ref == 0 row,
       ## including ones the allowlist has just recovered whose final_svcf is finite and correct.
       ## Without the guard it silently undoes the recovery: the value survives but the status reads
       ## zero_ref_depth, so every downstream count treats the row as suppressed. Caught in test.
-      svcf_status = ifelse(svcf_status != "ok_zero_ref_recovered" &
+      svcf_status = ifelse(zero_ref_reviewed, "ok_zero_ref_recovered", svcf_status),
+      final_svcf = ifelse(zero_ref_reviewed, 1, final_svcf),
+      svcf_status = ifelse(!zero_ref_reviewed &
                              (is.infinite(final_svcf) | is.infinite(r_bar)),
                            "zero_ref_depth", svcf_status),
-      final_svcf  = ifelse(pl == 1L & is.infinite(final_svcf), NA_real_, final_svcf)
+      final_svcf_unconstrained = final_svcf,
+      final_svcf = ifelse(svcf_status == "zero_ref_depth", NA_real_, final_svcf)
     ) %>%
     ## Preserve labelled infinite-ratio rows, but remove diploid rows whose raw
     ## estimate is NaN. Hemizygous rows remain visible with explicit status.
@@ -329,18 +335,26 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
       ## a fresh error, so there na.rm = TRUE.
       final_svcf = ifelse(classification %in% c('INV', 'BND'),
                           ifelse(pl == 1L, mean(final_svcf, na.rm = TRUE), mean(final_svcf)),
-                          final_svcf)
+                          final_svcf),
+      final_svcf_unconstrained = ifelse(classification %in% c('INV', 'BND'),
+                                        mean(final_svcf_unconstrained),
+                                        final_svcf_unconstrained)
     ) %>%
     ungroup() %>%
-    mutate(final_svcf = ifelse(is.nan(final_svcf), NA_real_, final_svcf))
+    mutate(
+      final_svcf = ifelse(is.nan(final_svcf), NA_real_, final_svcf),
+      final_svcf_constraint_status = svcf_constraint_status(final_svcf_unconstrained),
+      final_svcf = constrain_svcf(final_svcf)
+    ) %>%
+    select(-zero_ref_reviewed)
 
-  n_drop <- sum(final$svcf_status != "ok", na.rm = TRUE)
+  n_drop <- sum(!startsWith(final$svcf_status, "ok"), na.rm = TRUE)
   if (n_drop > 0) {
     message(sprintf(
       "calc_svcf [%s]: %d of %d SV rows have no usable SVCF (%s)",
       samp, n_drop, nrow(final),
-      paste(sprintf("%s=%d", names(table(final$svcf_status[final$svcf_status != "ok"])),
-                    as.integer(table(final$svcf_status[final$svcf_status != "ok"]))),
+      paste(sprintf("%s=%d", names(table(final$svcf_status[!startsWith(final$svcf_status, "ok")])),
+                    as.integer(table(final$svcf_status[!startsWith(final$svcf_status, "ok")]))),
             collapse = ", ")))
   }
   n_bound <- sum(final$svcf_is_bound, na.rm = TRUE)

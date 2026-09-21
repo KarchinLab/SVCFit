@@ -33,5 +33,6 @@ estimate, which is different from two measurements disagreeing.
 VAF is mathematically defined when \code{sv_ref = 0}, but SVCFit labels the
 row \code{"zero_ref_depth"} because the alt-to-reference depth ratio used by
 other branches is infinite. \code{calc_svcf()} can recover independently
-reviewed hemizygous rows through \code{zero_ref_allowlist}.
+reviewed rows through \code{zero_ref_allowlist}. All other zero-reference
+estimates are reported as \code{NA}, on autosomes as well as hemizygous chromosomes.
 }

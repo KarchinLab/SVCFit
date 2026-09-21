@@ -369,7 +369,7 @@ svcf_out <- calc_svcf(
 | `hemi_cn_bar` | data.frame / numeric | NULL | Read-depth mean copy number (`cn_bar`) for hemizygous rows — a `data.frame(CHROM, POS, cn_bar)` or numeric vector. Without it (or for an unmatched row) hemizygous **duplications** are left unresolved; deletions, inversions, and translocations fall back to `SVCF = VAF`. |
 | `hemi_bg_cn` | data.frame / numeric | NULL | Flanking (background) copy number for the CNV-first deletion form; optional. |
 | `hemi_dup_r` | numeric | 2 | Copies in carrier cells for a hemizygous tandem duplication; SVCFs reported as upper bounds. |
-| `zero_ref_allowlist` | data.frame | NULL | Hemizygous rows with `sv_ref = 0` that BAM evidence confirms are genuine clonal losses (SVCF = VAF = 1). |
+| `zero_ref_allowlist` | data.frame | NULL | Rows with `sv_ref = 0` that independent evidence confirms are genuine clonal events; reviewed rows are recovered at the SVCF boundary of 1. |
 
 **Output:** An annotated VCF-like data frame with additional fields for
 VAF, the read-count normalization, carrier-copy multiplicity, and SVCF.

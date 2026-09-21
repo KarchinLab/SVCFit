@@ -24,3 +24,20 @@ svcf_constraint_status <- function(x) {
     TRUE ~ "in_range"
   )
 }
+
+#' Validate reported SVCF values before downstream analysis
+#'
+#' @param x Numeric vector of reported SVCF estimates.
+#' @param context Short description used in an error message.
+#' @return Invisibly returns \code{TRUE}; errors if any finite value falls
+#'   outside the biological interval.
+#' @keywords internal
+validate_final_svcf <- function(x, context = "SVCF output") {
+  bad <- is.finite(x) & (x < 0 | x > 1)
+  if (any(bad)) {
+    stop(sum(bad), " ", context, " final_svcf value(s) fall outside [0, 1]; ",
+         "rerun SVCFit with the final-estimate constraint before downstream analysis",
+         call. = FALSE)
+  }
+  invisible(TRUE)
+}

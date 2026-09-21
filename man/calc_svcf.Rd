@@ -44,9 +44,9 @@ copy-altered rows unresolved rather than guessing, which is countable downstream
 r is not identifiable from a single locus, and r = 2 maximises SVCF, so the duplication values
 are upper bounds; \code{svcf_is_bound} marks them.}
 
-\item{zero_ref_allowlist}{data.frame or NULL. Rows on a hemizygous chromosome with sv_ref = 0
-that BAM evidence shows are genuine clonal losses rather than reference dropout, so that
-SVCF = VAF = 1 is the correct answer. Columns \code{sample}, \code{chrom}, \code{pos}, and
+\item{zero_ref_allowlist}{data.frame or NULL. Rows with sv_ref = 0 that independent evidence
+shows are genuine clonal events rather than reference dropout, so that SVCF = 1 is the
+reviewed boundary estimate. Columns \code{sample}, \code{chrom}, \code{pos}, and
 \code{verdict}; only rows with \code{verdict == "recover"} are used.
 
 This table must come from an independently reviewed procedure using
@@ -59,6 +59,7 @@ CNV-first deletion form; optional.}
 \value{
 data.frame as before, plus \code{pl} (local normal ploidy),
 \code{s2_raw}, \code{ss2_raw}, \code{ss2_constraint_status},
+\code{final_svcf_unconstrained}, \code{final_svcf_constraint_status},
 \code{svcf_status}, \code{sv_cnv_order} and \code{svcf_is_bound}.
 The raw alternate candidate is retained when the reported value is
 constrained to 0 or 1, so boundary estimates are countable and auditable.

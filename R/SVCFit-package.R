@@ -27,6 +27,7 @@ utils::globalVariables(c(
   "closest_keeper", "cluster", "cluster_merged", "cluster_num", "cn_type",
   "cna", "cncf", "cnv_phase", "connected", "delta", "dep", "donor",
   "doubleBreakPtsRes", "edge", "event_id", "f_day85", "f_pre", "final_svcf",
+  "final_svcf_unconstrained", "final_svcf_constraint_status", "zero_ref_reviewed",
   "grp_left", "grp_right", "info", "iter", "key", "lcn.em", "left", "len",
   "len1", "len2", "len_dif", "lower_bound", "mPOS", "major", "match_chrom",
   "match_pos", "match_pos_id", "mate", "minor", "mutation_id", "nPOS",
