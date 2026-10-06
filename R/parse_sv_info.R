@@ -13,7 +13,9 @@
 #'   \code{sv_ref}, \code{sv_alt}, \code{class}, \code{donor}, \code{receiver},
 #'   \code{classification}, \code{zygosity_tmp}, and \code{mate}.  BND records
 #'   are annotated with translocation class; INV records share read counts across
-#'   mate pairs.
+#'   mate pairs. \code{sv_ref} is halved for DEL and DUP. For BND it is
+#'   \code{RS/2 + RP}, because SVtyper counts reference split reads (\code{RS}) at
+#'   both partner loci; RO is used when \code{RS} or \code{RP} is missing.
 #' @export
 #'
 # parse_sv_info <- function(sv, bnd, del) {
@@ -72,6 +74,9 @@ parse_sv_info <- function(sv, bnd, del, QUAL_thresh=100, min_alt=2) {
            sv_alt = setNames(strsplit(tumor,  ":")[[1]], strsplit(FORMAT, ":")[[1]])["AO"],
            sv_ref=as.integer(sv_ref),
            sv_alt=as.integer(sv_alt),
+           # SVtyper reference split-read (RS) and read-pair (RP) counts; RO = RS + RP
+           ref_split=as.numeric(setNames(strsplit(tumor,  ":")[[1]], strsplit(FORMAT, ":")[[1]])["RS"]),
+           ref_pair=as.numeric(setNames(strsplit(tumor,  ":")[[1]], strsplit(FORMAT, ":")[[1]])["RP"]),
            classification=gsub(".*SVTYPE=(\\w+).*","\\1", INFO),
            mate={idx <- which(abs(POS-sv$POS)<50); if(grepl('INV', classification) && length(idx)>0) paste0('inv', idx[1L]) else mate})%>%
     group_by(mate, CHROM)%>%
@@ -80,7 +85,11 @@ parse_sv_info <- function(sv, bnd, del, QUAL_thresh=100, min_alt=2) {
       sv_ref=ifelse(classification=='INV', mean(as.integer(sv_ref)), sv_ref),
       sv_alt=ifelse(classification=='INV', mean(as.integer(sv_alt)), sv_alt),
       # half the ref reads for dup and del to unify equations
-      sv_ref=ifelse(classification %in% c('DUP','DEL'), sv_ref/2, sv_ref))%>%
+      sv_ref=ifelse(classification %in% c('DUP','DEL'), sv_ref/2, sv_ref),
+      # for BND, RS counts reference split reads at both partner loci while RP
+      # averages the two, so halve only RS; keep RO when RS/RP are not reported
+      sv_ref=ifelse(classification=='BND' & !is.na(ref_split) & !is.na(ref_pair),
+                    ref_split/2 + ref_pair, sv_ref))%>%
     ungroup()%>%
     filter(sv_alt > min_alt)%>%
     mutate(classification=case_when(
