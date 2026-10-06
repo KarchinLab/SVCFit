@@ -54,3 +54,6 @@ config.local.sh
 !/inst/extdata/examples/example_sv.bed
 !/inst/extdata/plot_data/VISOR_bench_data.bed
 !/inst/extdata/tree.png
+
+# Test fixture: SVtyper records of one simulated VISOR translocation.
+!/tests/testthat/fixtures/svtyper_bnd.vcf

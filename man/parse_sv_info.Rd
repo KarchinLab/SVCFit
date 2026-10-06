@@ -25,7 +25,9 @@ A data.frame of filtered SVs with columns \code{CHROM}, \code{chr2},
 \code{sv_ref}, \code{sv_alt}, \code{class}, \code{donor}, \code{receiver},
 \code{classification}, \code{zygosity_tmp}, and \code{mate}.  BND records
 are annotated with translocation class; INV records share read counts across
-mate pairs.
+mate pairs. \code{sv_ref} is halved for DEL and DUP. For BND it is
+\code{RS/2 + RP}, because SVtyper counts reference split reads (\code{RS}) at
+both partner loci; RO is used when \code{RS} or \code{RP} is missing.
 }
 \description{
 parse SV information
