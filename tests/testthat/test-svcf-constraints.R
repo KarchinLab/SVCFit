@@ -34,7 +34,7 @@ test_that("zygosity correction is applied before the SVCF constraint", {
 test_that("calc_svcf retains raw s2 and flags an active upper boundary", {
   anno <- data.frame(
     CHROM = c("chr1", "chr1"), POS = c(100L, 200L), ID = c("het", "hom"),
-    zygosity = c("het", "hom"), ASCN = c(1.5, 1.5), cn_type = c("DEL", "DEL"),
+    zygosity = c("het", "hom"), acr = c(1.5, 1.5), cn_type = c("DEL", "DEL"),
     bkg_cnv = c("dup", "dup"), major = c(1, 1), minor = c(0, 0),
     mate = c("het", "hom"), stringsAsFactors = FALSE
   )
@@ -57,7 +57,7 @@ test_that("calc_svcf uses the sign criterion with the 0.1 noise buffer", {
   anno <- data.frame(
     CHROM = c("chr1", "chr1", "chr1"), POS = c(100L, 200L, 300L),
     ID = c("buffer", "positive", "deletion"), zygosity = "het",
-    ASCN = c(1.79, 1.5, 1.2), cn_type = c("DUP", "DUP", "DEL"),
+    acr = c(1.79, 1.5, 1.2), cn_type = c("DUP", "DUP", "DEL"),
     bkg_cnv = "dup", major = c(3, 3, 1), minor = 0,
     mate = c("buffer", "positive", "deletion"), stringsAsFactors = FALSE
   )
@@ -80,7 +80,7 @@ test_that("diploid duplication uses FACETS carrier copy number", {
   anno <- data.frame(
     CHROM = "chr1", POS = c(100L, 200L, 300L),
     ID = c("r3_clonal", "r3_half", "r4_half"), zygosity = "het",
-    ASCN = 1, cn_type = "norm", bkg_cnv = "norm",
+    acr = 1, cn_type = "norm", bkg_cnv = "norm",
     major = c(3, 3, 4), minor = 0,
     mate = c("r3_clonal", "r3_half", "r4_half"), stringsAsFactors = FALSE
   )
@@ -101,7 +101,7 @@ test_that("diploid duplication uses FACETS carrier copy number", {
 test_that("the selected final estimate is constrained and remains auditable", {
   anno <- data.frame(
     CHROM = "chr1", POS = 100L, ID = "high", zygosity = "het",
-    ASCN = 1, cn_type = "norm", bkg_cnv = "norm", major = 1,
+    acr = 1, cn_type = "norm", bkg_cnv = "norm", major = 1,
     minor = 1, mate = "high", stringsAsFactors = FALSE
   )
   reads <- data.frame(
@@ -119,7 +119,7 @@ test_that("the selected final estimate is constrained and remains auditable", {
 test_that("zero-reference estimates require independent review on autosomes", {
   anno <- data.frame(
     CHROM = "chr1", POS = 100L, ID = "zero-ref", zygosity = "het",
-    ASCN = 1, cn_type = "norm", bkg_cnv = "norm", major = 1,
+    acr = 1, cn_type = "norm", bkg_cnv = "norm", major = 1,
     minor = 1, mate = "zero-ref", stringsAsFactors = FALSE
   )
   reads <- data.frame(

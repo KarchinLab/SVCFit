@@ -18,7 +18,7 @@
 # Silence R CMD check NOTEs about non-standard evaluation in dplyr/tidyr
 # pipelines (bare column names referenced as if they were variables).
 utils::globalVariables(c(
-  ".", "AD", "ALT", "ASCN", "CHROM", "DEP", "END", "END_cluster", "END_raw",
+  ".", "AD", "ALT", "acr", "CHROM", "DEP", "END", "END_cluster", "END_raw",
   "FILTER", "FORMAT", "ID", "INFO", "POS", "POS_cluster", "POS_raw",
   "Proportion", "QUAL", "REF", "Subclone", "a_count", "allele",
   "best_sv_alt", "best_sv_ref", "bi_directional", "bkg_cnv", "bnd_group",
@@ -40,7 +40,7 @@ utils::globalVariables(c(
   "se_day85", "se_pre", "second", "shared", "sid", "side", "snp_alt",
   "snp_ref", "ss1", "ss2", "ss2_raw", "ss2_constraint_status", "stage",
   "sv_alt", "sv_len", "sv_phase",
-  "sv_ref", "sv_zy", "tascn", "tmpid", "tumor", "type", "use_mate",
+  "sv_ref", "sv_zy", "acr_raw", "tmpid", "tumor", "type", "use_mate",
   "v_sorted", "vaf", "var_day85", "var_pre", "vio_birth", "w_day85",
   "w_pre", "z1", "z2", "zygosity", "zygosity_snp", "zygosity_tmp",
   "pl"

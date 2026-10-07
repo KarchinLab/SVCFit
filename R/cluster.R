@@ -137,58 +137,58 @@ resolve_svcfit_bed <- function(data_dir, sample_id) {
 }
 
 read_data <- function(pair, row, pur_file, data_dir){
-  pre_samp <- pair$pre_BAT[row]
-  on_samp <- pair$on_BAT[row]
-  pre_pur <- pur_file$purity[pur_file$sample == pre_samp]
-  on_pur <- pur_file$purity[pur_file$sample == on_samp]
+  samp_tp1 <- pair$pre_BAT[row]
+  samp_tp2 <- pair$on_BAT[row]
+  pur_tp1 <- pur_file$purity[pur_file$sample == samp_tp1]
+  pur_tp2 <- pur_file$purity[pur_file$sample == samp_tp2]
 
-  pre <- read.delim(resolve_svcfit_bed(data_dir, pre_samp)) %>%
+  tp1 <- read.delim(resolve_svcfit_bed(data_dir, samp_tp1)) %>%
     mutate(
-      sample_ID = pre_samp,
+      sample_ID = samp_tp1,
       pair = row,
       stage = 'pre_BAT',
-      purity = as.numeric(pre_pur)
+      purity = as.numeric(pur_tp1)
     )
   
-  on <- read.delim(resolve_svcfit_bed(data_dir, on_samp)) %>%
+  tp2 <- read.delim(resolve_svcfit_bed(data_dir, samp_tp2)) %>%
     mutate(
-      sample_ID = on_samp,
+      sample_ID = samp_tp2,
       pair = row,
       stage = 'on_BAT',
-      purity = as.numeric(on_pur)
+      purity = as.numeric(pur_tp2)
     ) %>%
     rowwise() %>%
     mutate(
       row = ifelse(
-        any(CHROM == pre$CHROM & abs(POS - pre$POS) < 100 & abs(END - pre$END) < 100 & classification == pre$classification),
-        which(CHROM == pre$CHROM & abs(POS - pre$POS) < 100 & abs(END - pre$END) < 100 & classification == pre$classification)[1],
+        any(CHROM == tp1$CHROM & abs(POS - tp1$POS) < 100 & abs(END - tp1$END) < 100 & classification == tp1$classification),
+        which(CHROM == tp1$CHROM & abs(POS - tp1$POS) < 100 & abs(END - tp1$END) < 100 & classification == tp1$classification)[1],
         0
       ),
-      shared = ifelse(row == 0, NA, pre$ID[row])
+      shared = ifelse(row == 0, NA, tp1$ID[row])
     )
   
-  shared_id <- on$shared[!is.na(on$shared)]
+  shared_id <- tp2$shared[!is.na(tp2$shared)]
   
-  pre <- pre %>%
+  tp1 <- tp1 %>%
     rowwise() %>%
     mutate(
       row = ifelse(
-        any(CHROM == on$CHROM & abs(POS - on$POS) < 100 & abs(END - on$END) < 100 & classification == on$classification),
-        which(CHROM == on$CHROM & abs(POS - on$POS) < 100 & abs(END - on$END) < 100 & classification == on$classification)[1],
+        any(CHROM == tp2$CHROM & abs(POS - tp2$POS) < 100 & abs(END - tp2$END) < 100 & classification == tp2$classification),
+        which(CHROM == tp2$CHROM & abs(POS - tp2$POS) < 100 & abs(END - tp2$END) < 100 & classification == tp2$classification)[1],
         0
       ),
-      shared = ifelse(row == 0, NA, on$ID[row]),
+      shared = ifelse(row == 0, NA, tp2$ID[row]),
       sid = ifelse(ID %in% shared_id, which(ID == shared_id), NA)
     ) %>%
     ungroup()
   
-  on <- on %>%
+  tp2 <- tp2 %>%
     mutate(
       sid = ifelse(shared %in% shared_id, which(shared == shared_id), NA)
     ) %>%
     ungroup()
   
-  out <- rbind(pre, on) %>% ungroup()
+  out <- rbind(tp1, tp2) %>% ungroup()
   return(out)
 }
 

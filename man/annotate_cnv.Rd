@@ -20,7 +20,7 @@ Ploidy-aware version. With \code{hemizygous_chr = NULL} the classification
 reduces to the diploid tests.
 }
 \details{
-On a hemizygous chromosome there are no heterozygous germline SNPs, so \code{tascn} and
-\code{ASCN} (Eq. 6) are undefined. They are left as NA and the downstream correction is skipped
+On a hemizygous chromosome there are no heterozygous germline SNPs, so \code{acr_raw} and
+\code{acr} (Eq. 6) are undefined. They are left as NA and the downstream correction is skipped
 rather than being fed a fabricated value.
 }

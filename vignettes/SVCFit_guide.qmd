@@ -244,10 +244,10 @@ The input data has `r nrow(read.table(p_sv, quote='"'))` SV breakpoint records. 
 ```{r}
 #| label: characterize
 anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
-head(anno_sv_cnv %>% select(ID, zygosity, ASCN, cn_type, bkg_cnv))
+head(anno_sv_cnv %>% select(ID, zygosity, acr, cn_type, bkg_cnv))
 ```
 
-`ASCN` is the legacy column name for the SNP-derived **allele copy ratio (ACR)** relevant to the SV allele. It is a read-ratio estimate, not a FACETS integer allele-specific copy number.
+`acr` is the legacy column name for the SNP-derived **allele copy ratio (ACR)** relevant to the SV allele. It is a read-ratio estimate, not a FACETS integer allele-specific copy number.
 
 ## Step 3: Calculate SVCF — `calc_svcf()`
 

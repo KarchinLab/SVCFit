@@ -80,8 +80,8 @@ calc_svcf <- function(anno_sv_cnv, sv_info, thresh = 0.1, samp, exper,
       ## first, then use the constrained maximum-likelihood estimate under the
       ## fixed-ACR binomial model. Retain the raw candidate and constraint status
       ## so boundary estimates remain auditable.
-      s1      = (2 * sv_alt - sv_ref * (ASCN - 1)) / (sv_alt + sv_ref),
-      s2_raw  = (sv_alt + sv_alt * ASCN) / (sv_alt + sv_ref),
+      s1      = (2 * sv_alt - sv_ref * (acr - 1)) / (sv_alt + sv_ref),
+      s2_raw  = (sv_alt + sv_alt * acr) / (sv_alt + sv_ref),
       s2      = s2_raw,
       ss1     = ifelse(zygosity == "hom", 0.5 * s1, s1),
       ss2_raw = ifelse(zygosity == "hom", 0.5 * s2_raw, s2_raw),

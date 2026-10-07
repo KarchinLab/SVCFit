@@ -16,7 +16,7 @@
 #' @return A data.frame combining CNV annotation from \code{\link{annotate_cnv}},
 #'   full SV metadata, and background CNV classification from
 #'   \code{\link{assign_background_cnv}}.  Key added columns: \code{cn_type},
-#'   \code{ASCN}, \code{bkg_cnv} (\code{"DUP"}, \code{"norm"}, or \code{"DEL"}
+#'   \code{acr}, \code{bkg_cnv} (\code{"DUP"}, \code{"norm"}, or \code{"DEL"}
 #'   indicating the background copy number state flanking each SV breakpoint).
 #' @export
 #'
