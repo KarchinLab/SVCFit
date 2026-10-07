@@ -73,8 +73,9 @@ fitting the DP-GMM. Default \code{TRUE}.}
 \item{run_tree}{Logical. Build a phylogenetic tree from cluster CCFs.
 Requires \code{run_clustering = TRUE}. Default \code{FALSE}.}
 
-\item{lineage_precedence_thresh}{Numeric. Maximum allowed CCF ratio for a
-child-to-parent edge to be retained. Default \code{0.2}.}
+\item{lineage_precedence_thresh}{Numeric. Maximum allowed CCF excess of a
+child clone over its parent for a parent-child edge to be retained.
+Default \code{0.2}.}
 
 \item{sum_filter_thresh}{Numeric. Maximum allowed excess of summed children
 CCFs over the parent CCF. Default \code{0.2}.}
@@ -93,9 +94,11 @@ stage did not run):
 \code{NULL} when \code{run_clustering = FALSE}.}
 \item{\code{tree}}{List returned by \code{\link{build_tree}} (only when
 \code{run_tree = TRUE} and \eqn{\ge 2} clones exist):
-\code{[[1]]} best spanning tree edges, \code{[[2]]} CCF matrix,
-\code{[[3]]} igraph tree plot.
-\code{NULL} when \code{run_tree = FALSE} or fewer than 2 clones.}
+\code{[[1]]} best spanning tree edges, \code{[[2]]} cluster CCF matrix,
+\code{[[3]]} igraph tree plot, \code{n_top} number of spanning trees
+sharing the highest fitness.
+\code{NULL} when \code{run_tree = FALSE}, fewer than 2 clones, or no
+valid spanning tree is found.}
 }
 }
 \description{

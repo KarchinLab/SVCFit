@@ -11,7 +11,13 @@
 #' @param hemizygous_chr character vector or NULL. Chromosomes that are single-copy in this
 #'   subject's germline.
 #'
-#' @return data.frame with the original columns plus \code{pl}.
+#' @return data.frame with columns \code{CHROM}, \code{POS}, \code{ID},
+#'   \code{zygosity}, \code{sv_phase}, \code{cnv_phase}, \code{cncf},
+#'   \code{major}, \code{minor}, \code{cna}, \code{acr}, \code{cn_type},
+#'   \code{acr_raw}, \code{no_snp}, \code{mate}, and \code{pl}. Added columns:
+#'   \code{acr_raw} (SNP allele copy ratio), \code{acr} (phase-oriented
+#'   ratio), \code{cn_type}, \code{cnv_phase}, and \code{pl} (local normal
+#'   ploidy).
 #' @export
 #'
 annotate_cnv <- function(sv_cnv, hemizygous_chr = NULL) {

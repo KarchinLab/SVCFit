@@ -285,7 +285,7 @@ info <- extract_info(
   flank_del = 50, 
   QUAL_thresh = 100, 
   min_alt = 2, 
-  tumor_only = FALSE
+  tum_only = FALSE
 )
 ```
 
@@ -301,12 +301,14 @@ info <- extract_info(
 | `p_cnv` | Character | — | Path to CNV file. |
 | `chr_lst` | Character | NULL | Chromosomes to include. |
 | `flank_del` | numeric | 50 | Max distance to consider deletion overlapping a BND. |
-| `QUAL_thresh` | numeric | 100 | Minimum QUAL score. |
-| `min_alt` | numeric | 2 | Minimum alternative reads. |
-| `tum_only` | Logical | — | Whether SVs come from tumor-only calling. |
+| `QUAL_thresh` | numeric | 100 | Keep an SV if QUAL \> `QUAL_thresh` or FILTER = PASS. |
+| `min_alt` | numeric | 2 | Keep an SV only if it has more than `min_alt` supporting reads. |
+| `tum_only` | Logical | FALSE | Whether SVs come from tumor-only calling. |
 
-**Output:** A list of data frames containing parsed SV + SNP
-information.
+**Output:** An unnamed list of four elements: `[[1]]` the raw input data
+from `load_data()` (named elements `het_snp`, `het_on_sv`, `sv`, `cnv`),
+`[[2]]` parsed SV metadata (`sv_info`), `[[3]]` parsed heterozygous
+SNPs, and `[[4]]` SNP phasing on SV reads (`sv_phase`).
 
 ### 2. Annotate SVs Using CNV and SNP Information — `characterize_sv()`
 
@@ -316,15 +318,17 @@ zygosity, and overlapping CNV. `characterize_sv()` internally performs:
 1.  **Assign SV IDs to SNPs** — `assign_svids()`
 2.  **Summarizes phasing + zygosity** — `sum_sv_info()`
 3.  **Assign CNV to SV** — `assign_cnv()`
-4.  **Annotate overlapping CNV** — `annotate_cnv()`, `parse_snp_on_sv()`
+4.  **Annotate overlapping CNV** — `annotate_cnv()`
+5.  **Assign background CNV** — `assign_background_cnv()`
 
 ``` r
 sv_char <- characterize_sv(
-  sv_phase = info$sv_phase, 
-  sv_info = info$sv_info, 
-  cnv = info$cnv,
+  sv_phase = info[[4]], 
+  sv_info = info[[2]], 
+  cnv = info[[1]]$cnv,
   flank_snp = 500,
-  flank_cnv = 1000
+  flank_cnv = 1000,
+  hemizygous_chr = NULL
 )
 ```
 
@@ -332,13 +336,17 @@ sv_char <- characterize_sv(
 
 #### `characterize_sv()`
 
-| Argument    | Type       | Default | Description                       |
-|-------------|------------|---------|-----------------------------------|
-| `sv_phase`  | data.frame | —       | Phasing/zygosity from SNPs.       |
-| `sv_info`   | data.frame | —       | Parsed SV metadata.               |
-| `cnv`       | data.frame | —       | CNV data.                         |
-| `flank_snp` | numeric    | 500     | Max assignment distance for SNPs. |
-| `flank_cnv` | numeric    | 1000    | Max assignment distance for CNVs. |
+| Argument | Type | Default | Description |
+|----|----|----|----|
+| `sv_phase` | data.frame | — | Phasing/zygosity from SNPs. |
+| `sv_info` | data.frame | — | Parsed SV metadata. |
+| `cnv` | data.frame | — | CNV data. |
+| `flank_snp` | numeric | 500 | Max assignment distance for SNPs. |
+| `flank_cnv` | numeric | 1000 | Max assignment distance for CNVs. |
+| `hemizygous_chr` | character | NULL | Chromosomes single-copy in the germline; forwarded to `annotate_cnv()`. `NULL` = diploid-only behavior. |
+
+**Output:** A single data.frame combining the CNV annotation, SV
+metadata, and background CNV state (`bkg_cnv`) for each SV.
 
 ### 3. Calculate SVCF for Structural Variants — `calc_svcf()`
 
@@ -348,8 +356,8 @@ and returns an annotated VCF-like data frame.
 ``` r
 
 svcf_out <- calc_svcf(
-  anno_sv_cnv = sv_char$anno_sv_cnv,
-  sv_info     = sv_char$sv_info,
+  anno_sv_cnv = sv_char,
+  sv_info     = info[[2]],
   thresh      = 0.1,
   samp        = "SampleID",
   exper       = "ExperimentID"
@@ -423,7 +431,7 @@ cluster_data()
 | `pur_path` | character | — | Path to a tab-separated file with columns for ‘sample’ and ‘purity’. |
 | `data_dir` | character | — | Directory containing per-sample SVCF BED files, or a run root containing `SVCFit_output/` or `COMBAT/SVCFit_output/`. |
 | `Kmax` | numeric | 10 | Maximum number of clusters for DP-GMM. |
-| `n_steps` | numeric | 100 | Number of DP-GMM iterations. |
+| `n_steps` | numeric | 100 | Number of warm-start EM steps used for convergence diagnostics; the final fit uses `max_iter = 2000`, `n_init = 20`. |
 | `thr_min_w` | numeric | 0.01 | Minimum cluster weight threshold. |
 | `random_state` | integer | 0 | Random seed for reproducibility. |
 | `concentration` | numeric | 1 | Dirichlet concentration parameter. |
@@ -445,7 +453,11 @@ build_tree()
 
 **Output:** A tumor evolutionary tree rooted at the germline (G). Node
 numbers correspond to SV cluster numbers. The branching depicts the
-chronological occurrence of SV clusters.
+chronological occurrence of SV clusters. The returned list also contains
+`n_top`, the number of spanning trees sharing the highest fitness; when
+`n_top > 1` the topology is not uniquely resolved (a message is printed)
+and the first tied tree is returned. `build_tree()` returns `NULL` when
+no valid spanning tree is found.
 
 ### 5. Simulation & Benchmarking
 
@@ -583,15 +595,15 @@ CBS). The recipe:
 4.  **Segment** `log2(cn_bar)` per bin with DNAcopy and report each
     segment’s mean as `cn_bar = 2^seg.mean`.
 
-<!-- -->
-
-    library(DNAcopy)
-    # cn_bar_bin : per-bin (tumor/normal depth ratio) * (psi_sample / 2)
-    # pos        : bin start positions on the hemizygous contig
-    cna <- CNA(log2(cn_bar_bin), rep("chrX", length(pos)), pos,
-               data.type = "logratio", sampleid = "chrX")
-    seg <- segment(smooth.CNA(cna), alpha = 0.01, min.width = 2)$output
-    seg_cn_bar <- 2^seg$seg.mean          # mean copy number per cell, per segment
+``` r
+library(DNAcopy)
+# cn_bar_bin : per-bin (tumor/normal depth ratio) * (psi_sample / 2)
+# pos        : bin start positions on the hemizygous contig
+cna <- CNA(log2(cn_bar_bin), rep("chrX", length(pos)), pos,
+           data.type = "logratio", sampleid = "chrX")
+seg <- segment(smooth.CNA(cna), alpha = 0.01, min.width = 2)$output
+seg_cn_bar <- 2^seg$seg.mean          # mean copy number per cell, per segment
+```
 
 `cn_bar` is the **final** product and is never rounded to an integer —
 the corrected hemizygous forms take it directly (there is no integer
@@ -707,8 +719,9 @@ REF/ALT counts and therefore different SVCF estimates from the same data
 — see Discussion in the manuscript.
 
 **Can I skip FACETS and use Battenberg / ASCAT instead?** Yes, as long
-as you provide per-segment total copy number and gain/loss
-classification in the same TSV format.
+as you provide a tab-delimited segment file with the FACETS column names
+SVCFit reads: `chrom`, `start`, `end`, `tcn.em` (total copy number),
+`lcn.em` (minor copy number), and `cf.em` (segment cellular fraction).
 
 **Do I need a matched normal?** A matched normal is recommended. For a
 tumor-only SV VCF, set `tum_only = TRUE`; SVCFit still requires

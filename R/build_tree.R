@@ -34,19 +34,21 @@
 #'   children CCFs over the parent CCF when pruning spanning trees.
 #'   Default \code{0.2}.
 #'
-#' @return A list of length 4:
+#' @return \code{NULL} if no valid spanning tree is found; otherwise a list
+#'   of length 4:
 #' \describe{
 #'   \item{\code{[[1]]}}{data.frame. Edge list of the best-scoring spanning
 #'     tree (columns: \code{parent}, \code{child}).}
-#'   \item{\code{[[2]]}}{Numeric matrix. CCF matrix used for scoring (rows =
-#'     clones named by \code{cluster_num}, columns = time points
-#'     \code{f_pre} and \code{f_day85}).}
+#'   \item{\code{[[2]]}}{Numeric matrix. The cluster CCF matrix built from
+#'     \code{clones} (rows = clones named by \code{cluster_num}, columns =
+#'     time points \code{f_pre} and \code{f_day85}). Scoring uses a copy with
+#'     the trunk cluster floored to 1; the returned matrix is unmodified.}
 #'   \item{\code{[[3]]}}{igraph plot object returned by
 #'     \code{\link{plotTree}}.}
 #'   \item{\code{n_top}}{Integer. Number of spanning trees that share the
 #'     highest fitness. A value above 1 means the CCFs do not resolve a unique
-#'     topology; \code{[[1]]} is then the first of the tied trees in
-#'     enumeration order.}
+#'     topology (a message is printed); \code{[[1]]} is then the first of the
+#'     tied trees in enumeration order.}
 #' }
 #'
 #' @export

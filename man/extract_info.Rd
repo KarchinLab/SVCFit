@@ -35,11 +35,11 @@ chromosomes (e.g. \code{"chr1"}). Default \code{NULL} (all chromosomes).}
 \item{flank_del}{object of class 'numeric'. This object describes the maximum allowed
 differences in genomic locations for a deletion to be considered as overlapping to a translocation.}
 
-\item{QUAL_thresh}{object of class 'numeric'. This object describes the minimum quality score
-allowed to include an SV.}
+\item{QUAL_thresh}{object of class 'numeric'. An SV is included if QUAL > \code{QUAL_thresh}
+or FILTER = PASS.}
 
-\item{min_alt}{object of class 'numeric'. This object describes the minimum
-amount of SV supporting read counts to include an SV.}
+\item{min_alt}{object of class 'numeric'. An SV is included only if it has more
+than \code{min_alt} supporting reads.}
 
 \item{tum_only}{Logical. Whether SVs were called from a tumor-only BAM.
 Default \code{FALSE}.}

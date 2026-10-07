@@ -17,8 +17,10 @@
 #'   chromosomes).
 #' @param flank_del Numeric. Maximum genomic distance (bp) for a deletion to be
 #'   considered overlapping a translocation. Default \code{50}.
-#' @param QUAL_thresh Numeric. Minimum SV quality score. Default \code{100}.
-#' @param min_alt Numeric. Minimum SV-supporting read count. Default \code{2}.
+#' @param QUAL_thresh Numeric. An SV is kept if QUAL > \code{QUAL_thresh} or
+#'   FILTER = PASS. Default \code{100}.
+#' @param min_alt Numeric. An SV is kept only if it has more than
+#'   \code{min_alt} supporting reads. Default \code{2}.
 #' @param tum_only Logical. Whether SVs were called from a tumor-only BAM.
 #'   Default \code{FALSE}.
 #' @param thresh Numeric (0, 1). Operational noise buffer around the sign-based
@@ -203,8 +205,9 @@ run_svcfit <- function(
 #'   fitting the DP-GMM. Default \code{TRUE}.
 #' @param run_tree Logical. Build a phylogenetic tree from cluster CCFs.
 #'   Requires \code{run_clustering = TRUE}. Default \code{FALSE}.
-#' @param lineage_precedence_thresh Numeric. Maximum allowed CCF ratio for a
-#'   child-to-parent edge to be retained. Default \code{0.2}.
+#' @param lineage_precedence_thresh Numeric. Maximum allowed CCF excess of a
+#'   child clone over its parent for a parent-child edge to be retained.
+#'   Default \code{0.2}.
 #' @param sum_filter_thresh Numeric. Maximum allowed excess of summed children
 #'   CCFs over the parent CCF. Default \code{0.2}.
 #' @param ccf_floor Numeric. CCF values below this threshold are zeroed out
@@ -220,9 +223,11 @@ run_svcfit <- function(
 #'     \code{NULL} when \code{run_clustering = FALSE}.}
 #'   \item{\code{tree}}{List returned by \code{\link{build_tree}} (only when
 #'     \code{run_tree = TRUE} and \eqn{\ge 2} clones exist):
-#'     \code{[[1]]} best spanning tree edges, \code{[[2]]} CCF matrix,
-#'     \code{[[3]]} igraph tree plot.
-#'     \code{NULL} when \code{run_tree = FALSE} or fewer than 2 clones.}
+#'     \code{[[1]]} best spanning tree edges, \code{[[2]]} cluster CCF matrix,
+#'     \code{[[3]]} igraph tree plot, \code{n_top} number of spanning trees
+#'     sharing the highest fitness.
+#'     \code{NULL} when \code{run_tree = FALSE}, fewer than 2 clones, or no
+#'     valid spanning tree is found.}
 #' }
 #'
 #' @examples

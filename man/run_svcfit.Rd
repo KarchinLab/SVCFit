@@ -48,9 +48,11 @@ chromosomes).}
 \item{flank_del}{Numeric. Maximum genomic distance (bp) for a deletion to be
 considered overlapping a translocation. Default \code{50}.}
 
-\item{QUAL_thresh}{Numeric. Minimum SV quality score. Default \code{100}.}
+\item{QUAL_thresh}{Numeric. An SV is kept if QUAL > \code{QUAL_thresh} or
+FILTER = PASS. Default \code{100}.}
 
-\item{min_alt}{Numeric. Minimum SV-supporting read count. Default \code{2}.}
+\item{min_alt}{Numeric. An SV is kept only if it has more than
+\code{min_alt} supporting reads. Default \code{2}.}
 
 \item{tum_only}{Logical. Whether SVs were called from a tumor-only BAM.
 Default \code{FALSE}.}

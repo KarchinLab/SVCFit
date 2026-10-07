@@ -22,7 +22,7 @@ SVCFit estimates the **Structural Variant Cellular Fraction (SVCF)** for somatic
 A key challenge is that SVs frequently co-occur with somatic copy-number alterations (CNAs). When an SV breakpoint falls inside a deleted or amplified segment, naively dividing SV-supporting reads by total reads gives a biased estimate of the true cellular fraction. SVCFit corrects for this by:
 
 1.  Detecting whether a deletion or duplication overlaps each SV breakpoint.
-2.  Using nearby heterozygous SNPs to infer the **zygosity** (hemizygous vs. homozygous) and **phase** (same vs. opposite allele as the CNA) of the SV.
+2.  Using nearby heterozygous SNPs to infer the **zygosity** (heterozygous vs. homozygous) and **phase** (same vs. opposite allele as the CNA) of the SV.
 3.  Applying the appropriate correction formula for each configuration.
 
 The resulting `final_svcf` column is a copy-number–corrected cellular fraction that can be fed into downstream clustering and phylogenetic tree inference.
@@ -130,7 +130,7 @@ Key columns:
 |----------------------------|--------------------------------------------|
 | `chrom`, `start`, `end` | Segment coordinates |
 | `tcn.em` | Total copy number of the segment |
-| `lcn.em` | Minor-allele copy number (`NA` is treated as 0 by the current implementation) |
+| `lcn.em` | Minor-allele copy number (`NA` is set to 1 by `load_data()`) |
 | `cf.em` | FACETS cellular fraction of the segment; retained as `cncf` for annotation and audit, but not used directly by `calc_svcf()` |
 
 ------------------------------------------------------------------------
@@ -167,8 +167,8 @@ svcfit_out %>%
 | Column | Description |
 |----------------------------|--------------------------------------------|
 | `ID` | SV identifier from the input VCF |
-| `classification` | SV type after processing: `DEL`, `DUP`, `INV`, `BND` (translocation), `COPBND` (copy-paste translocation) |
-| `bkg_cnv` | Copy-number context at the breakpoint: `norm` (diploid), `del`, or `dup` |
+| `classification` | SV type after processing: `DEL`, `DUP`, `INV`, `BND` (translocation; all translocation subtypes are reported as `BND`) |
+| `bkg_cnv` | Copy-number context at the breakpoint: `norm` (diploid), `DEL`, or `DUP` |
 | `cn_type` | Type of overlapping CNV event (`DEL`, `DUP`, or `norm`) |
 | `zygosity` | Inferred allelic state of the SV: `het` (one allele) or `hom` (both alleles) |
 | `final_svcf` | **Copy-number–corrected SVCF.** Every finite reported estimate lies in 0–1. Unreviewed zero-reference estimates are `NA`. |
@@ -220,8 +220,8 @@ info <- extract_info(
   p_cnv       = p_cnv,
   chr_lst     = NULL,      # NULL = all chromosomes
   flank_del   = 50,        # bp window for BND-associated deletions
-  QUAL_thresh = 100,       # minimum SV quality score
-  min_alt     = 2,         # minimum SV-supporting reads
+  QUAL_thresh = 100,       # keep SVs with QUAL > QUAL_thresh or FILTER = PASS
+  min_alt     = 2,         # keep SVs with more than min_alt supporting reads
   tum_only    = FALSE      # paired normal BAM available
 )
 
@@ -247,7 +247,7 @@ anno_sv_cnv <- characterize_sv(sv_phase, sv_info, data$cnv)
 head(anno_sv_cnv %>% select(ID, zygosity, acr, cn_type, bkg_cnv))
 ```
 
-`acr` is the legacy column name for the SNP-derived **allele copy ratio (ACR)** relevant to the SV allele. It is a read-ratio estimate, not a FACETS integer allele-specific copy number.
+`acr` is the SNP-derived **allele copy ratio (ACR)** relevant to the SV allele. It is a read-ratio estimate, not a FACETS integer allele-specific copy number.
 
 ## Step 3: Calculate SVCF — `calc_svcf()`
 
@@ -460,7 +460,7 @@ After computing SVCF values across multiple samples (e.g. pre-treatment and on-t
 `build_trees()` runs in two stages:
 
 1.  **DP-GMM clustering** (`run_clustering = TRUE`): groups SVs with similar SVCF profiles across paired samples into clones using a Dirichlet-process Gaussian mixture model. Requires Python with `scikit-learn` installed (via the `reticulate` package).
-2.  **Tree inference** (`run_tree = TRUE`): fits a spanning tree over the clone CCF table that satisfies the lineage-precedence constraint (parent CCF ≥ sum of children CCFs).
+2.  **Tree inference** (`run_tree = TRUE`): fits a spanning tree over the clone CCF table that satisfies the lineage-precedence constraint (parent CCF ≥ child CCF, within `lineage_precedence_thresh`) and the sum condition (parent CCF ≥ sum of children CCFs, within `sum_filter_thresh`).
 
 `data_dir` may point directly to the directory containing `<sample>.bed`
 files. SVCFit also recognizes existing workflow layouts with the files under
@@ -483,6 +483,8 @@ bt <- build_trees(
 # bt[[2]][[3]] — igraph plot of the inferred phylogenetic tree
 bt[[2]][[3]]
 ```
+
+`bt[[2]]$n_top` gives the number of spanning trees that share the highest fitness. When it is greater than 1, the clone CCFs do not resolve a unique topology (a message is printed) and the first tied tree is returned. `bt[[2]]` is `NULL` if no valid spanning tree is found.
 
 ------------------------------------------------------------------------
 

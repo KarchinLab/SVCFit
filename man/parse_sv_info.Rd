@@ -13,11 +13,11 @@ parse_sv_info(sv, bnd, del, QUAL_thresh = 100, min_alt = 2)
 
 \item{del}{an object of class 'data frame'. This object stores the output from \code{proc_bnd}.}
 
-\item{QUAL_thresh}{an object of class 'integer'. This object describes the minimum QUAL score
-to include for analysis.}
+\item{QUAL_thresh}{an object of class 'integer'. An SV is included for analysis if
+QUAL > \code{QUAL_thresh} or FILTER = PASS.}
 
-\item{min_alt}{an object of class 'integer'. This object describes the minimum alternative read
-count for a structural varinats to have to be included for anlaysis.}
+\item{min_alt}{an object of class 'integer'. A structural variant is included for analysis
+only if it has more than \code{min_alt} supporting reads.}
 }
 \value{
 A data.frame of filtered SVs with columns \code{CHROM}, \code{chr2},

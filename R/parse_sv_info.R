@@ -3,10 +3,10 @@
 #' @param sv an object of class 'data frame'. This object stores the sv data loaded from `load_data`.
 #' @param bnd an object of class 'data frame'. This object stores the output from `proc_bnd`.
 #' @param del an object of class 'data frame'. This object stores the output from `proc_bnd`.
-#' @param QUAL_thresh an object of class 'integer'. This object describes the minimum QUAL score
-#' to include for analysis.
-#' @param min_alt an object of class 'integer'. This object describes the minimum alternative read
-#' count for a structural varinats to have to be included for anlaysis.
+#' @param QUAL_thresh an object of class 'integer'. An SV is included for analysis if
+#' QUAL > `QUAL_thresh` or FILTER = PASS.
+#' @param min_alt an object of class 'integer'. A structural variant is included for analysis
+#' only if it has more than `min_alt` supporting reads.
 #'
 #' @return A data.frame of filtered SVs with columns \code{CHROM}, \code{chr2},
 #'   \code{pos2}, \code{POS}, \code{END}, \code{nPOS}, \code{mPOS}, \code{ID},

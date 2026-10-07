@@ -10,12 +10,12 @@
 #' to CNV file. 
 #' @param flank_del object of class 'numeric'. This object describes the maximum allowed
 #' differences in genomic locations for a deletion to be considered as overlapping to a translocation.  
-#' @param QUAL_thresh object of class 'numeric'. This object describes the minimum quality score 
-#'  allowed to include an SV.
+#' @param QUAL_thresh object of class 'numeric'. An SV is included if QUAL > \code{QUAL_thresh}
+#'  or FILTER = PASS.
 #' @param chr_lst Character vector or \code{NULL}. Restrict analysis to these
 #'   chromosomes (e.g. \code{"chr1"}). Default \code{NULL} (all chromosomes).
-#' @param min_alt object of class 'numeric'. This object describes the minimum
-#' amount of SV supporting read counts to include an SV.
+#' @param min_alt object of class 'numeric'. An SV is included only if it has more
+#' than \code{min_alt} supporting reads.
 #' @param tum_only Logical. Whether SVs were called from a tumor-only BAM.
 #'   Default \code{FALSE}.
 #'
