@@ -404,7 +404,6 @@ build_tree()
 | `clones` | data.frame | — | SV clustering result. |
 | `lineage_precedence_thresh` | numeric | 0.2 | Maximum violation of lineage precedence rule. |
 | `sum_filter_thresh` | numeric | 0.2 | Maximum violation of sum condition rule. |
-| `linear_penalty` | numeric | 0 | Penalty applied to linear (chain) topologies during tree scoring. |
 
 **Output:** A tumor evolutionary tree rooted at the germline (G). Node numbers correspond to SV cluster numbers. The branching depicts the chronological occurrence of SV clusters.
 

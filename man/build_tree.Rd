@@ -7,8 +7,7 @@
 build_tree(
   clones,
   lineage_precedence_thresh = 0.2,
-  sum_filter_thresh = 0.2,
-  linear_penalty = 0
+  sum_filter_thresh = 0.2
 )
 }
 \arguments{
@@ -24,12 +23,9 @@ and filtering edges.  Default \code{0.2}.}
 \item{sum_filter_thresh}{Numeric. Maximum allowed excess of the summed
 children CCFs over the parent CCF when pruning spanning trees.
 Default \code{0.2}.}
-
-\item{linear_penalty}{Numeric. Penalty weight applied to linear-chain tree
-topologies during scoring.  Default \code{0} (no penalty).}
 }
 \value{
-A list of length 3:
+A list of length 4:
 \describe{
 \item{\code{[[1]]}}{data.frame. Edge list of the best-scoring spanning
 tree (columns: \code{parent}, \code{child}).}
@@ -38,6 +34,10 @@ clones named by \code{cluster_num}, columns = time points
 \code{f_pre} and \code{f_day85}).}
 \item{\code{[[3]]}}{igraph plot object returned by
 \code{\link{plotTree}}.}
+\item{\code{n_top}}{Integer. Number of spanning trees that share the
+highest fitness. A value above 1 means the CCFs do not resolve a unique
+topology; \code{[[1]]} is then the first of the tied trees in
+enumeration order.}
 }
 }
 \description{

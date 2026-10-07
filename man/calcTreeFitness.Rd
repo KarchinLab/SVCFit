@@ -11,8 +11,7 @@ calcTreeFitness(
   am_format = "long",
   weight_mass = 1,
   weight_topology = 1,
-  scaling_coeff = 5,
-  linear_penalty = 0
+  scaling_coeff = 5
 )
 }
 \arguments{

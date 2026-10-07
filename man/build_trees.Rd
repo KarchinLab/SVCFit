@@ -22,8 +22,7 @@ build_trees(
   run_tree = FALSE,
   lineage_precedence_thresh = 0.2,
   sum_filter_thresh = 0.2,
-  ccf_floor = 0.1,
-  linear_penalty = 0
+  ccf_floor = 0.1
 )
 }
 \arguments{
@@ -83,9 +82,6 @@ CCFs over the parent CCF. Default \code{0.2}.}
 \item{ccf_floor}{Numeric. CCF values below this threshold are zeroed out
 before clustering. Default \code{0.1}. Lower at low purity (e.g. 0.05 at
 p40) to retain signal from small subclones.}
-
-\item{linear_penalty}{Numeric. Per-edge penalty added to the tree fitness
-score to favour simpler topologies. Default \code{0} (no penalty).}
 }
 \value{
 A named list with two elements (\code{NULL} when the corresponding
